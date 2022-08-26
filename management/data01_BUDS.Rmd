@@ -1,0 +1,170 @@
+---
+title: "Data prep script 1: Importing and combining self-report data"
+author: "Brent Rappaport"
+date: "`r format(Sys.time(),  '%Y-%m-%d')`"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+subtitle: Template Rmd
+editor_options:
+  chunk_output_type: console
+toc: yes
+---
+
+# About
+This script imports and merges the self-report data from BUDS study: Bullying, Unsupportive family/peers, Discrimination, and Social feedback study using data from PREDICT project collaboration between Northwestern (Shankman) and Columbia (Auerbach).
+
+# 1. Get Setup
+## 1.1. Clear everything & set width
+```{r echo=TRUE, results='hide', message=FALSE}
+    options(width=80) #Set width
+    rm(list=ls())     #Remove everything from environment
+    cat("\014")       #Clear Console
+```
+
+## 1.2. Load Libraries
+```{r echo=TRUE, results='hide', message=FALSE}
+  renv::restore()     #restore environment
+  library(knitr)      #allows rmarkdown files
+  library(haven)      #helps import stata
+  library(questionr)  #allows lookfor function
+  library(tidyverse)  #plotting/cleaning, etc.
+  library(broom)      #nice statistical output
+  library(here)       #nice file paths
+  library(expss)      #labeling variables/values
+  library(psych)      #used for statistical analyses
+  library(ggplot2)    #creates plots
+  library(Hmisc)
+  library(workflowr)  #helps with workflow
+```
+
+## 1.3. Get the Working Directory
+```{r}
+  here()
+```
+
+## 1.4. Set seed
+```{r}
+     set.seed(312)    #Set seed
+```
+
+## 1.5 Load Data
+Remember to immediately rename and remove. Avoid overwriting old data.
+```{r}
+# Import data from Columbia University
+BUDS_cleaning01_columbia <- read.csv("../_rawdata/Columbia/SP_Self-Report_Baseline (3.17.21)_August 1, 2022_14.08.csv", header=TRUE)
+# Use the second row as the variable labels
+var.labels = BUDS_cleaning01_columbia[2,]; label(BUDS_cleaning01_columbia) <- as.list(var.labels[match(names(BUDS_cleaning01_columbia), names(var.labels))])
+BUDS_cleaning02_columbia <- BUDS_cleaning01_columbia[-(1:2),]; rm("BUDS_cleaning01_columbia")
+
+# Import data from Northwestern University
+BUDS_cleaning01_nw1 <- read.csv("../_rawdata/Northwestern/9001-9012.SP_Self-Report_Baseline.csv", header=TRUE)
+# Use the first row as the variable labels
+var.labels = BUDS_cleaning01_nw1[1,]; label(BUDS_cleaning01_nw1) <- as.list(var.labels[match(names(BUDS_cleaning01_nw1), names(var.labels))])
+BUDS_cleaning02_nw1 <- BUDS_cleaning01_nw1[-(1),]; rm("BUDS_cleaning01_nw1")
+
+BUDS_cleaning01_nw2 <- read.csv("../_rawdata/Northwestern/9013-9039.SP_Self-Report_Baseline.csv", header=TRUE)
+# Use the first row as the variable labels
+var.labels = BUDS_cleaning01_nw2[1,]; label(BUDS_cleaning01_nw2) <- as.list(var.labels[match(names(BUDS_cleaning01_nw2), names(var.labels))])
+BUDS_cleaning02_nw2 <- BUDS_cleaning01_nw2[-(1),]; rm("BUDS_cleaning01_nw2")
+
+BUDS_cleaning01_nw3 <- read.csv("../_rawdata/Northwestern/9040-9083.SP Self-Report Baseline.csv", header=TRUE)
+# Use the first row as the variable labels
+var.labels = BUDS_cleaning01_nw3[1,]; label(BUDS_cleaning01_nw3) <- as.list(var.labels[match(names(BUDS_cleaning01_nw3), names(var.labels))])
+BUDS_cleaning02_nw3 <- BUDS_cleaning01_nw3[-(1),]; rm("BUDS_cleaning01_nw3")
+
+BUDS_cleaning02_nw <- bind_rows(BUDS_cleaning02_nw1, BUDS_cleaning02_nw2, BUDS_cleaning02_nw3)
+
+BUDS_cleaning02 <- bind_rows(BUDS_cleaning02_columbia, BUDS_cleaning02_nw)
+```
+
+# 2.0 Filter and score data
+```{r}
+# Only include variables of interest
+BUDS_cleaning03 <- BUDS_cleaning02 %>%
+  select(c("id_1_i","id_2_i"),matches('bcs_|promis_|addi_'))
+```
+
+## 2.1 Score ADDI
+```{r}
+# ADDI
+## Make variable list
+addi_vars <- c("addi_1b_i","addi_2b_i","addi_3b_i","addi_4b_i","addi_5b_i","addi_6b_i","addi_7b_i","addi_8b_i","addi_9b_i","addi_10b_i",
+                                "addi_11b_i","addi_12b_i","addi_13b_i","addi_14b_i","addi_15b_i")
+BUDS_cleaning03[,addi_vars] <- sapply(BUDS_cleaning03[,addi_vars], as.numeric) # make variables of numeric class
+
+## score
+BUDS_cleaning03$addi_total <- rowSums(BUDS_cleaning03[,addi_vars], na.rm=TRUE)
+BUDS_cleaning03$addi_educ <- rowSums(BUDS_cleaning03[,addi_vars[c(1,2,3,6)]], na.rm=TRUE)
+BUDS_cleaning03$addi_instit <- rowSums(BUDS_cleaning03[,addi_vars[c(7,9,10,13,14)]], na.rm=TRUE)
+BUDS_cleaning03$addi_distress <- rowSums(BUDS_cleaning03[,addi_vars[c(4,5,8,11,15)]], na.rm=TRUE)
+```
+## 2.2 Score BCS-A
+```{r}
+# Score BCS
+bcs_vars <- c("bcs_offline_1_i","bcs_offline_2_i","bcs_offline_3_i","bcs_offline_4_i","bcs_offline_5_i","bcs_offline_6_i","bcs_offline_7_i","bcs_offline_8_i",
+              "bcs_online_1_i","bcs_online_2_i","bcs_online_3_i","bcs_online_4_i","bcs_online_5_i")
+BUDS_cleaning03[,bcs_vars] <- sapply(BUDS_cleaning03[,bcs_vars], as.numeric) # make variables of numeric class
+
+# Score using ordinal measurement scale where ratings of "about once a week" and "several times a week or more" are treated equally.
+BUDS_cleaning03[,bcs_vars] <- sapply(BUDS_cleaning03[,bcs_vars], function(x) ifelse(x>=2, 2, x))
+
+# Score using ordinal measurement scale
+## This means that 0 = not involved, 1 = sub-threshold, 2 = victimized/perpetrated. Based on the scoring that if any of the items endorsed at a 2, then their subscale is a 2 ("about once a week" or "several times a week or more"); if any items endorsed as a 1 ("once or twice"), then subscale is a 1; participants could only score a 0 if all items endorsed at a 0 ("this did not happen to me").
+BUDS_cleaning04 <- BUDS_cleaning03 %>% 
+    mutate(bcs_physical_vic = ifelse(if_any(bcs_vars[1:4], ~.x %in% 2),2,if_any(bcs_vars[1:4], ~.x %in% 1,1,0)),
+           bcs_verbal_vic = ifelse(if_any(bcs_vars[5:6], ~.x %in% 2),2,if_any(bcs_vars[5:6], ~.x %in% 1,1,0)),
+           bcs_rel_vic = ifelse(if_any(bcs_vars[7:8], ~.x %in% 2),2,if_any(bcs_vars[7:8], ~.x %in% 1,1,0)),
+           bcs_cyber_vic = ifelse(if_any(bcs_vars[9:13], ~.x %in% 2),2,if_any(bcs_vars[9:13], ~.x %in% 1,1,0)),
+           bcs_total_vic = ifelse(if_any(bcs_vars[1:13], ~.x %in% 2),2,if_any(bcs_vars[1:13], ~.x %in% 1,1,0)))
+```
+## 2.3 Score PROMIS
+```{r}
+promis_vars <- c("promis_peer_rel_1_i","promis_peer_rel_2_i","promis_peer_rel_3_i","promis_peer_rel_4_i","promis_peer_rel_5_i","promis_peer_rel_6_i","promis_peer_rel_7_i","promis_peer_rel_8_i","promis_family_rel_1_i","promis_family_rel_2_i","promis_family_rel_3_i","promis_family_rel_4_i")
+BUDS_cleaning04[,promis_vars] <- sapply(BUDS_cleaning04[,promis_vars], as.numeric) # make variables of numeric class
+
+BUDS_cleaning05 <- BUDS_cleaning04 %>% 
+    rowwise() %>%
+    mutate(promis_peer_meanraw = mean(c_across(promis_peer_rel_1_i:promis_peer_rel_8_i), na.rm=T),
+           promis_fam_meanraw = mean(c_across(promis_family_rel_1_i:promis_family_rel_4_i), na.rm=T),
+           promis_peer_sumraw = sum(c_across(promis_peer_rel_1_i:promis_peer_rel_8_i), na.rm=T),
+           promis_fam_sumraw = sum(c_across(promis_family_rel_1_i:promis_family_rel_4_i), na.rm=T))
+
+# May need to recode to get t-score
+#    mutate(promis_peer_tscore = dplyr::recode(promis_peer_sumraw, `40`=64.4,`39`=59.5,`38`=56.8,`37`=54.5,`36`=52.6,`35`=50.9,`34`=49.4,`33`=48,`32`=46.7,`31`=45.5,`30`=44.3,...))
+
+# Check to make sure mean is calculated correctly
+head(BUDS_cleaning05[,c(promis_vars[1:8],"promis_peer_meanraw")])
+head(BUDS_cleaning05[,c(promis_vars[9:12],"promis_fam_meanraw")])
+```
+
+# 3.0 Check variables
+```{r}
+# Check distributions
+hist(BUDS_cleaning05$addi_total)
+hist(BUDS_cleaning05$addi_educ)
+hist(BUDS_cleaning05$addi_instit)
+hist(BUDS_cleaning05$addi_distress)
+
+hist(BUDS_cleaning05$bcs_physical_vic)
+hist(BUDS_cleaning05$bcs_verbal_vic)
+hist(BUDS_cleaning05$bcs_rel_vic)
+hist(BUDS_cleaning05$bcs_cyber_vic)
+hist(BUDS_cleaning05$bcs_total_vic)
+
+hist(BUDS_cleaning05$promis_peer_meanraw)
+hist(BUDS_cleaning05$promis_fam_meanraw)
+```
+
+```{r}
+save(BUDS_cleaning05, file="data/BUDS_cleaning05.RData")
+```
+
+# 2 Closing out
+  In this step, go ahead and close out of the file and quit R without saving  
+  the work space.
+```{r}
+   renv::snapshot()   #Take a snapshot of environment
+```
+
