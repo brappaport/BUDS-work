@@ -76,6 +76,14 @@ BUDS_cleaning03$addi_educ <- rowSums(BUDS_cleaning03[,addi_vars[c(1,2,3,6)]], na
 BUDS_cleaning03$addi_instit <- rowSums(BUDS_cleaning03[,addi_vars[c(7,9,10,13,14)]], na.rm=TRUE)
 BUDS_cleaning03$addi_distress <- rowSums(BUDS_cleaning03[,addi_vars[c(4,5,8,11,15)]], na.rm=TRUE)
 ```
+### 2.1.1 Alphas
+```{r}
+# psych::alpha(BUDS_cleaning03[,c(addi_vars)])$total$std.alpha
+# psych::alpha(BUDS_cleaning03[,c(addi_vars[c(1,2,3,6)])])$total$std.alpha
+# psych::alpha(BUDS_cleaning03[,c(addi_vars[c(7,9,10,13,14)])])$total$std.alpha
+# psych::alpha(BUDS_cleaning03[,c(addi_vars[c(4,5,8,11,15)])])$total$std.alpha
+```
+
 ## 2.2 Score BCS-A
 ```{r}
 # Score BCS
@@ -93,8 +101,43 @@ BUDS_cleaning04 <- BUDS_cleaning03 %>%
            bcs_verbal_vic = ifelse(if_any(bcs_vars[5:6], ~.x %in% 2),2,if_any(bcs_vars[5:6], ~.x %in% 1,1,0)),
            bcs_rel_vic = ifelse(if_any(bcs_vars[7:8], ~.x %in% 2),2,if_any(bcs_vars[7:8], ~.x %in% 1,1,0)),
            bcs_cyber_vic = ifelse(if_any(bcs_vars[9:13], ~.x %in% 2),2,if_any(bcs_vars[9:13], ~.x %in% 1,1,0)),
-           bcs_total_vic = ifelse(if_any(bcs_vars[1:13], ~.x %in% 2),2,if_any(bcs_vars[1:13], ~.x %in% 1,1,0)))
+           bcs_total_vic = ifelse(if_any(bcs_vars[1:13], ~.x %in% 2),2,if_any(bcs_vars[1:13], ~.x %in% 1,1,0)),
+           
+           bcs_physical_vic_revised = ifelse(if_any(bcs_vars[c(1,4)], ~.x %in% 2),2,if_any(bcs_vars[c(1,4)], ~.x %in% 1,1,0)),
+           bcs_rel_vic_revised = ifelse(if_any(bcs_vars[c(2,3,7,8)], ~.x %in% 2),2,if_any(bcs_vars[c(2,3,7,8)], ~.x %in% 1,1,0)))
 ```
+### 2.2.1 Alphas
+```{r}
+psych::alpha(BUDS_cleaning04[,c(bcs_vars[1:4])])$total$std.alpha
+psych::alpha(BUDS_cleaning04[,c(bcs_vars[5:6])])$total$std.alpha
+psych::alpha(BUDS_cleaning04[,c(bcs_vars[7:8])])$total$std.alpha
+psych::alpha(BUDS_cleaning04[,c(bcs_vars[9:13])])$total$std.alpha
+psych::alpha(BUDS_cleaning04[,c(bcs_vars[1:13])])$total$std.alpha
+
+psych::alpha(BUDS_cleaning04[,c(bcs_vars[c(1,4)])])$total$std.alpha
+psych::alpha(BUDS_cleaning04[,c(bcs_vars[c(2,3,7,8)])])$total$std.alpha
+
+
+library(lavaan)
+original <- '
+physical =~ bcs_offline_1_i + bcs_offline_2_i + bcs_offline_3_i + bcs_offline_4_i
+verbal =~ bcs_offline_5_i + bcs_offline_6_i
+relational =~ bcs_offline_7_i + bcs_offline_8_i
+'
+
+new <- '
+physical =~ bcs_offline_1_i + bcs_offline_4_i
+verbal =~ bcs_offline_5_i + bcs_offline_6_i
+relational =~ bcs_offline_2_i + bcs_offline_3_i + bcs_offline_7_i + bcs_offline_8_i
+'
+
+original_fit <- cfa(original, BUDS_cleaning04, estimator="ML", missing="FIML")
+new_fit <- cfa(new, BUDS_cleaning04, estimator="ML", missing="FIML")
+
+anova(original_fit, new_fit)
+```
+
+
 ## 2.3 Score PROMIS
 ```{r}
 promis_vars <- c("promis_peer_rel_1_i","promis_peer_rel_2_i","promis_peer_rel_3_i","promis_peer_rel_4_i","promis_peer_rel_5_i","promis_peer_rel_6_i","promis_peer_rel_7_i","promis_peer_rel_8_i","promis_family_rel_1_i","promis_family_rel_2_i","promis_family_rel_3_i","promis_family_rel_4_i")
@@ -105,14 +148,25 @@ BUDS_cleaning05 <- BUDS_cleaning04 %>%
     mutate(promis_peer_meanraw = mean(c_across(promis_peer_rel_1_i:promis_peer_rel_8_i), na.rm=T),
            promis_fam_meanraw = mean(c_across(promis_family_rel_1_i:promis_family_rel_4_i), na.rm=T),
            promis_peer_sumraw = sum(c_across(promis_peer_rel_1_i:promis_peer_rel_8_i), na.rm=T),
-           promis_fam_sumraw = sum(c_across(promis_family_rel_1_i:promis_family_rel_4_i), na.rm=T))
-
-# May need to recode to get t-score
-#    mutate(promis_peer_tscore = dplyr::recode(promis_peer_sumraw, `40`=64.4,`39`=59.5,`38`=56.8,`37`=54.5,`36`=52.6,`35`=50.9,`34`=49.4,`33`=48,`32`=46.7,`31`=45.5,`30`=44.3,...))
+           promis_fam_sumraw = sum(c_across(promis_family_rel_1_i:promis_family_rel_4_i), na.rm=T)) %>%
+   mutate(
+     promis_peer_tscore = dplyr::recode(promis_peer_sumraw, 
+     `40`=64.4,`39`=59.5,`38`=56.8,`37`=54.5,`36`=52.6,`35`=50.9,`34`=49.4,`33`=48,`32`=46.7,`31`=45.5,
+     `30`=44.3,`29`=43.1,`28`=42,`27`=40.9,`26`=39.8,`25`=38.8,`24`=37.7,`23`=36.7,`22`=35.6,`21`=34.6,
+     `20`=33.6,`19`=32.5,`18`=31.4,`17`=30.3,`16`=29.2,`15`=28.1,`14`=26.9,`13`=25.7,`12`=24.4,`11`=23,
+     `10`=21.4,`9`=20,`8`=17.8),
+     promis_fam_tscore = dplyr::recode(promis_fam_sumraw,
+     `20`=59.5,`19`=52.1,`18`=49.0,`17`=46.7,`16`=44.7,`15`=42.8,`14`=41.0,`13`=39.1,`12`=37.4,`11`=35.7,
+     `10`=34.0,`9`=32.4,`8`=30.8,`7`=29.1,`6`=27.3,`5`=25.1,`4`=21.4))
 
 # Check to make sure mean is calculated correctly
 head(BUDS_cleaning05[,c(promis_vars[1:8],"promis_peer_meanraw")])
 head(BUDS_cleaning05[,c(promis_vars[9:12],"promis_fam_meanraw")])
+```
+### 2.3.1 Alphas
+```{r}
+psych::alpha(BUDS_cleaning05[,c(promis_vars[c(1:8)])])$total$std.alpha
+psych::alpha(BUDS_cleaning05[,c(promis_vars[c(9:12)])])$total$std.alpha
 ```
 
 # 3.0 Check variables
@@ -131,6 +185,8 @@ hist(BUDS_cleaning05$bcs_total_vic)
 
 hist(BUDS_cleaning05$promis_peer_meanraw)
 hist(BUDS_cleaning05$promis_fam_meanraw)
+hist(BUDS_cleaning05$promis_peer_tscore)
+hist(BUDS_cleaning05$promis_fam_tscore)
 ```
 
 ```{r}
@@ -143,4 +199,3 @@ save(BUDS_cleaning05, file="data/BUDS_cleaning05.RData")
 ```{r}
    renv::snapshot()   #Take a snapshot of environment
 ```
-
