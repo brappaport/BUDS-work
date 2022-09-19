@@ -36,6 +36,8 @@ This script filter and scores the self-report data from BUDS study: Bullying, Un
   library(psych)      #used for statistical analyses
   library(ggplot2)    #creates plots
   library(Hmisc)
+  library(misty)      #ordinal Cronbach's alpha
+  library(lavaan)     #SEM
   library(workflowr)  #helps with workflow
 ```
 
@@ -98,6 +100,7 @@ BUDS_cleaning03[,bcs_vars] <- sapply(BUDS_cleaning03[,bcs_vars], function(x) ife
 ## This means that 0 = not involved, 1 = sub-threshold, 2 = victimized/perpetrated. Based on the scoring that if any of the items endorsed at a 2, then their subscale is a 2 ("about once a week" or "several times a week or more"); if any items endorsed as a 1 ("once or twice"), then subscale is a 1; participants could only score a 0 if all items endorsed at a 0 ("this did not happen to me").
 BUDS_cleaning04 <- BUDS_cleaning03 %>% 
     mutate(bcs_physical_vic = ifelse(if_any(bcs_vars[1:4], ~.x %in% 2),2,if_any(bcs_vars[1:4], ~.x %in% 1,1,0)),
+           bcs_physical_vic_01 = ifelse(bcs_physical_vic > 0, 1, 0),
            bcs_verbal_vic = ifelse(if_any(bcs_vars[5:6], ~.x %in% 2),2,if_any(bcs_vars[5:6], ~.x %in% 1,1,0)),
            bcs_rel_vic = ifelse(if_any(bcs_vars[7:8], ~.x %in% 2),2,if_any(bcs_vars[7:8], ~.x %in% 1,1,0)),
            bcs_cyber_vic = ifelse(if_any(bcs_vars[9:13], ~.x %in% 2),2,if_any(bcs_vars[9:13], ~.x %in% 1,1,0)),
@@ -108,17 +111,12 @@ BUDS_cleaning04 <- BUDS_cleaning03 %>%
 ```
 ### 2.2.1 Alphas
 ```{r}
-psych::alpha(BUDS_cleaning04[,c(bcs_vars[1:4])])$total$std.alpha
-psych::alpha(BUDS_cleaning04[,c(bcs_vars[5:6])])$total$std.alpha
-psych::alpha(BUDS_cleaning04[,c(bcs_vars[7:8])])$total$std.alpha
-psych::alpha(BUDS_cleaning04[,c(bcs_vars[9:13])])$total$std.alpha
-psych::alpha(BUDS_cleaning04[,c(bcs_vars[1:13])])$total$std.alpha
+item.alpha(BUDS_cleaning04[,c(bcs_vars[1:4])], std=TRUE)
+item.alpha(BUDS_cleaning04[,c(bcs_vars[5:6])], std=TRUE)
+item.alpha(BUDS_cleaning04[,c(bcs_vars[7:8])], std=TRUE)
+item.alpha(BUDS_cleaning04[,c(bcs_vars[9:13])], std=TRUE)
+item.alpha(BUDS_cleaning04[,c(bcs_vars[1:13])], std=TRUE)
 
-psych::alpha(BUDS_cleaning04[,c(bcs_vars[c(1,4)])])$total$std.alpha
-psych::alpha(BUDS_cleaning04[,c(bcs_vars[c(2,3,7,8)])])$total$std.alpha
-
-
-library(lavaan)
 original <- '
 physical =~ bcs_offline_1_i + bcs_offline_2_i + bcs_offline_3_i + bcs_offline_4_i
 verbal =~ bcs_offline_5_i + bcs_offline_6_i
@@ -137,7 +135,6 @@ new_fit <- cfa(new, BUDS_cleaning04, estimator="ML", missing="FIML")
 anova(original_fit, new_fit)
 ```
 
-
 ## 2.3 Score PROMIS
 ```{r}
 promis_vars <- c("promis_peer_rel_1_i","promis_peer_rel_2_i","promis_peer_rel_3_i","promis_peer_rel_4_i","promis_peer_rel_5_i","promis_peer_rel_6_i","promis_peer_rel_7_i","promis_peer_rel_8_i","promis_family_rel_1_i","promis_family_rel_2_i","promis_family_rel_3_i","promis_family_rel_4_i")
@@ -145,10 +142,10 @@ BUDS_cleaning04[,promis_vars] <- sapply(BUDS_cleaning04[,promis_vars], as.numeri
 
 BUDS_cleaning05 <- BUDS_cleaning04 %>% 
     rowwise() %>%
-    mutate(promis_peer_meanraw = mean(c_across(promis_peer_rel_1_i:promis_peer_rel_8_i), na.rm=T),
-           promis_fam_meanraw = mean(c_across(promis_family_rel_1_i:promis_family_rel_4_i), na.rm=T),
-           promis_peer_sumraw = sum(c_across(promis_peer_rel_1_i:promis_peer_rel_8_i), na.rm=T),
-           promis_fam_sumraw = sum(c_across(promis_family_rel_1_i:promis_family_rel_4_i), na.rm=T)) %>%
+    mutate(promis_peer_meanraw = mean(c_across(promis_peer_rel_1_i:promis_peer_rel_8_i), na.rm=F),
+           promis_fam_meanraw = mean(c_across(promis_family_rel_1_i:promis_family_rel_4_i), na.rm=F),
+           promis_peer_sumraw = sum(c_across(promis_peer_rel_1_i:promis_peer_rel_8_i), na.rm=F),
+           promis_fam_sumraw = sum(c_across(promis_family_rel_1_i:promis_family_rel_4_i), na.rm=F)) %>%
    mutate(
      promis_peer_tscore = dplyr::recode(promis_peer_sumraw, 
      `40`=64.4,`39`=59.5,`38`=56.8,`37`=54.5,`36`=52.6,`35`=50.9,`34`=49.4,`33`=48,`32`=46.7,`31`=45.5,
@@ -170,6 +167,7 @@ psych::alpha(BUDS_cleaning05[,c(promis_vars[c(9:12)])])$total$std.alpha
 ```
 
 # 3.0 Check variables
+## 3.1 Histograms
 ```{r}
 # Check distributions
 hist(BUDS_cleaning05$addi_total)
@@ -178,16 +176,100 @@ hist(BUDS_cleaning05$addi_instit)
 hist(BUDS_cleaning05$addi_distress)
 
 hist(BUDS_cleaning05$bcs_physical_vic)
+hist(BUDS_cleaning05$bcs_physical_vic_01)
 hist(BUDS_cleaning05$bcs_verbal_vic)
 hist(BUDS_cleaning05$bcs_rel_vic)
 hist(BUDS_cleaning05$bcs_cyber_vic)
 hist(BUDS_cleaning05$bcs_total_vic)
 
-hist(BUDS_cleaning05$promis_peer_meanraw)
-hist(BUDS_cleaning05$promis_fam_meanraw)
-hist(BUDS_cleaning05$promis_peer_tscore)
-hist(BUDS_cleaning05$promis_fam_tscore)
+table(BUDS_cleaning05$promis_peer_sumraw)
+table(BUDS_cleaning05$promis_fam_sumraw)
+table(BUDS_cleaning05$promis_peer_tscore)
+table(BUDS_cleaning05$promis_fam_tscore)
 ```
+
+## 3.2 Correlation between measures
+```{r Correlation matrix table function}
+# from https://www.r-bloggers.com/2020/07/create-a-publication-ready-correlation-matrix-with-significance-levels-in-r/
+
+correlation_matrix <- function(df, 
+                               type = "pearson",
+                               digits = 3, 
+                               decimal.mark = ".",
+                               use = "all", 
+                               show_significance = TRUE, 
+                               replace_diagonal = FALSE, 
+                               replacement = ""){
+  
+  # check arguments
+  stopifnot({
+    is.numeric(digits)
+    digits >= 0
+    use %in% c("all", "upper", "lower")
+    is.logical(replace_diagonal)
+    is.logical(show_significance)
+    is.character(replacement)
+  })
+  # we need the Hmisc package for this
+  require(Hmisc)
+  
+  # retain only numeric and boolean columns
+  isNumericOrBoolean = vapply(df, function(x) is.numeric(x) | is.logical(x), logical(1))
+  if (sum(!isNumericOrBoolean) > 0) {
+    cat('Dropping non-numeric/-boolean column(s):', paste(names(isNumericOrBoolean)[!isNumericOrBoolean], collapse = ', '), '\n\n')
+  }
+  df = df[isNumericOrBoolean]
+  
+  # transform input data frame to matrix
+  x <- as.matrix(df)
+  
+  # run correlation analysis using Hmisc package
+  correlation_matrix <- Hmisc::rcorr(x, type = )
+  R <- correlation_matrix$r # Matrix of correlation coeficients
+  p <- correlation_matrix$P # Matrix of p-value 
+  
+  # transform correlations to specific character format
+  Rformatted = formatC(R, format = 'f', digits = digits, decimal.mark = decimal.mark)
+  
+  # if there are any negative numbers, we want to put a space before the positives to align all
+  if (sum(R < 0) > 0) {
+    Rformatted = ifelse(R > 0, paste0(' ', Rformatted), Rformatted)
+  }
+  
+  # add significance levels if desired
+  if (show_significance) {
+    # define notions for significance levels; spacing is important.
+    stars <- ifelse(is.na(p), "   ", ifelse(p < .001, "***", ifelse(p < .01, "** ", ifelse(p < .05, "*  ", "   "))))
+    Rformatted = paste0(Rformatted, stars)
+  }
+  # build a new matrix that includes the formatted correlations and their significance stars
+  Rnew <- matrix(Rformatted, ncol = ncol(x))
+  rownames(Rnew) <- colnames(x)
+  colnames(Rnew) <- paste(colnames(x), "", sep =" ")
+  
+  # replace undesired values
+  if (use == 'upper') {
+    Rnew[lower.tri(Rnew, diag = replace_diagonal)] <- replacement
+  } else if (use == 'lower') {
+    Rnew[upper.tri(Rnew, diag = replace_diagonal)] <- replacement
+  } else if (replace_diagonal) {
+    diag(Rnew) <- replacement
+  }
+  
+  return(Rnew)
+}
+```
+```{r}
+all_measures <- c("addi_total","addi_educ","addi_instit","addi_distress",
+                  "bcs_total_vic","bcs_physical_vic_01","bcs_verbal_vic","bcs_rel_vic","bcs_cyber_vic",
+                  "promis_peer_tscore","promis_fam_tscore")
+
+write.csv(correlation_matrix(BUDS_cleaning05[c(all_measures)], use="lower", replace_diagonal = TRUE, show_significance=FALSE), file = "manuscript/tables/beh_cor_matrix.csv")
+
+library(corrplot)
+corrplot(cor(BUDS_cleaning05[c(all_measures)],use="pairwise.complete.obs"), method="circle")
+```
+
 
 ```{r}
 save(BUDS_cleaning05, file="data/BUDS_cleaning05.RData")
