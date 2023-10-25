@@ -1,0 +1,713 @@
+---
+title: "Data prep script 3: Importing and combining ERP data with self-reported data"
+author: "Brent Rappaport"
+date: "`r format(Sys.time(),  '%Y-%m-%d')`"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+subtitle: Template Rmd
+editor_options:
+  chunk_output_type: console
+toc: yes
+---
+
+# About
+This script filter and scores the self-report data from BUDS study: Bullying, Unsupportive family/peers, Discrimination, and Social feedback study using data from PREDICT project collaboration between Northwestern (PI: Shankman) and Columbia (PI: Auerbach).
+
+# Get Setup
+## Clear everything & set width
+```{r}
+knitr::opts_chunk$set(set.seed(312), echo=FALSE, results='hide', message=FALSE, warning=FALSE, error=FALSE)
+    options(width=80) #Set width
+    rm(list=ls())     #Remove everything from environment
+    cat("\014")       #Clear Console
+```
+
+## Load Libraries
+```{r}
+  library(knitr)      #allows rmarkdown files
+  library(haven)      #helps import stata
+  library(questionr)  #allows lookfor function
+  library(broom)      #nice statistical output
+  library(here)       #nice file paths
+  library(expss)      #labeling variables/values
+  library(psych)      #used for statistical analyses
+  library(ggplot2)    #creates plots
+  library(MASS)
+  library(papaja)     #generate APA documents
+  library(Hmisc)
+  library(misty)      #ordinal Cronbach's alpha
+  library(lavaan)     #SEM
+  library(papaja)
+  library(pscl)       # for zero inflated models
+  library(lme4)
+  library(lmerTest)
+  library(bbmle)
+  library(marginaleffects)
+  library(bestNormalize) # for normalizing data
+  library(tidyverse)  #plotting/cleaning, etc.
+  library(workflowr)  #helps with workflow
+
+select <- dplyr::select
+```
+
+## Get the Working Directory
+```{r}
+  here::i_am("./management/data03_BUDS.Rmd")
+```
+
+## Load ERP data
+Remember to immediately rename and remove. Avoid overwriting old data.
+```{r, eval=F}
+subjects <- c(1000,
+1001,
+1004,
+1006,
+# 1010,
+# 1012,
+1014,
+1017,
+1021,
+1022,
+1023,
+1024,
+1025,
+1026,
+1027,
+1029,
+1030,
+1031,
+1033,
+1035,
+1036,
+1037,
+1039,
+1040,
+1043,
+1044,
+1046,
+1047,
+1048,
+1049,
+1050,
+1052,
+1053,
+1054,
+1055,
+1057,
+1058,
+1059,
+1060,
+1061,
+1063,
+1064,
+1065,
+1066,
+1067,
+1068,
+1069,
+1070,
+1071,
+# 1072,
+1074,
+1075,
+1077,
+1078,
+1079,
+1080,
+1081,
+1082,
+1084,
+1085,
+1086,
+1087,
+1088,
+1089,
+1090,
+1091,
+1094,
+1095,
+1096,
+1098,
+1099,
+1100,
+1101,
+1102,
+1103,
+1104,
+1105,
+1106,
+1107,
+1108,
+1109,
+1110,
+1111,
+1112,
+1114,
+1115,
+1117,
+1118,
+1119,
+1120,
+1121,
+1122,
+1123,
+1124,
+1125,
+1126,
+9001,
+9003,
+# 9004,
+9006,
+9007,
+9008,
+9010,
+9013,
+# 9014,
+9015,
+9017,
+9018,
+9019,
+9020,
+9021,
+9022,
+9024,
+9026,
+9027,
+9028,
+9030,
+9031,
+9033,
+9034,
+9035,
+9037,
+9038,
+9039,
+9040,
+9042,
+9043,
+9044,
+9045,
+9046,
+9048,
+9049,
+9051,
+9052,
+9053,
+9055,
+9057,
+9059,
+9060,
+9061,
+9062,
+9063,
+9067,
+9068,
+9069,
+9070,
+9072,
+9075,
+9076,
+9077,
+9078,
+9079,
+9080,
+9081,
+9082,
+9083,
+9084,
+9085,
+9087,
+9088,
+9089,
+9091,
+9092,
+9093,
+9094,
+9096,
+9097,
+9098,
+9099,
+9100)
+
+channels <- c("Fp1", "Fz", "F3", "F7", "FT9", "FC5", "FC1", 
+              "C3", "TP9", "CP5", "CP1", 
+              "Pz", "P3", "P7", "CPz", "Oz", "POz", "P4", "P8", "TP10", 
+              "CP6", "CP2", "Cz", "C4", "AFz", 
+              "FT10", "FC6", "FC2", "F4", "F8", "Fp2", "FCz")
+time_windows <- c("150275", "50150", "275425", "150350", "200400", "250450", "4001000", "6001500")
+time_windows <- c("150275", "50150", "275425")
+
+for ( t in time_windows) {
+  eval(parse(text=paste0('df_',t,' <- as.data.frame(NA)')))
+  for (s in subjects) {
+   eval(parse(text=paste0(
+     'df_',s,'_',t,' <- as.data.frame(read.csv(here("./data/eeg_processing_fully_auto/Scripts/Results/subj_erp_Feedback/',s,'_component_',t,'.csv"), header=FALSE))
+     colnames(df_',s,'_',t,') <- c("Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All")
+     df_',s,'_',t,'$ID <- rep(',s,', 32)
+     df_',s,'_',t,'$Channel <- channels
+     df_',t,' <- bind_rows(df_',t,',df_',s,'_',t,')
+     print(paste0("Done with subject ", s))'
+     )))
+  }
+}
+
+# Load Even and Odd trials
+for (t in time_windows) {
+  eval(parse(text=paste0('df_even_',t,' <- as.data.frame(NA)')))
+  eval(parse(text=paste0('df_odd_',t,' <- as.data.frame(NA)')))
+  print(paste0("***********Loading data from time window ",t," now***********"))
+  for (s in subjects) {
+    tryCatch({
+   eval(parse(text=paste0('
+     print(paste0("Load subject ",s,"_even data now"))
+     df_even_',s,'_',t,' <- as.data.frame(read.delim(here("./data/eeg_processing_fully_auto/Scripts/Results/subj_erp_Feedback/split_half/even/',s,'_component_',t,'.txt"), header=TRUE))
+     df_even_',s,'_',t,'$ID <- rep(',s,', 1)
+     df_even_',t,' <- bind_rows(df_even_',t,',df_even_',s,'_',t,')'
+     )))
+   eval(parse(text=paste0('
+   print(paste0("Load subject ",s,"_odd data now"))
+     df_odd_',s,'_',t,' <- as.data.frame(read.delim(here("./data/eeg_processing_fully_auto/Scripts/Results/subj_erp_Feedback/split_half/odd/',s,'_component_',t,'.txt"), header=TRUE))
+     df_odd_',s,'_',t,'$ID <- rep(',s,', 1)
+     df_odd_',t,' <- bind_rows(df_odd_',t,',df_odd_',s,'_',t,')'
+     )))
+    }, error=function(e){cat("ERROR : For subject ",s, "; ", conditionMessage(e), "\n")})
+  }
+}
+
+# load(file=here("./data/ERP_data.RData"))
+save(df_275425, df_150350, df_250450, df_200400, df_4001000, df_6001500, df_150275, df_50150,
+     df_even_150350, df_even_250450, df_even_200400, df_even_4001000, df_even_6001500, df_even_275425, df_even_150275, df_even_50150,
+     df_odd_150350, df_odd_250450, df_odd_200400, df_odd_4001000, df_odd_6001500, df_odd_275425, df_odd_150275, df_odd_50150,
+     file=here("./data/ERP_data.RData"))
+```
+
+## Load ERP data
+```{r}
+load(here("./data/ERP_data.RData"))
+```
+
+## Load self-report data
+```{r}
+load(here("data/BUDS_cleaning05.RData"))
+BUDS_cleaning05$ID <- as.integer(as.character(BUDS_cleaning05$id_1_i))
+BUDS_cleaning05 <- BUDS_cleaning05 %>%
+  filter(!is.na(ID))
+```
+
+# Participant self-reported race
+```{r}
+# Import raw data files
+nw_demo1 <- read.csv(here("../_rawdata/demo/nw/SP Demographics Child+Parent+18 Merged_9001-9042.csv"), colClasses="character", header=TRUE)[-c(1:2),] %>%
+    dplyr::select(c(id_1_i, demo_child_gender, demo_child_sex, demo_child_race, demo_child_hispanic, demo_child_sex_or))
+nw_demo2 <- read.csv(here("../_rawdata/demo/nw/SP Demographics 11.4.21_May 18, 2023_9042-9110.csv"), colClasses="character", header=TRUE)[-c(1:2),] %>%
+    dplyr::select(c(id_1_i, demo_child_gender, demo_child_sex, demo_child_race, demo_child_hispanic, demo_child_sex_or))
+
+nw_demo <- nw_demo1 %>%
+  full_join(nw_demo2) %>% # merge two NW files together
+  filter(complete.cases(demo_child_race)) # only keep participants with race data
+
+cu_demo1 <- read.csv(here("../_rawdata/demo/cu/SP_Demographics (4.13.21)_November 1, 2021_12.34.csv"), colClasses="character", header=TRUE)[-c(1:2),] %>%
+  filter(complete.cases(demo_child_race)) %>% # only keep participants with race data
+  dplyr::select(c(id_1_i, demo_child_gender, demo_child_sex, demo_child_race, demo_child_hispanic, demo_child_sex_or))
+cu_demo2 <- read.csv(here("../_rawdata/demo/cu/SP_Demographics (9.22.21)_July 18, 2023_08.08.csv"), colClasses="character", header=TRUE)[-c(1:2),] %>%
+  filter(complete.cases(demo_child_race)) %>% # only keep participants with race data
+  dplyr::select(c(id_1_i, demo_child_gender, demo_child_sex, demo_child_race, demo_child_hispanic, demo_child_sex_or))
+
+cu_demo <- cu_demo1 %>%
+  full_join(cu_demo2) %>% # merge two NW files together
+  filter(complete.cases(demo_child_race)) # only keep participants with race data
+
+# Convert ID variables to integers (as.character assures that values are not changed)
+nw_demo <- nw_demo %>%
+  mutate(ID = as.integer(as.character(id_1_i))) %>%
+  dplyr::select(-id_1_i)
+cu_demo <- cu_demo %>%
+  mutate(ID = as.integer(as.character(id_1_i))) %>%
+  dplyr::select(-id_1_i)
+
+# Test whether there are any duplicate IDs
+nw_demo[duplicated(nw_demo$ID)==TRUE,"ID"]
+cu_demo[duplicated(cu_demo$ID)==TRUE,"ID"]
+
+cu_demo <- cu_demo %>%
+  distinct(ID, .keep_all=TRUE)
+
+BUDS_cleaning05_demo <- rbind(cu_demo, nw_demo) %>%
+  mutate(demo_child_gender = case_match(demo_child_gender,
+                                        "1" ~ "Male", "2" ~ "Female", 
+                                      "3" ~ "Trans male", "4" ~ "Trans female", 
+                                      "5" ~ "Genderqueer/Gender non-conforming", 
+                                      "6" ~ "Do not identify as any of these options", 
+                                      "99" ~ "Prefer not to answer",
+                                      .default=demo_child_gender),
+         demo_child_sex = case_match(demo_child_sex,
+                                     "1" ~ "male", "2" ~ "female",
+                                     .default=demo_child_sex),
+         demo_child_sex_or = case_match(demo_child_sex_or,
+                                        "1" ~ "Heterosexual", "2" ~ "Gay or Lesbian",
+                                        "3" ~ "Bisexual or pansexual", 
+                                        "4" ~ "Asexual", "5" ~ "Not sure", 
+                                        "99" ~ "Decline to state", "6" ~ "Other",
+                                        .default=demo_child_sex_or),
+         demo_child_race = case_match(demo_child_race,
+                                      "1" ~ "American Indian/Alaska Native", 
+                                      "2" ~ "Asian", 
+                                      "3" ~ "Native Hawaiin or Other Pacific Islander", 
+                                      "4" ~ "Black or African American", 
+                                      "5" ~ "White", 
+                                      "6" ~ "More than one race", 
+                                      "99" ~ "Unknown or not reported",
+                                      .default=demo_child_race),
+         demo_child_hispanic = case_match(demo_child_hispanic, "Yes" ~ "Yes", "No" ~ "No",
+                                          "0" ~ "No", "1" ~ "Yes")) %>%
+  mutate(White_nonwhite = case_match(demo_child_race, c("White") ~ "White",
+         c("More than one race", "Asian", "Black or African American", "American Indian/Alaska Native", "Native Hawaiian or Other Pacific Islander") ~ "Non_white")) %>%
+  dplyr::select(c(ID, demo_child_gender, demo_child_sex, demo_child_race, demo_child_hispanic, White_nonwhite))
+```
+
+# Import 6 month followup
+```{r, eval=FALSE}
+# Import data from Columbia University
+BUDS_cleaning01_columbia_6month <- read.csv(here("../_rawdata/Columbia/SP_Self-Report_6-Month (3.17.21)_August 14, 2023_12.21.csv"), header=TRUE)
+var.labels = BUDS_cleaning01_columbia_6month[2,]; label(BUDS_cleaning01_columbia_6month) <- as.list(var.labels[match(names(BUDS_cleaning01_columbia_6month), names(var.labels))])
+
+# Import data from Northwestern University
+BUDS_cleaning01_nw_6month <- read.csv(here("../_rawdata/Northwestern/SP_Self-Report_6-Month_11.4.21_3.7.23.csv"), header=TRUE)
+# Use the first row as the variable labels
+var.labels = BUDS_cleaning01_nw_6month[1,]; label(BUDS_cleaning01_nw_6month) <- as.list(var.labels[match(names(BUDS_cleaning01_nw_6month), names(var.labels))])
+BUDS_cleaning02_nw_6month <- BUDS_cleaning01_nw_6month[-(1),]; rm("BUDS_cleaning01_nw_6month")
+
+BUDS_cleaning01_6month <- bind_rows(BUDS_cleaning01_columbia_6month, BUDS_cleaning02_nw_6month)
+BUDS_cleaning01_6month$ID <- BUDS_cleaning01_6month$id_1_6
+BUDS_cleaning02_6month <- BUDS_cleaning01_6month %>%
+  filter(ID!="9075 - incorrect")
+```
+
+# Create IDAS score
+## Baseline
+```{r}
+BUDS_cleaning05_idas <- as.data.frame(BUDS_cleaning05)[-c(1:2),] %>%
+  select(ID,contains("idas")) %>%
+  mutate_all(as.character())
+idas <- colnames(BUDS_cleaning05_idas[,-1])
+BUDS_cleaning05_idas_num <- BUDS_cleaning05_idas %>%
+  mutate(across(all_of(c(idas)), ~ case_match(as.character(.), "1" ~ 1, "2" ~ 2, "3" ~ 3, "4" ~ 4, "5" ~ 5,
+                                                       "Not at all" ~ 1,
+                                                       "A little bit" ~ 2,
+                                                       "Moderately" ~ 3,
+                                                       "Quite a bit" ~ 4,
+                                                       "Extremely" ~ 5)))
+
+idas_dep <- c("idas_1_i","idas_2_i","idas_5_i","idas_6_i","idas_8_i","idas_9_i","idas_11_i","idas_13_i","idas_21_i","idas_26_i","idas_30_i","idas_31_i","idas_40_i","idas_48_i","idas_51_i","idas_52_i","idas_57_i","idas_61_i")
+idas_wb <- c("idas_3_i","idas_10_i","idas_23_i","idas_27_i","idas_50_i","idas_53_i","idas_59_i","idas_64_i")
+idas_panic <- c("idas_7_i","idas_16_i","idas_32_i","idas_39_i","idas_45_i","idas_49_i","idas_56_i","idas_58_i")
+idas_sa <- c("idas_15_i","idas_18_i","idas_20_i","idas_41_i","idas_47_i","idas_99_i")
+# idas_claus <- c("idas_74_i","idas_80_i","idas_84_i","idas_90_i","idas_94_i")
+
+BUDS_cleaning05_idas_num$idas_27r = 6 - BUDS_cleaning05_idas_num$idas_27_i
+BUDS_cleaning05_idas_num$idas_64r = 6 - BUDS_cleaning05_idas_num$idas_64_i
+BUDS_cleaning05_idas_num$IDAS_depression = rowMeans(BUDS_cleaning05_idas_num[,idas_dep], na.rm=F)
+BUDS_cleaning05_idas_num$IDAS_wellbeing = rowMeans(BUDS_cleaning05_idas_num[,idas_wb], na.rm=F)
+BUDS_cleaning05_idas_num$IDAS_panic = rowMeans(BUDS_cleaning05_idas_num[,idas_panic], na.rm=F)
+BUDS_cleaning05_idas_num$IDAS_sa = rowMeans(BUDS_cleaning05_idas_num[,idas_sa], na.rm=F)
+BUDS_cleaning05_idas_num$IDAS_anxiety = rowMeans(BUDS_cleaning05_idas_num[,c(idas_panic,idas_sa)], na.rm=F)
+# BUDS_cleaning05_idas_num$IDAS_claus = rowMeans(BUDS_cleaning05_idas_num[,idas_claus], na.rm=F)
+
+cor.test(BUDS_cleaning05_idas_num$IDAS_panic, BUDS_cleaning05_idas_num$IDAS_sa)
+hist(sqrt(BUDS_cleaning05_idas_num$IDAS_sa))
+
+library(ggpubr)
+shapiro.test(BUDS_cleaning05_idas_num$IDAS_depression)
+BUDS_cleaning05_idas_num$IDAS_depression_sqrt <- sqrt(BUDS_cleaning05_idas_num$IDAS_depression)
+BUDS_cleaning05_idas_num$IDAS_depression_log <- log(BUDS_cleaning05_idas_num$IDAS_depression)
+BUDS_cleaning05_idas_num$IDAS_depression_rec <- 1/(BUDS_cleaning05_idas_num$IDAS_depression)
+
+ggdensity(BUDS_cleaning05_idas_num, x = "IDAS_depression", fill = "lightgray", title = "IDAS_depression") +
+  scale_x_continuous(limits = c(-1, 6)) +
+  stat_overlay_normal_density(color = "red", linetype = "dashed")
+
+shapiro.test(BUDS_cleaning05_idas_num$IDAS_wellbeing)
+ggdensity(BUDS_cleaning05_idas_num, x = "IDAS_wellbeing", fill = "lightgray", title = "IDAS_wellbeing") +
+  scale_x_continuous(limits = c(-1, 6)) +
+  stat_overlay_normal_density(color = "red", linetype = "dashed")
+```
+
+## 6 month followup
+```{r, eval=FALSE}
+BUDS_cleaning05_idas_6month <- as.data.frame(BUDS_cleaning02_6month)[-c(1:2),] %>%
+  select(ID,contains("idas")) %>%
+  mutate_all(as.character())
+idas <- colnames(BUDS_cleaning05_idas_6month[,-1])
+BUDS_cleaning05_idas_num_6month <- BUDS_cleaning05_idas_6month %>%
+  mutate(across(all_of(c(idas)), ~ case_match(as.character(.), "1" ~ 1, "2" ~ 2, "3" ~ 3, "4" ~ 4, "5" ~ 5,
+                                                       "Not at all" ~ 1,
+                                                       "A little bit" ~ 2,
+                                                       "Moderately" ~ 3,
+                                                       "Quite a bit" ~ 4,
+                                                       "Extremely" ~ 5)))
+
+idas_dep <- c("idas_1_6","idas_2_6","idas_5_6","idas_6_6","idas_8_6","idas_9_6","idas_11_6","idas_13_6","idas_21_6","idas_26_6","idas_27r","idas_30_6","idas_31_6","idas_40_6","idas_48_6","idas_51_6","idas_52_6","idas_57_6","idas_61_6","idas_64r")
+idas_wb <- c("idas_3_6","idas_10_6","idas_23_6","idas_27_6","idas_50_6","idas_53_6","idas_59_6","idas_64_6")
+
+BUDS_cleaning05_idas_num_6month$idas_27r = 6 - BUDS_cleaning05_idas_num_6month$idas_27_6
+BUDS_cleaning05_idas_num_6month$idas_64r = 6 - BUDS_cleaning05_idas_num_6month$idas_64_6
+BUDS_cleaning05_idas_num_6month$IDAS_depression_6month = rowMeans(BUDS_cleaning05_idas_num_6month[,idas_dep])
+BUDS_cleaning05_idas_num_6month$IDAS_wellbeing_6month = rowMeans(BUDS_cleaning05_idas_num_6month[,idas_wb])
+BUDS_cleaning05_idas_num_6month$ID <- unlabel(as.integer(BUDS_cleaning05_idas_num_6month$ID))
+
+BUDS_cleaning05_idas_baseand6 <- left_join(BUDS_cleaning05_idas_num,
+                                           dplyr::select(BUDS_cleaning05_idas_num_6month, ID, IDAS_depression_6month, IDAS_wellbeing_6month), by="ID") %>%
+  filter(complete.cases(IDAS_depression_6month) & complete.cases(IDAS_depression)) %>%
+  mutate(IDAS_depression_6month_r = rstandard(lm(IDAS_depression_6month ~ IDAS_depression, .)))
+```
+
+# Merge self-report and ERP data
+```{r}
+merge_self_report_with_erp <- function(data, electrode, self_report_data, demo_data, idas_data) {
+  data %>%
+  filter(Channel %in% electrode) %>%
+  group_by(ID) %>%
+  reframe(Acc_All = mean(Acc_All),
+         Rej_All = mean(Rej_All),
+         Acc_Acc = mean(Acc_Acc),
+         Acc_Rej = mean(Acc_Rej),
+         Rej_Acc = mean(Rej_Acc),
+         Rej_Rej = mean(Rej_Rej)) %>%
+  full_join(self_report_data, by="ID") %>%
+  full_join(demo_data, by="ID") %>%
+  dplyr::select(-contains(idas)) %>%
+  left_join(idas_data, by="ID", relationship =
+  "many-to-many") %>%
+  filter(!is.na(Acc_All)) %>%
+  ungroup() %>%
+  mutate(A_all = stdres(lm(Acc_All ~ Rej_All, .)),
+         AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, .)),
+         RA_RR = stdres(lm(Rej_Acc ~ Rej_Rej, .)),
+         AA_RA = stdres(lm(Acc_Acc ~ Rej_Acc, .)),
+         R_all = stdres(lm(Rej_All ~ Acc_All, .)),
+         AR_AA = stdres(lm(Acc_Rej ~ Acc_Acc, .)),
+         RR_RA = stdres(lm(Rej_Rej ~ Rej_Acc, .)),
+         AA_AR_c = scale(AA_AR, center=T, scale=F),
+         AA_AR_z = scale(AA_AR, center=T, scale=T),
+         AR_AA_c = scale(AR_AA, center=T, scale=F),
+         AR_AA_z = scale(AR_AA, center=T, scale=T))
+}
+
+merge_self_report_with_erp_long <- function(data) {
+data %>%
+  mutate(Like_Acc=Acc_Acc,
+         Dislike_Acc=Rej_Acc,
+         Like_Rej=Acc_Rej,
+         Dislike_Rej=Rej_Rej,
+         
+         Like_Acc_c = scale(Acc_Acc, center=T, scale=F),
+         Dislike_Acc_c = scale(Rej_Acc, center=T, scale=F),
+         Like_Rej_c = scale(Acc_Rej, center=T, scale=F),
+         Dislike_Rej_c = scale(Rej_Rej, center=T, scale=F)) %>%
+  pivot_longer(cols=c("Like_Acc","Dislike_Acc","Like_Rej","Dislike_Rej"), names_to=c("Voting","Feedback"), names_sep="_", values_to="ERP")
+}
+
+df_275425_cz <- merge_self_report_with_erp(data=df_275425, electrode=c("Cz","CPz","Pz"), 
+                                           self_report_data=BUDS_cleaning05, demo_data=BUDS_cleaning05_demo, idas_data=BUDS_cleaning05_idas_num)
+df_275425_cz_long <- merge_self_report_with_erp_long(df_275425_cz)
+
+df_150275_cz <- merge_self_report_with_erp(data=df_150275, electrode=c("Cz"), 
+                                           self_report_data=BUDS_cleaning05, demo_data=BUDS_cleaning05_demo, idas_data=BUDS_cleaning05_idas_num)
+df_150275_cz_long <- merge_self_report_with_erp_long(df_150275_cz)
+
+df_50150_cz <- merge_self_report_with_erp(data=df_50150, electrode=c("Cz"), 
+                                           self_report_data=BUDS_cleaning05, demo_data=BUDS_cleaning05_demo, idas_data=BUDS_cleaning05_idas_num)
+df_50150_cz_long <- merge_self_report_with_erp_long(df_50150_cz)
+```
+
+## Split-half
+### Even
+```{r}
+df_even_50150_cz <- df_even_50150 %>%
+  dplyr::select(ID, contains("_Cz"))
+colnames(df_even_50150_cz) <- c("ID","Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All")
+df_even_50150_cz <- df_even_50150_cz[,1:7] %>%
+  full_join(BUDS_cleaning05, by="ID") %>%
+  filter(!is.na(Acc_All)) %>%
+  mutate(A_all = stdres(lm(Acc_All ~ Rej_All, .)),
+         AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, .)))
+
+df_even_150275_cz <- df_even_150275 %>%
+  dplyr::select(ID, contains("_Cz"))
+colnames(df_even_150275_cz) <- c("ID","Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All")
+df_even_150275_cz <- df_even_150275_cz[,1:7] %>%
+  full_join(BUDS_cleaning05, by="ID") %>%
+  filter(!is.na(Acc_All)) %>%
+  mutate(A_all = stdres(lm(Acc_All ~ Rej_All, .)),
+         AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, .)))
+
+df_even_275425_cz <- df_even_275425 %>%
+  dplyr::select(ID, contains("_Cz"))
+colnames(df_even_275425_cz) <- c("ID","Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All")
+df_even_275425_cz <- df_even_275425_cz[,1:7] %>%
+  full_join(BUDS_cleaning05, by="ID") %>%
+  filter(!is.na(Acc_All)) %>%
+  mutate(A_all = stdres(lm(Acc_All ~ Rej_All, .)),
+         AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, .)))
+```
+
+### Odd
+```{r}
+df_odd_50150_cz <- df_odd_50150 %>%
+  dplyr::select(ID, contains("_Cz"))
+colnames(df_odd_50150_cz) <- c("ID","Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All")
+df_odd_50150_cz <- df_odd_50150_cz[,1:7] %>%
+  full_join(BUDS_cleaning05, by="ID") %>%
+  filter(!is.na(Acc_All)) %>%
+  mutate(A_all = stdres(lm(Acc_All ~ Rej_All, .)),
+         AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, .)))
+
+df_odd_150275_cz <- df_odd_150275 %>%
+  dplyr::select(ID, contains("_Cz"))
+colnames(df_odd_150275_cz) <- c("ID","Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All")
+df_odd_150275_cz <- df_odd_150275_cz[,1:7] %>%
+  full_join(BUDS_cleaning05, by="ID") %>%
+  filter(!is.na(Acc_All)) %>%
+  mutate(A_all = stdres(lm(Acc_All ~ Rej_All, .)),
+         AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, .)))
+
+df_odd_275425_cz <- df_odd_275425 %>%
+  dplyr::select(ID, contains("_Cz"))
+colnames(df_odd_275425_cz) <- c("ID","Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All")
+df_odd_275425_cz <- df_odd_275425_cz[,1:7] %>%
+  full_join(BUDS_cleaning05, by="ID") %>%
+  filter(!is.na(Acc_All)) %>%
+  mutate(A_all = stdres(lm(Acc_All ~ Rej_All, .)),
+         AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, .)))
+```
+
+# Import Area Deprivation Index data
+```{r, include=F}
+# Import address info and sort by row number, to tie to subject number
+geocode_data <- read.csv(here("../_rawdata/GeocodeResults_edited.csv"), header=F, colClasses='character') %>%
+  mutate(V1=as.integer(as.character(V1))) %>%
+  arrange(V1)
+  # dplyr::slice(length(V1), 1:length(V1))
+# geocode_data[1,1] <- 1
+# Concatenate to make FIPS
+geocode_data$FIPS <- as.numeric(as.character((paste0(geocode_data$V9,geocode_data$V10,geocode_data$V11,substr(geocode_data$V12,1,1)))))
+
+# Import subject ID 
+subj_rownumber <- openxlsx::read.xlsx(here("../_rawdata/Columbia/PREDICT_Addresses_formula.xlsx"))[,1:2]
+geocode_data2 <- full_join(subj_rownumber,geocode_data, by="V1")
+adi_codes <- read.csv(here("./data/ADI/national/US_2020_ADI_Census Block Group_v3.2.csv"))
+
+geocode_data_with_adi <- left_join(geocode_data2, adi_codes, by="FIPS") %>%
+  dplyr::select(c(ID,ADI_NATRANK,ADI_STATERNK)) %>%
+  mutate(ADI_NATRANK = as.integer(as.character(ADI_NATRANK)),
+         ADI_NATRANK_log = log(ADI_NATRANK))
+
+df_275425_cz <- left_join(df_275425_cz, geocode_data_with_adi, by="ID") %>%
+  filter(complete.cases(AA_AR)) %>%
+  mutate(ADI_NATRANK_log_c = scale(center=TRUE, scale=FALSE, ADI_NATRANK_log),
+         ADI_NATRANK_log_z = scale(center=TRUE, scale=TRUE, ADI_NATRANK_log))
+df_150275_cz <- left_join(df_150275_cz, geocode_data_with_adi, by="ID") %>%
+  filter(complete.cases(AA_AR)) %>%
+  mutate(ADI_NATRANK_log_c = scale(center=TRUE, scale=FALSE, ADI_NATRANK_log),
+         ADI_NATRANK_log_z = scale(center=TRUE, scale=TRUE, ADI_NATRANK_log))
+df_50150_cz <- left_join(df_50150_cz, geocode_data_with_adi, by="ID") %>%
+  filter(complete.cases(AA_AR)) %>%
+  mutate(ADI_NATRANK_log_c = scale(center=TRUE, scale=FALSE, ADI_NATRANK_log),
+         ADI_NATRANK_log_z = scale(center=TRUE, scale=TRUE, ADI_NATRANK_log))
+
+corr.test(df_150275_cz$AA_AR, df_275425_cz$AA_AR)
+corr.test(df_150275_cz$Acc_Acc, df_275425_cz$Acc_Rej)
+
+df_275425_cz_long <- left_join(df_275425_cz_long, geocode_data_with_adi, by="ID") %>%
+        mutate(site = case_match(as.character(id_2_i), "CUMC" ~ "Columbia",
+                                   "2" ~ "Northwestern",
+                                   NA ~ NA)) %>%
+  group_by(Voting, Feedback) %>%
+  mutate(ADI_NATRANK_log_c = scale(center=TRUE, scale=FALSE, ADI_NATRANK_log),
+         ADI_NATRANK_log_z = scale(center=TRUE, scale=TRUE, ADI_NATRANK_log))
+df_150275_cz_long <- left_join(df_150275_cz_long, geocode_data_with_adi, by="ID") %>%
+        mutate(site = case_match(as.character(id_2_i), "CUMC" ~ "Columbia",
+                                   "2" ~ "Northwestern",
+                                   NA ~ NA)) %>%
+  group_by(Voting, Feedback) %>%
+  mutate(ADI_NATRANK_log_c = scale(center=TRUE, scale=FALSE, ADI_NATRANK_log),
+         ADI_NATRANK_log_z = scale(center=TRUE, scale=TRUE, ADI_NATRANK_log))
+df_50150_cz_long <- left_join(df_50150_cz_long, geocode_data_with_adi, by="ID") %>%
+        mutate(site = case_match(as.character(id_2_i), "CUMC" ~ "Columbia",
+                                   "2" ~ "Northwestern",
+                                   NA ~ NA)) %>%
+  group_by(Voting, Feedback) %>%
+  mutate(ADI_NATRANK_log_c = scale(center=TRUE, scale=FALSE, ADI_NATRANK_log),
+         ADI_NATRANK_log_z = scale(center=TRUE, scale=TRUE, ADI_NATRANK_log))
+```
+
+# STRAIN
+```{r}
+load(here("data/BUDS_cleaning02_with_strain.RData"))
+BUDS_cleaning02_with_strain$ID <- as.integer(as.character(BUDS_cleaning02_with_strain$id_1_i))
+
+df_275425_cz_strain <- df_275425_cz %>%
+  full_join(BUDS_cleaning02_with_strain, by="ID")
+
+df_150275_cz_strain <- df_150275_cz %>%
+  full_join(BUDS_cleaning02_with_strain, by="ID")
+
+df_50150_cz_strain <- df_50150_cz %>%
+  full_join(BUDS_cleaning02_with_strain, by="ID")
+
+df_275425_cz_long_strain <- df_275425_cz_long %>%
+  full_join(BUDS_cleaning02_with_strain, by="ID", relationship = "many-to-many")
+
+df_150275_cz_long_strain <- df_150275_cz_long %>%
+  full_join(BUDS_cleaning02_with_strain, by="ID", relationship = "many-to-many")
+
+df_50150_cz_long_strain <- df_50150_cz_long %>%
+  full_join(BUDS_cleaning02_with_strain, by="ID", relationship = "many-to-many")
+```
+
+# Split-half
+```{r}
+library(confintr)
+compute_split_half <- function(time_window) {
+  for (contrast in c("Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All","A_all","AA_AR")){
+    eval(parse(text=paste0('
+    r_half_',time_window,'',contrast,' <- cor(df_even_',time_window,'_cz$',contrast,', df_odd_',time_window,'_cz$',contrast,', method="spearman", use="pairwise")
+    r_half_',time_window,'ci_',contrast,' <- ci_cor(df_even_',time_window,'_cz$',contrast,', df_odd_',time_window,'_cz$',contrast,', method="spearman", type = "bootstrap", R=1000)
+    r_sb_',time_window,'_cilower_',contrast,' <<- (2*r_half_',time_window,'ci_',contrast,'$interval[1])/(1+r_half_',time_window,'ci_',contrast,'$interval[1])
+    r_sb_',time_window,'_ciupper_',contrast,' <<- (2*r_half_',time_window,'ci_',contrast,'$interval[2])/(1+r_half_',time_window,'ci_',contrast,'$interval[2])
+    r_sb_',time_window,'_',contrast,' <<- (2*r_half_',time_window,'',contrast,')/(1+r_half_',time_window,'',contrast,')
+    ')))
+}
+}
+
+compute_split_half("50150")
+compute_split_half("150275")
+compute_split_half("275425")
+
+spearman_brown <- data.frame(Time_windows=c("Cz 50-150ms","Cz 150-275ms","Cz 275-425ms"))
+spearman_brown$Acc_Acc <- c(r_sb_50150_Acc_Acc,r_sb_150275_Acc_Acc,r_sb_275425_Acc_Acc)
+spearman_brown$Acc_Rej <- c(r_sb_50150_Acc_Rej,r_sb_150275_Acc_Rej,r_sb_275425_Acc_Rej)
+spearman_brown$Rej_Acc <- c(r_sb_50150_Rej_Acc,r_sb_150275_Rej_Acc,r_sb_275425_Rej_Acc)
+spearman_brown$Rej_Rej <- c(r_sb_50150_Rej_Rej,r_sb_150275_Rej_Rej,r_sb_275425_Rej_Rej)
+spearman_brown[,2:5] <- round(spearman_brown[,2:5],2)
+```
+
+# Save files
+```{r}
+save(df_150275_cz, df_150275_cz_long,
+     df_50150_cz, df_50150_cz_long,
+     df_275425_cz, df_275425_cz_long,
+     df_150275_cz_strain, df_150275_cz_long_strain,
+     df_50150_cz_strain, df_50150_cz_long_strain,
+     df_275425_cz_strain, df_275425_cz_long_strain,
+     file=here("./data/BUDS_df_ERP.RData"))
+
+save(geocode_data_with_adi, file=here("./data/geocode_data_with_adi.RData"))
+
+save(df_even_50150_cz, df_even_150275_cz, df_even_275425_cz, file=here("./data/BUDS_split_half_even.RData"))
+save(df_odd_50150_cz, df_odd_150275_cz, df_odd_275425_cz, file=here("./data/BUDS_split_half_odd.RData"))
+
+# write.csv(spearman_brown, here("tables/spearman_brown.csv"))
+```

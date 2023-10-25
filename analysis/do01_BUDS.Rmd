@@ -1,0 +1,1899 @@
+---
+title: "Data analysis script 1: Area Deprivation (ADI), Discrimination (ADDI), and Daily mood (EMA)"
+author: "Brent Rappaport"
+date: "`r format(Sys.time(),  '%Y-%m-%d')`"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+subtitle: Template Rmd
+editor_options:
+  chunk_output_type: console
+toc: yes
+---
+
+# About
+This script filter and scores the self-report data from BUDS study: Bullying, Unsupportive family/peers, Discrimination, and Social feedback study using data from PREDICT project collaboration between Northwestern (PI: Shankman) and Columbia (PI: Auerbach).
+
+# Get Setup
+## Clear everything & set width
+```{r}
+knitr::opts_chunk$set(set.seed(312), echo=TRUE, results='hide', message=FALSE)
+
+    options(width=80, scipen = 999) #Set width
+    rm(list=ls())     #Remove everything from environment
+    cat("\014")       #Clear Console
+```
+
+## Load Libraries
+```{r, include=F}
+  library(knitr)      #allows rmarkdown files
+  library(haven)      #helps import stata
+  library(tidyverse)  #plotting/cleaning, etc.
+  library(broom)      #nice statistical output
+  library(here)       #nice file paths
+  library(psych)      #used for statistical analyses
+  library(ggplot2)    #creates plots
+  library(MASS)
+  library(papaja)     #generate APA documents
+  library(Hmisc)
+  library(misty)      #ordinal Cronbach's alpha
+  library(lavaan)     #SEM
+  library(blavaan)
+  library(brms)
+  library(papaja)
+  library(pscl)       # for zero inflated models
+  library(lme4)
+  library(lmerTest)
+  library(bbmle)
+  library(marginaleffects)
+  library(tableone)
+  library(bestNormalize) # for normalizing data
+  library(glmmTMB) # for zero-inflated MLMs
+  library(sjPlot) # plotting interactions
+  library(emmeans) # testing simple slopes
+  library(datawizard)
+  library(performance)
+  library(workflowr)  #helps with workflow
+
+select <- dplyr::select
+```
+
+## Get the Working Directory
+```{r, include=F}
+  here::i_am("./analysis/do01_BUDS.Rmd")
+```
+
+## Load data
+```{r, include=F}
+load(here("./data/BUDS_df_ERP.RData"))
+load(here("./data/BUDS_behavior.RData"))
+# load(here("./data/BUDS_hc_data.RData"))
+```
+
+
+# ERP task effects
+```{r}
+paste0("N = ",sum(complete.cases(df_150275_cz$Acc_Acc) & complete.cases(df_150275_cz$Acc_Rej)))
+t.test(df_50150_cz$Acc_Acc, df_50150_cz$Acc_Rej, paired=TRUE)
+t.test(df_150275_cz$Acc_Acc, df_150275_cz$Acc_Rej, paired=TRUE)
+t.test(df_275425_cz$Acc_Acc, df_275425_cz$Acc_Rej, paired=TRUE)
+
+plot_cap(
+    lmer(formula = ERP ~ Feedback*Voting + (1 | ID) + (1 | site), df_150275_cz_long),
+    condition = list(
+      "Voting",
+        "Feedback")) +
+  # scale_y_continuous(limits=c(-3,5)) +
+    theme_classic()
+
+plot_cap(
+    lmer(formula = ERP ~ Feedback*Voting + (1 | ID) + (1 | site), df_275425_cz_long),
+    condition = list(
+      "Voting",
+        "Feedback")) +
+  # scale_y_continuous(limits=c(-3,5)) +
+    theme_classic()
+```
+
+# ADI: Area Deprivation Index
+*A note on the ADI: "Why are some block groups missing ADI ranks?*
+When a Census Block Group falls into one or more of the suppression criteria mentioned above the ADI rank is replaced with a code describing the suppression reason. Three possible codes will appear in the ADI field: PH for suppression due to low population and/or housing, GQ for suppression due to a high group quarters population, and PH-GQ for suppression due to both types of suppression criteria. A code of KVM designates block groups without an ADI due to Key Missing Variables, stemming from missing data in the source ACS data." https://www.neighborhoodatlas.medicine.wisc.edu/#faq-anchor
+
+N = `r sum(is.na(df_50150_cz$Acc_Acc) | is.na(df_50150_cz$ADI_NATRANK))` are missing data due to one of these fields, and an additional are missing data due to bad addresses.
+```{r}
+paste0("N = ",sum(complete.cases(df_150275_cz$Acc_Acc) & complete.cases(df_150275_cz$ADI_NATRANK)))
+```
+
+## Race/Ethnicity
+```{r}
+# Who is missing demo_child_race?
+df_50150_cz[is.na(df_50150_cz$demo_child_race),c("ID","demo_child_race")]
+df_50150_cz_demo <- left_join(df_50150_cz, select(df_50150_cz_rating, c("ID","site")))
+
+paste0("N = ",sum(complete.cases(df_50150_cz$White_nonwhite) & complete.cases(df_50150_cz$ADI_NATRANK)))
+
+paste0("N = ",sum(complete.cases(df_50150_cz$demo_child_hispanic) & complete.cases(df_50150_cz$ADI_NATRANK)))
+
+# Interacts with site
+anova(lm(formula = ADI_NATRANK_log ~ White_nonwhite*site, data =df_50150_cz_ema))
+ggplot(filter(df_50150_cz_ema, complete.cases(White_nonwhite)), aes(x=White_nonwhite, y=ADI_NATRANK)) +
+  geom_bar(stat = "summary", fun = "median") +
+  facet_wrap(~ site) +
+  labs(x="Race", y="ADI")
+
+# Include site as a random intercept
+summary(lmer(formula = ADI_NATRANK_log ~ White_nonwhite + (1 | site), data =df_50150_cz_demo))
+ggplot(filter(df_150275_cz, complete.cases(White_nonwhite)), aes(x=White_nonwhite, y=ADI_NATRANK_log)) +
+  geom_bar(stat = "summary", fun = "median")
+
+anova(lm(formula = ADI_NATRANK_log ~ demo_child_hispanic, data =df_150275_cz))
+ggplot(filter(df_150275_cz, complete.cases(demo_child_hispanic)), aes(x=demo_child_hispanic, y=ADI_NATRANK_log)) +
+  geom_bar(stat = "summary", fun = "median")
+
+ggplot(filter(df_150275_cz, complete.cases(demo_child_race)), aes(x=demo_child_race, y=ADI_NATRANK)) +
+  geom_bar(stat = "summary", fun = "median")
+# anova(lm(formula = ADI_NATRANK_log ~ demo_child_race, data =df_150275_cz))
+
+anova(lm(formula = ADI_NATRANK ~ demo_child_race, data = filter(df_150275_cz, demo_child_race=="White" |
+              demo_child_race=="Asian" |
+              demo_child_race=="American Indian/Alaska Native" |
+              demo_child_race=="Black or African American" |
+              demo_child_race=="More than one race")))
+```
+Subjects in the racial majority have higher ADI and subjects in the racial minority have lower ADI, the opposite of one might typically think. Hispanic subjects show significantly higher ADI than non-Hispanic subjects.
+
+## ERP
+### N1
+```{r}
+ggplot(df_50150_cz, aes(x=AA_AR, y=ADI_NATRANK_log)) +
+  geom_point() +
+  stat_smooth(method="lm") +
+  geom_text(x=-2, y=.5, color="blue", size=5, label=paste0("beta=",
+       round(tidy(lm(formula = ADI_NATRANK_log_z ~ AA_AR, data = df_50150_cz))[2,c(2)],3),
+       ", p=", 
+       round(tidy(lm(formula = ADI_NATRANK_log_z ~ AA_AR, data = df_50150_cz))[2,c(5)],3))) +
+  labs(x="High value acceptance \n(relative to high value rejection)",
+       y="Area Deprivation") +
+  theme(text=element_text(size=15))
+```
+
+### RewP
+```{r}
+ggplot(df_150275_cz, aes(x=AA_AR, y=ADI_NATRANK_log)) +
+  geom_point() +
+  stat_smooth(method="lm") +
+  geom_text(x=-1, y=.5, color="blue", size=5, label=paste0("beta=",
+       round(tidy(lm(formula = ADI_NATRANK_log_z ~ AA_AR, data = df_150275_cz))[2,c(2)],3),
+       ", p=", 
+       round(tidy(lm(formula = ADI_NATRANK_log_z ~ AA_AR, data = df_150275_cz))[2,c(5)],3))) +
+    labs(x="High value acceptance \n(relative to high value rejection)",
+       y="Area Deprivation") +
+  theme(text=element_text(size=15))
+```
+
+### P3
+```{r}
+ggplot(df_275425_cz, aes(x=AA_AR, y=ADI_NATRANK_log)) +
+  geom_point() +
+  stat_smooth(method="lm") +
+  geom_text(x=-1, y=.5, color="blue", size=5, label=paste0("beta=",
+       round(tidy(lm(formula = ADI_NATRANK_log_z ~ AA_AR, data = df_275425_cz))[2,c(2)],3),
+       ", p=", 
+       round(tidy(lm(formula = ADI_NATRANK_log_z ~ AA_AR, data = df_275425_cz))[2,c(5)],3))) +
+    labs(x="High value acceptance \n(relative to high value rejection)",
+       y="Area Deprivation") +
+  theme(text=element_text(size=15))
+```
+
+# Interactions
+```{r}
+lmer_adi_interaction_table <- function(data) {
+  new_model <- data.frame(model = c("Both","Like","Dislike"),
+                            beta = NA, 
+                            p = NA)
+new_model$beta <- c(broom.mixed::tidy(lmer(formula = ERP ~ Feedback*Voting*ADI_NATRANK_log_z + (1 | ID), REML=TRUE, data = data))[8,4], broom.mixed::tidy(lmer(formula = ERP ~ Feedback*ADI_NATRANK_log_z + (1 | ID), REML=TRUE, data = filter(data, Voting=="Like")))[4,4],
+                        broom.mixed::tidy(lmer(formula = ERP ~ Feedback*ADI_NATRANK_log_z + (1 | ID), REML=TRUE, data = filter(data, Voting=="Dislike")))[4,4])
+
+new_model$p <- c(broom.mixed::tidy(lmer(formula = ERP ~ Feedback*Voting*ADI_NATRANK_log_z + (1 | ID), REML=TRUE, data = data))[8,8], broom.mixed::tidy(lmer(formula = ERP ~ Feedback*ADI_NATRANK_log_z + (1 | ID), REML=TRUE, data = filter(data, Voting=="Like")))[4,8],
+                        broom.mixed::tidy(lmer(formula = ERP ~ Feedback*ADI_NATRANK_log_z + (1 | ID), REML=TRUE, data = filter(data, Voting=="Dislike")))[4,8])
+new_model
+}
+```
+
+## N1
+```{r}
+models_50150_cz_table <- lmer_adi_interaction_table(df_50150_cz_long)
+models_50150_cz_table$component <- "50150_cz"
+
+model_50150_cz <- lmer(formula = ERP ~ Feedback*ADI_NATRANK_log + (1 | ID) + (1 | site), data = filter(df_50150_cz_long, Voting=="Like"))
+plot_cap(
+    model_50150_cz,
+    condition = list(
+      "ADI_NATRANK_log" = "threenum",
+        "Feedback")) +
+  # scale_y_continuous(limits=c(-3,5)) +
+  labs(title=paste0("ADI: beta=",
+       round(tidy(model_50150_cz)[4,c(4)],3),
+       ", p=", 
+       round(tidy(model_50150_cz)[4,c(8)],3))) +
+    theme_classic()
+```
+
+## RewP
+```{r}
+models_150275_cz_table <- lmer_adi_interaction_table(df_150275_cz_long)
+models_150275_cz_table$component <- "150275_cz"
+
+model_150275_cz <- lmer(formula = ERP ~ Feedback*ADI_NATRANK_log + (1 | ID), data = filter(df_150275_cz_long, Voting=="Like"))
+
+plot_cap(
+    model_150275_cz,
+    condition = list(
+      "ADI_NATRANK_log" = "threenum",
+        "Feedback")) +
+  # scale_y_continuous(limits=c(-3,5)) +
+  labs(title=paste0("ADI: beta=",
+       round(tidy(model_150275_cz)[4,c(4)],3),
+       ", p=", 
+       round(tidy(model_150275_cz)[4,c(8)],3))) +
+    theme_classic()
+```
+
+## P3
+```{r}
+models_275425_cz_table <- lmer_adi_interaction_table(df_275425_cz_long)
+models_275425_cz_table$component <- "275425_cz"
+
+model_275425_cz <- lmer(formula = ERP ~ Feedback*ADI_NATRANK_log + (1 | ID), data = filter(df_275425_cz_long, Voting=="Like"))
+plot_cap(
+    model_275425_cz,
+    condition = list(
+      "ADI_NATRANK_log" = "threenum",
+        "Feedback")) +
+  # scale_y_continuous(limits=c(-3,5)) +
+  labs(title=paste0("ADI: beta=",
+       round(tidy(model_275425_cz)[4,c(4)],3),
+       ", p=", 
+       round(tidy(model_275425_cz)[4,c(8)],3))) +
+    theme_classic()
+```
+
+## Covaring for age, sex, hispanic ethnicity, stress, IDAS
+### N1
+```{r}
+summary(lmer(formula = ERP ~ Feedback*ADI_NATRANK_log_z + Age + Sex + demo_child_hispanic + StressCT + StressTH + IDAS_depression + IDAS_anxiety + IDAS_wellbeing + (1 | ID) + (1 | site), data = filter(df_50150_cz_long_strain, Voting=="Like")))
+
+plot_cap(
+    lmer(formula = ERP ~ Feedback*ADI_NATRANK_log_z + Age + Sex + demo_child_hispanic + StressCT + StressTH + IDAS_depression + IDAS_anxiety + IDAS_wellbeing + (1 | ID) + (1 | site), data = filter(df_50150_cz_long_strain, Voting=="Like")),
+    condition = list(
+      "ADI_NATRANK_log_z" = "threenum",
+        "Feedback")) +
+  # scale_y_continuous(limits=c(-3,5)) +
+  labs(title="ADI") +
+    theme_classic()
+```
+### RewP
+```{r}
+summary(lmer(formula = ERP ~ Feedback*ADI_NATRANK_log_z + Age + Sex + demo_child_hispanic + StressCT + StressTH + IDAS_depression + IDAS_anxiety + IDAS_wellbeing + (1 | ID), data = filter(df_150275_cz_long_strain, Voting=="Like")))
+
+plot_cap(
+    lmer(formula = ERP ~ Feedback*ADI_NATRANK_log_z + Age + Sex + demo_child_hispanic + StressCT + StressTH + IDAS_depression + IDAS_anxiety + IDAS_wellbeing + (1 | ID) + (1 | site), data = filter(df_150275_cz_long_strain, Voting=="Like")),
+    condition = list(
+      "ADI_NATRANK_log_z" = "threenum",
+        "Feedback")) +
+  labs(title="ADI") +
+    theme_classic()
+
+summary(lm(formula = AA_AR ~ ADI_NATRANK_log_z + Age + Sex + demo_child_hispanic + StressCT + StressTH + IDAS_depression + IDAS_anxiety + IDAS_wellbeing, data = filter(df_150275_cz_long_strain, Voting=="Like" & Feedback=="Acc")))
+
+ggplot(df_150275_cz_strain, aes(x=ADI_NATRANK_log_z, y=AA_AR)) +
+  geom_point() +
+  stat_smooth(method=lm)
+```
+
+### P3
+```{r}
+summary(lmer(formula = ERP ~ Feedback*ADI_NATRANK_log_z + Age + Sex + demo_child_hispanic + StressCT + StressTH + IDAS_depression + IDAS_anxiety + IDAS_wellbeing + (1 | ID) + (1 | site), data = filter(df_275425_cz_long_strain, Voting=="Like")))
+
+plot_cap(
+    lmer(formula = ERP ~ Feedback*ADI_NATRANK_log_z + Age + Sex + demo_child_hispanic + StressCT + StressTH + IDAS_depression + IDAS_anxiety + IDAS_wellbeing + (1 | ID) + (1 | site), data = filter(df_275425_cz_long_strain, Voting=="Like")),
+    condition = list(
+      "ADI_NATRANK_log_z" = "threenum",
+        "Feedback")) +
+  labs(title="ADI") +
+    theme_classic()
+
+summary(lm(formula = AA_AR ~ ADI_NATRANK_log_z + Age + Sex + demo_child_hispanic + StressCT + StressTH + IDAS_depression + IDAS_anxiety + IDAS_wellbeing, data = filter(df_275425_cz_long_strain, Voting=="Like" & Feedback=="Acc")))
+
+ggplot(df_275425_cz_strain, aes(x=ADI_NATRANK_log_z, y=AA_AR)) +
+  geom_point() +
+  stat_smooth(method=lm)
+```
+
+## Covaring for belief in deception
+### N1
+```{r}
+df_50150_cz_long_rating <- full_join(df_50150_cz_long, df_50150_cz_rating, by="ID")
+
+summary(lmer(formula = ERP ~ Feedback*ADI_NATRANK_log_z + SP_debriefing_deceived + (1 | ID) + (1 | site.x), data = filter(df_50150_cz_long_rating, Voting=="Like")))
+
+plot_cap(
+    lmer(formula = ERP ~ Feedback*ADI_NATRANK_log_z + SP_debriefing_deceived + (1 | ID) + (1 | site.x), data = filter(df_50150_cz_long_rating, Voting=="Like")),
+    condition = list(
+      "ADI_NATRANK_log_z" = "threenum",
+        "Feedback")) +
+  # scale_y_continuous(limits=c(-3,5)) +
+  labs(title="ADI") +
+    theme_classic()
+```
+### RewP
+```{r}
+df_150275_cz_long_rating <- full_join(df_150275_cz_long, df_150275_cz_rating, by="ID")
+
+summary(lmer(formula = ERP ~ Feedback*ADI_NATRANK_log_z + SP_debriefing_deceived + (1 | ID), data = filter(df_150275_cz_long_rating, Voting=="Like")))
+
+plot_cap(
+    lmer(formula = ERP ~ Feedback*ADI_NATRANK_log_z + SP_debriefing_deceived + (1 | ID), data = filter(df_150275_cz_long_rating, Voting=="Like")),
+    condition = list(
+      "ADI_NATRANK_log_z" = "threenum",
+        "Feedback")) +
+  labs(title="ADI") +
+    theme_classic()
+```
+
+### P3
+```{r}
+df_275425_cz_long_rating <- full_join(df_275425_cz_long, df_275425_cz_rating, by="ID")
+
+summary(lmer(formula = ERP ~ Feedback*ADI_NATRANK_log_z + SP_debriefing_deceived + (1 | ID) + (1 | site.x), data = filter(df_275425_cz_long_rating, Voting=="Like")))
+
+plot_cap(
+    lmer(formula = ERP ~ Feedback*ADI_NATRANK_log_z + SP_debriefing_deceived + (1 | ID) + (1 | site.x), data = filter(df_275425_cz_long_rating, Voting=="Like")),
+    condition = list(
+      "ADI_NATRANK_log_z" = "threenum",
+        "Feedback")) +
+  labs(title="ADI") +
+    theme_classic()
+```
+
+
+# ADDI: Discrimination
+```{r}
+paste0("N = ",sum(complete.cases(df_150275_cz$AA_AR) & complete.cases(df_150275_cz$addi_total)))
+
+model_50150_cz_addi <- lmer(ERP ~ Feedback*addi_total + (1 | ID) + (1 | site),
+    data = filter(df_50150_cz_long, Voting=="Like"), REML=TRUE)
+summary(model_50150_cz_addi)
+plot_cap(
+    model_50150_cz_addi,
+    condition = list(
+      "addi_total" = "threenum",
+        "Feedback")) +
+  # scale_y_continuous(limits=c(-3,5)) +
+  labs(title=paste0("ADDI: beta=",
+       round(tidy(model_50150_cz_addi)[4,c(4)],3),
+       ", p=", 
+       round(tidy(model_50150_cz_addi)[4,c(8)],3))) +
+    theme_classic()
+
+model_150275_cz_addi <- lmer(ERP ~ Feedback*addi_total + (1 | ID),
+    data = filter(df_150275_cz_long, Voting=="Like"), REML=TRUE)
+summary(model_150275_cz_addi)
+  plot_cap(
+    model_150275_cz_addi,
+    condition = list(
+      "addi_total" = "threenum",
+        "Feedback")) +
+  # scale_y_continuous(limits=c(-3,5)) +
+  labs(title=paste0("ADDI: beta=",
+       round(tidy(model_150275_cz_addi)[4,c(4)],3),
+       ", p=", 
+       round(tidy(model_150275_cz_addi)[4,c(8)],3))) +
+    theme_classic()
+
+model_275425_cz_addi <- lmer(ERP ~ Feedback*addi_total + (1 | ID) + (1 | site),
+    data = filter(df_275425_cz_long, Voting=="Like"), REML=TRUE)
+summary(model_275425_cz_addi)
+plot_cap(
+    model_275425_cz_addi,
+    condition = list(
+      "addi_total" = "threenum",
+        "Feedback")) +
+  # scale_y_continuous(limits=c(-3,5)) +
+  labs(title=paste0("ADDI: beta=",
+       round(tidy(model_275425_cz_addi)[4,c(4)],3),
+       ", p=", 
+       round(tidy(model_275425_cz_addi)[4,c(8)],3))) +
+    theme_classic()
+
+table(df_275425_cz$addi_total==0,df_275425_cz$addi_total>0)
+cor.test(df_275425_cz$ADI_NATRANK_log, df_275425_cz$addi_total)
+ggplot(df_275425_cz, aes(x=ADI_NATRANK_log, y=addi_total)) +
+  geom_point() +
+  stat_smooth(method=lm)
+```
+
+# EMA
+```{r}
+df_ema_daily_raw <- read.csv(here("./data/PREDICT_daily_merged_all.csv"), header=TRUE)
+df_ema <- read.csv(here("./data/PREDICT_EMA_merged_all.csv"), header=TRUE)
+
+df_ema_summary <- df_ema %>%
+  mutate(ID = subject_id) %>%
+  group_by(ID) %>%
+  mutate(angry_mean = mean(angry, na.rm=T),
+         anxious_mean = mean(anxious, na.rm=T),
+         excited_mean = mean(excited, na.rm=T),
+         happy_mean = mean(happy, na.rm=T),
+         rejected_mean = mean(rejected, na.rm=T),
+         sad_mean = mean(sad, na.rm=T),
+         supported_mean = mean(supported, na.rm=T),
+         sharedEmotions_mean = mean(sharedEmotions, na.rm=T),
+         connect_mean = mean(connect, na.rm=T),
+         messages_mean = mean(messages, na.rm=T),
+         conversations_mean = mean(conversations, na.rm=T),
+         covidIsolated_mean = mean(covidIsolated, na.rm=T),
+         covidStressed_mean = mean(covidStressed, na.rm=T)) %>%
+  ungroup()
+
+daily <- df_ema_daily_raw %>%
+  # select(subject_id, daily, dt_local, tm_start, tm_end) %>%
+  filter(complete.cases(daily))
+
+# hist(df_ema_daily$daily)
+# ggplot(filter(df_ema_daily, subject_id<8999), aes(x=dt_local, y=daily, group=subject_id)) +
+#   geom_line(alpha=0.25)
+# 
+# ggplot(filter(df_ema_daily, subject_id>8999), aes(x=dt_local, y=daily, group=subject_id)) +
+#   geom_line(alpha=0.25)
+# 
+# ggplot(filter(df_ema_daily, subject_id==9091), aes(x=dt_local, y=daily, group=subject_id)) +
+#   geom_line(alpha=0.75)
+```
+
+### Daily: cleaning
+```{r}
+# check whether overlapping times
+dups.index1 = duplicated(daily[, c("subject_id", "tm_start")])
+dups.index2 = duplicated(daily[, c("subject_id", "tm_start")], fromLast = T)
+dups = daily[dups.index1, ] %>%
+  rbind(daily[dups.index2, ]) %>%
+  arrange(subject_id, tm_start) ## same rating, same id_file --> remove duplicated ratings
+
+daily = daily %>%
+  distinct(subject_id, tm_start, .keep_all = T)
+
+# remove extra times
+## I did this since I’m only looking at the first 90 days
+daily = daily %>%
+  filter(!is.na(daily)) %>%
+  arrange(subject_id, tm_start) %>%
+  group_by(subject_id) %>%
+  mutate(daysFrom = difftime(as.Date(tm_start), as.Date(tm_start[1]), units = "days")) %>%
+  mutate(daysFrom = as.numeric(daysFrom))
+  # filter(daysFrom <= 89) %>%
+  # ungroup()
+
+daily = daily %>%
+  arrange(subject_id, tm_start) %>%
+  mutate(date = as.Date(tm_start),
+         hour = as.numeric(format(tm_start, format = "%H")),
+         wday = format(tm_start, format = "%wday")) %>%
+  mutate(EMA.daily = factor(paste0(wday, hour)))
+
+# multiples within a day
+check = daily %>% count(subject_id, date) %>% arrange(-n)
+
+daily = daily %>%
+  distinct(subject_id, date, .keep_all = T)
+
+# check completion time: remove those who didn't complete within 20 minutes 
+describe(daily$tm_taken)
+daily = daily %>%
+  filter(tm_taken <= 20*60)
+
+# remove people with < 7 responses
+resp.rate = daily %>% 
+  distinct(subject_id, date) %>% 
+  dplyr::count(subject_id) %>%
+  arrange(n)
+
+daily = daily %>%
+  filter(subject_id %in% resp.rate$subject_id[resp.rate$n >= 7]) %>%
+  mutate(ID = subject_id)
+```
+
+### Intensives: Lilian's cleaning code
+```{r}
+ema <- df_ema
+# check whether overlapping times
+dups.index1 = duplicated(ema[, c("subject_id", "tm_start")])
+dups.index2 = duplicated(ema[, c("subject_id", "tm_start")], fromLast = T)
+dups = ema[dups.index1, ] %>%
+  rbind(ema[dups.index2, ]) %>%
+    arrange(subject_id, tm_start) ## same rating, same id_file --> remove duplicated ratings
+
+ema = ema %>%
+  distinct(subject_id, tm_start, .keep_all = T)
+
+# remove non-baseline times
+baseline = ema %>%
+  arrange(subject_id, tm_start) %>%
+  group_by(subject_id) %>%
+  mutate(daysFrom = as.numeric(difftime(as.Date(tm_start), as.Date(tm_start[1]), units = "days"))) %>%
+  ungroup() %>%
+  filter(daysFrom < 7)
+  
+# remove responses where all ratings were NA
+baseline = baseline %>%
+  filter(!(is.na(angry) & is.na(anxious) & is.na(excited) & is.na(happy) & is.na(rejected) & is.na(sad) & is.na(supported)
+           & is.na(sharedEmotions) & is.na(connect) & is.na(messages) & is.na(conversations)))
+
+#Carelessness: (a) an EMA completed in which the participant spent less than an average of 1 s per item; (b) any EMA in which the within-EMA standard deviation is less than 5 (when using a 0–100 scale); and (c) any EMA in which more than 60% of items are given the same modal score (Heller et al., 2021)
+# I’ve only removed responses where the same score was given to everything
+check = baseline %>%
+  mutate(secPerItem = as.numeric(difftime(tm_end, tm_start, units = "secs"))/rowSums(!is.na(baseline %>% select(angry:restful)))) %>%
+  mutate(emoSD = matrixStats::rowSds(as.matrix(.[,c("angry", "anxious", "excited", "happy", "rejected", "sad", "supported",
+                                                    "sharedEmotions","connect","messages", "conversations")])))
+remove = check %>% filter(emoSD == 0)
+
+baseline = baseline %>%
+  anti_join(remove %>% select(id_file:daysFrom)) %>%
+  arrange(subject_id, tm_start) %>%
+  mutate(date = as.Date(tm_start),
+         hour = as.numeric(format(tm_start, format = "%H")),
+         wday = format(tm_start, format = "%wday")) %>%
+  mutate(EMA.baseline = factor(paste0(wday, hour)))
+
+# multiples within a time block
+## skipped
+# baseline = baseline %>%
+#   mutate(block = ifelse(hour<11, "morning",
+#                         ifelse(hour<=16, "afternoon",
+#                                ifelse(hour<=18, "evening",
+#                                       ifelse(hour<=23, "night", NA)))))
+
+check = baseline %>% count(subject_id, date, block) %>% arrange(-n)
+
+# remove people with < 3 responses
+resp.rate = baseline %>% count(subject_id)
+remove = resp.rate %>% filter(n < 3)
+baseline = baseline %>% 
+  filter(!(subject_id %in% remove$subject_id)) %>%
+  mutate(pa = rowMeans(.[, c("happy", "excited", "supported")], na.rm = F),
+         na = rowMeans(.[, c("angry", "anxious", "sad", "rejected")], na.rm = F),
+         effort = rowMeans(.[, c("sharedEmotions", "connect")], na.rm = F),
+         future = rowMeans(.[, c("messages", "conversations")], na.rm = F),
+         ID = subject_id)
+
+missing_na <- baseline %>%
+  group_by(ID,daysFrom) %>%
+  reframe(missing_na = sum(is.na(na))) %>%
+  arrange(desc(missing_na))
+```
+
+```{r}
+## make time-varying (daily or within-day) variables
+df_ema_all <- df_ema_summary %>%
+  mutate(ID = subject_id) %>%
+  filter(cont_days<=7) %>%
+  group_by(ID, cont_days) %>% 
+  mutate(nSurveys_daily = sum(complete.cases(dt_local)),
+         nConsecPairs_daily = sum(complete.cases(dt_local) & complete.cases(lag(dt_local))),
+         time_of_day = case_match(slot, "Morning" ~ 1,
+                                        "Afternoon" ~ 2,
+                                        "Evening" ~ 3,
+                                        "Night" ~ 4)) %>%
+  mutate(
+         ## center within day (within people; .cwd = centered within day)
+         time_of_day.cwd = time_of_day - mean(time_of_day, na.rm = TRUE),
+         ## calculate amount of time between surveys (excluding overnight lags and missing surveys)
+         SecsSinceLastCompleted = as.numeric(difftime(tm_end, dplyr::lag(zoo::na.locf(tm_end, na.rm = FALSE)), units = "secs")),
+         MinsSinceLastCompleted = SecsSinceLastCompleted / 60) %>% 
+  ungroup() %>%
+## Create participant-level variables for EMA completion rates
+  group_by(ID) %>% 
+  mutate(nSurveysTotal = sum(!is.na(dt_local)),
+         ComplianceRate = nSurveysTotal / 28) %>% 
+  ungroup() %>%
+## Center EMA variables
+# Person-mean centering (more generally, "centering within cluster")
+# .pm = person mean
+# .cwp = centered within person
+  group_by(ID) %>%
+  mutate(
+    across(.cols = c('happy', 'angry', 'sad', 'anxious', 'rejected', 'supported', 'sharedEmotions', 'connect', 'messages', 'conversations'),
+           .fns = list('pm' = ~ mean(., na.rm = TRUE), # create person-level means
+                       'psd' = ~ sd(., na.rm = TRUE), # create person-level SDs (variability)
+                       'cwp' = ~ . - mean(., na.rm = TRUE)), # create person-centered variables
+           .names = '{.col}.{.fn}')
+  ) %>%
+  ungroup() %>%
+  ## THIS PART WAS NOT ORIGINALLY LEADING VALUES PROPERLY
+  ## for that reason, there is this odd workaround using transform instead of mutate and without
+## Make lagged and leaded variables for instability and inertia analyses
+  group_by(ID, cont_days) %>% # note: grouping by participant *and day* excludes overnight lags
+  transform(lead.happy = dplyr::lead(happy, n = 1L, default=NA),
+            lead.angry = dplyr::lead(angry, n = 1L, default=NA),
+            lead.sad = dplyr::lead(sad, n = 1L, default=NA),
+            lead.rejected = dplyr::lead(rejected, n = 1L, default=NA),
+            lead.anxious = dplyr::lead(anxious, n = 1L, default=NA),
+            lead.supported = dplyr::lead(supported, n = 1L, default=NA),
+            lead.sharedEmotions = dplyr::lead(sharedEmotions, n = 1L, default=NA),
+            lead.connect = dplyr::lead(connect, n = 1L, default=NA),
+            lead.messages = dplyr::lead(messages, n = 1L, default=NA),
+            lead.conversations = dplyr::lead(conversations, n = 1L, default=NA)) %>%
+  transform(lead.happy = ifelse(time_of_day==4, NA, lead.happy),
+            lead.angry = ifelse(time_of_day==4, NA, lead.angry),
+            lead.sad = ifelse(time_of_day==4, NA, lead.sad),
+            lead.rejected = ifelse(time_of_day==4, NA, lead.rejected),
+            lead.anxious = ifelse(time_of_day==4, NA, lead.anxious),
+            lead.supported = ifelse(time_of_day==4, NA, lead.supported),
+            lead.sharedEmotions = ifelse(time_of_day==4, NA, lead.sharedEmotions),
+            lead.connect = ifelse(time_of_day==4, NA, lead.connect),
+            lead.messages = ifelse(time_of_day==4, NA, lead.messages),
+            lead.conversations = ifelse(time_of_day==4, NA, lead.conversations)) %>%
+  
+  mutate(across(.cols = c('happy', 'angry', 'sad', 'anxious', 'rejected', 'supported', 'sharedEmotions', 'connect', 'messages', 'conversations', # uncentered EMA variables
+                     paste0(c('happy', 'angry', 'sad', 'anxious', 'rejected', 'supported', 'sharedEmotions', 'connect', 'messages', 'conversations'), '.cwp')), # person-centered EMA variables
+           .fns = list('lag' = ~ lag(., n = 1L)), # create lagged affect (at time t-1)
+           .names = '{.fn}.{.col}')) %>%
+    ungroup()
+
+# View(df_ema_all[,c("ID","cont_days","time_of_day","sad","lead.sad","lag.sad")])
+# View(dat_all[,c("sub","day","time_of_day","happy_EMA","lead.happy_EMA")])
+```
+
+## Data preparation for instability analyses (adjusting for variability in time between surveys)
+```{r, eval=F}
+## note: code adapted from Sarah Sperry
+## note: this implements the method from Jahng et al. (2008) [https://doi.org/10.1037/a0014173]
+
+## Create df wih no rows of NAs
+df_ema_all <- subset(df_ema_all, !is.na(tm_end)) %>%
+  filter(cont_days<8) # ADDED BY BRENT
+
+## Create lagged or adjusted time variables
+df_ema_all2 <- df_ema_all %>%
+  # group by subject and day so it excludes (a) lags spanning 2 subjects, and (b) overnight lags by setting the lagged variable to NA
+  group_by(ID, cont_days) %>%
+  mutate(
+    ## Create lagged time variables
+    lag.tm_start = lag(tm_start),
+    lag.tm_end = lag(tm_end)) %>%
+  mutate(
+    ## Time difference between surveys
+    Timedif_start = as.numeric(difftime(tm_start, lag.tm_start, units = "mins")),
+    Timedif_end = as.numeric(difftime(tm_end, lag.tm_end, units = "mins")),
+    ## Create variable representing time lag between each row (time t) and the next observation (time t+1)
+    lead.Timedif_start = lead(Timedif_start),
+    lead.Timedif_end = lead(Timedif_end)
+  ) %>%
+  ungroup() %>%
+## Exclude time lags > 1.5 SD above the sample mean
+  filter(Timedif_start <= mean(Timedif_start, na.rm = TRUE) + 1.5*sd(Timedif_start, na.rm = TRUE) | is.na(Timedif_start))
+
+## How many pairs of surveys are there within the same day?
+df_ema_all2 %>% with(sum(!is.na(tm_start) & !is.na(lag.tm_start)))
+  
+## Find the median time lag between surveys
+median.value_start <- median(df_ema_all2$Timedif_start, na.rm = TRUE) 
+## Divide each time lag by the median
+df_ema_all2$Timedif_start.adj <- df_ema_all2$Timedif_start / median.value_start
+
+## Calculate the WASD (which is needed to calculate lambda) by creating temporary ('temp_') variables that will get deleted later
+df_ema_all3 <- df_ema_all2 %>% 
+  group_by(ID, cont_days) %>% 
+  mutate(
+    # Calculate the successive difference
+    across(.cols = c('happy', 'angry', 'sad', 'anxious', 'rejected', 'supported', 'sharedEmotions', 'connect', 'messages', 'conversations'),
+           .fns = ~ lead(.) - ., 
+           .names = 'temp_{.col}.SD'),
+    # Divide successive difference by (time diff/median)
+    across(.cols = paste0('temp_', c('happy', 'angry', 'sad', 'anxious', 'rejected', 'supported', 'sharedEmotions', 'connect', 'messages', 'conversations'), '.SD'),
+           .fns = ~ . / Timedif_start.adj, 
+           .names = '{.col}W')
+    ) %>% 
+  ## change the ".SDW" suffix to ".WSD"
+  rename_with(.cols = ends_with('.SDW'),
+              .fn = ~ gsub('.SDW', '.WSD', .x)) %>% 
+  mutate(
+    # Take the absolute value
+    across(.cols = paste0('temp_', c('happy', 'angry', 'sad', 'anxious', 'rejected', 'supported', 'sharedEmotions', 'connect', 'messages', 'conversations'), '.WSD'),
+           .fns = ~ abs(.), 
+           .names = '{.col}A')
+    ) %>% 
+  ## change the ".WSDA" suffix to ".WASD"
+  rename_with(.cols = ends_with('.WSDA'),
+              .fn = ~ gsub('.WSDA', '.WASD', .x)) %>% 
+  ungroup()
+
+## Listwise deletion b/c some surveys are only missing some of the EMA items and smooth.spline doesn't handle NAs
+## # BRENT: I am also adding deletion of infinite values since those cannot be handled by "smooth.spline"
+newdata_happy <- filter(df_ema_all3, complete.cases(temp_happy.WASD) & complete.cases(Timedif_start.adj) & 
+                                     is.finite(temp_happy.WASD) & is.finite(Timedif_start.adj))
+newdata_angry <- filter(df_ema_all3, complete.cases(temp_angry.WASD) & complete.cases(Timedif_start.adj) & 
+                                     is.finite(temp_angry.WASD) & is.finite(Timedif_start.adj))
+newdata_sad <- filter(df_ema_all3, complete.cases(temp_sad.WASD) & complete.cases(Timedif_start.adj) & 
+                                     is.finite(temp_sad.WASD) & is.finite(Timedif_start.adj))
+newdata_anxious <- filter(df_ema_all3, complete.cases(temp_anxious.WASD) & complete.cases(Timedif_start.adj) & 
+                                     is.finite(temp_anxious.WASD) & is.finite(Timedif_start.adj))
+newdata_rejected <- filter(df_ema_all3, complete.cases(temp_rejected.WASD) & complete.cases(Timedif_start.adj) & 
+                                     is.finite(temp_rejected.WASD) & is.finite(Timedif_start.adj))
+newdata_supported <- filter(df_ema_all3, complete.cases(temp_supported.WASD) & complete.cases(Timedif_start.adj) & 
+                                     is.finite(temp_supported.WASD) & is.finite(Timedif_start.adj))
+newdata_sharedEmotions <- filter(df_ema_all3, complete.cases(temp_sharedEmotions.WASD) & complete.cases(Timedif_start.adj) & 
+                                     is.finite(temp_sharedEmotions.WASD) & is.finite(Timedif_start.adj))
+newdata_connect <- filter(df_ema_all3, complete.cases(temp_connect.WASD) & complete.cases(Timedif_start.adj) & 
+                                     is.finite(temp_connect.WASD) & is.finite(Timedif_start.adj))
+newdata_messages <- filter(df_ema_all3, complete.cases(temp_messages.WASD) & complete.cases(Timedif_start.adj) & 
+                                     is.finite(temp_messages.WASD) & is.finite(Timedif_start.adj))
+newdata_conversations <- filter(df_ema_all3, complete.cases(temp_conversations.WASD) & complete.cases(Timedif_start.adj) & 
+                                     is.finite(temp_conversations.WASD) & is.finite(Timedif_start.adj))
+
+## Calculate lambda for each EMA item separately
+spline.modelHappy <- smooth.spline(x = newdata_happy$Timedif_start.adj, y = newdata_happy$temp_happy.WASD)
+lambdaHappy <- spline.modelHappy$lambda
+spline.modelAngry <- smooth.spline(x = newdata_angry$Timedif_start.adj, y = newdata_angry$temp_angry.WASD)
+lambdaAngry <- spline.modelAngry$lambda
+spline.modelSad <- smooth.spline(x = newdata_sad$Timedif_start.adj, y = newdata_sad$temp_sad.WASD)
+lambdaSad <- spline.modelSad$lambda
+spline.modelAnxious <- smooth.spline(x = newdata_anxious$Timedif_start.adj, y = newdata_anxious$temp_anxious.WASD)
+lambdaAnxious <- spline.modelAnxious$lambda
+spline.modelRejected <- smooth.spline(x = newdata_rejected$Timedif_start.adj, y = newdata_rejected$temp_rejected.WASD)
+lambdaRejected <- spline.modelRejected$lambda
+spline.modelsupported <- smooth.spline(x = newdata_supported$Timedif_start.adj, y = newdata_supported$temp_supported.WASD)
+lambdasupported <- spline.modelsupported$lambda
+spline.modelsharedEmotions <- smooth.spline(x = newdata_sharedEmotions$Timedif_start.adj, y = newdata_sharedEmotions$temp_sharedEmotions.WASD)
+lambdasharedEmotions <- spline.modelsharedEmotions$lambda
+spline.modelconnect <- smooth.spline(x = newdata_connect$Timedif_start.adj, y = newdata_connect$temp_connect.WASD)
+lambdaconnect <- spline.modelconnect$lambda
+spline.modelmessages <- smooth.spline(x = newdata_messages$Timedif_start.adj, y = newdata_messages$temp_messages.WASD)
+lambdamessages <- spline.modelmessages$lambda
+spline.modelconversations <- smooth.spline(x = newdata_conversations$Timedif_start.adj, y = newdata_conversations$temp_conversations.WASD)
+lambdaconversations <- spline.modelconversations$lambda
+
+## Create ADJUSTED successive difference variables incorporating the lambda values
+df_ema_all4 <- df_ema_all3 %>% 
+  group_by(ID, cont_days) %>% 
+  mutate(
+    # Take the successive difference
+    happy.SD = lead.happy - happy,
+    angry.SD = lead.angry - angry,
+    sad.SD = lead.sad - sad,
+    anxious.SD = lead.anxious - anxious,
+    rejected.SD = lead.rejected - rejected,
+    supported.SD = lead.supported - supported,
+    sharedEmotions.SD = lead.sharedEmotions - sharedEmotions,
+    connect.SD = lead.connect - connect,
+    messages.SD = lead.messages - messages,
+    conversations.SD = lead.conversations - conversations,
+    # divide successive difference by (time diff/median)*lamda
+    happy.WSD = happy.SD / (Timedif_start.adj^lambdaHappy),
+    angry.WSD = angry.SD / (Timedif_start.adj^lambdaAngry),
+    sad.WSD = sad.SD / (Timedif_start.adj^lambdaSad),
+    anxious.WSD = anxious.SD / (Timedif_start.adj^lambdaAnxious),
+    rejected.WSD = rejected.SD / (Timedif_start.adj^lambdaAnxious),
+    supported.WSD = supported.SD / (Timedif_start.adj^lambdaAnxious),
+    sharedEmotions.WSD = sharedEmotions.SD / (Timedif_start.adj^lambdaAnxious),
+    connect.WSD = connect.SD / (Timedif_start.adj^lambdaAnxious),
+    messages.WSD = messages.SD / (Timedif_start.adj^lambdaAnxious),
+    conversations.WSD = conversations.SD / (Timedif_start.adj^lambdaAnxious),
+    # Take the absolute value
+    happy.WASD = abs(happy.WSD),
+    angry.WASD = abs(angry.WSD),
+    sad.WASD = abs(sad.WSD),
+    anxious.WASD = abs(anxious.WSD),
+    rejected.WASD = abs(rejected.WSD),
+    supported.WASD = abs(supported.WSD),
+    sharedEmotions.WASD = abs(sharedEmotions.WSD),
+    connect.WASD = abs(connect.WSD),
+    messages.WASD = abs(messages.WSD),
+    conversations.WASD = abs(conversations.WSD),
+    # Square the weighted absolute successive difference
+    happy.WSSD = happy.WASD^2,
+    angry.WSSD = angry.WASD^2,
+    sad.WSSD = sad.WASD^2,
+    anxious.WSSD = anxious.WASD^2,
+    rejected.WSSD = rejected.WASD^2,
+    supported.WSSD = supported.WASD^2,
+    sharedEmotions.WSSD = sharedEmotions.WASD^2,
+    connect.WSSD = connect.WASD^2,
+    messages.WSSD = messages.WASD^2,
+    conversations.WSSD = conversations.WASD^2
+  ) %>% 
+  ungroup() %>%
+## remove the 'temporary' variables that were used to calculate lambda
+  dplyr::select(-starts_with('temp_'))
+```
+
+## Descriptives
+```{r, eval=F}
+## Create a dataframe with 1 row per person
+dat_all_1rowPerPerson <- df_ema_all %>% 
+  filter(!duplicated(ID)) %>% # filter so there is 1 row per person
+  dplyr::select(-c(happy, angry, sad, # remove some of the variables that vary within-person (should remove them all to avoid confusion)
+            starts_with('lead.'), starts_with('lag.'), ends_with('.cwp'))) 
+
+## Analyzable N
+dat_all_1rowPerPerson %>% with(n_distinct(ID))
+
+## calculate the average number of EMA surveys per day for each person
+dat_all_1rowPerPerson2 <- dat_all_1rowPerPerson %>% 
+  # full_join(df_ema_all, by="ID") %>% # Brent commented this out, I don't think it's needed
+              dplyr::distinct(ID, cont_days, .keep_all = TRUE) %>% # filter so there's one row per person-day
+              group_by(ID,site,nSurveysTotal,ComplianceRate) %>%
+              reframe(nSurveys_daily.pm = mean(nSurveys_daily, na.rm = TRUE),
+                        nConsecPairs.psum = sum(nConsecPairs_daily, na.rm = TRUE),
+                        nConsecPairs_daily.pm = mean(nConsecPairs_daily, na.rm = TRUE))
+
+## table of participant characteristics (demographics, etc.)
+tableone::CreateTableOne(vars = c('nSurveysTotal', 'ComplianceRate', 'nSurveys_daily.pm',
+                                  'nConsecPairs.psum', 'nConsecPairs_daily.pm'),
+                         data = dat_all_1rowPerPerson2,
+                         strata = 'site',
+                         addOverall = TRUE)
+```
+
+## Merge with existing data
+```{r, eval=F}
+df_50150_cz_long_ema <- full_join(df_50150_cz_long_strain, df_ema_all4, by="ID", relationship =
+  "many-to-many")
+df_50150_cz_wide_ema <- full_join(df_50150_cz_strain, df_ema_all4, by="ID", relationship =
+  "many-to-many")
+df_150275_cz_long_ema <- full_join(df_150275_cz_long_strain, df_ema_all4, by="ID", relationship =
+  "many-to-many")
+df_150275_cz_wide_ema <- full_join(df_150275_cz_strain, df_ema_all4, by="ID", relationship =
+  "many-to-many")
+df_275425_cz_long_ema <- full_join(df_275425_cz_long_strain, df_ema_all4, by="ID", relationship =
+  "many-to-many")
+df_275425_cz_wide_ema <- full_join(df_275425_cz_strain, df_ema_all4, by="ID", relationship =
+  "many-to-many")
+```
+
+## Inertia analysis
+```{r, eval=F}
+## note: beep = survey number (in this case, 1-28 because there are 4 EMA survey prompts/day for 7 days)
+## note: this example includes the LPP to happy faces (LPPem_Happy_CT) as a level 2 moderator of the random autoregressive slope of happiness
+## note: it is common to control for the linear effect of time (e.g., beep) because some EMA studies have reported linear time trends (e.g., https://pubmed.ncbi.nlm.nih.gov/25844974)
+
+summary(glmer(lead.angry ~ cont_days + AA_AR*ADI_NATRANK_log_z*angry.cwp + (1+angry.cwp|ID),
+             data = df_150275_cz_wide_ema, family=poisson),correlation = FALSE)
+summary(glmer(lead.sad ~ cont_days + AA_AR*ADI_NATRANK_log_z*sad.cwp + (1+sad.cwp|ID),
+             data = df_150275_cz_wide_ema, family=poisson),correlation = FALSE)
+summary(glmer(lead.rejected ~ cont_days + AA_AR*ADI_NATRANK_log_z*rejected.cwp + (1+rejected.cwp|ID),
+             data = df_150275_cz_wide_ema, family=poisson),correlation = FALSE)
+summary(glmer(lead.anxious ~ cont_days + AA_AR*ADI_NATRANK_log_z*anxious.cwp + (1+anxious.cwp|ID),
+             data = df_150275_cz_wide_ema, family=poisson),correlation = FALSE)
+summary(glmer(lead.supported ~ cont_days + AA_AR*ADI_NATRANK_log_z*supported.cwp + (1+supported.cwp|ID),
+             data = df_150275_cz_wide_ema, family=poisson),correlation = FALSE)
+summary(glmer(lead.sharedEmotions ~ cont_days + AA_AR*ADI_NATRANK_log_z*sharedEmotions.cwp + (1+sharedEmotions.cwp|ID),
+             data = df_150275_cz_wide_ema, family=poisson),correlation = FALSE)
+summary(glmer(lead.connect ~ cont_days + AA_AR*ADI_NATRANK_log_z*connect.cwp + (1+connect.cwp|ID),
+             data = df_150275_cz_wide_ema, family=poisson),correlation = FALSE)
+summary(glmer(lead.messages ~ cont_days + AA_AR*ADI_NATRANK_log_z*messages.cwp + (1+messages.cwp|ID),
+             data = df_150275_cz_wide_ema, family=poisson),correlation = FALSE)
+summary(glmer(lead.conversations ~ cont_days + AA_AR*ADI_NATRANK_log_z*conversations.cwp + (1+conversations.cwp|ID),
+             data = df_150275_cz_wide_ema, family=poisson),correlation = FALSE)
+
+summary(glmer(lead.angry ~ cont_days + AA_AR*ADI_NATRANK_log_z*angry.cwp + (1+angry.cwp|ID) ,
+             data = df_275425_cz_wide_ema, family=poisson),correlation = FALSE)
+summary(glmer(lead.sad ~ cont_days + AA_AR*ADI_NATRANK_log_z*sad.cwp + (1+sad.cwp|ID) ,
+             data = df_275425_cz_wide_ema, family=poisson),correlation = FALSE)
+summary(glmer(lead.rejected ~ cont_days + AA_AR*ADI_NATRANK_log_z*rejected.cwp + (1+rejected.cwp|ID) ,
+             data = df_275425_cz_wide_ema, family=poisson),correlation = FALSE)
+summary(glmer(lead.anxious ~ cont_days + AA_AR*ADI_NATRANK_log_z*anxious.cwp + (1+anxious.cwp|ID) ,
+             data = df_275425_cz_wide_ema, family=poisson),correlation = FALSE)
+summary(glmer(lead.supported ~ cont_days + AA_AR*ADI_NATRANK_log_z*supported.cwp + (1+supported.cwp|ID),
+             data = df_275425_cz_wide_ema, family=poisson),correlation = FALSE)
+summary(glmer(lead.sharedEmotions ~ cont_days + AA_AR*ADI_NATRANK_log_z*sharedEmotions.cwp + (1+sharedEmotions.cwp|ID),
+             data = df_275425_cz_wide_ema, family=poisson),correlation = FALSE)
+summary(glmer(lead.connect ~ cont_days + AA_AR*ADI_NATRANK_log_z*connect.cwp + (1+connect.cwp|ID),
+             data = df_275425_cz_wide_ema, family=poisson),correlation = FALSE)
+summary(glmer(lead.messages ~ cont_days + AA_AR*ADI_NATRANK_log_z*messages.cwp + (1+messages.cwp|ID),
+             data = df_275425_cz_wide_ema, family=poisson),correlation = FALSE)
+summary(glmer(lead.conversations ~ cont_days + AA_AR*ADI_NATRANK_log_z*conversations.cwp + (1+conversations.cwp|ID),
+             data = df_275425_cz_wide_ema, family=poisson),correlation = FALSE)
+
+# plot_model(inertia_LPP_happy, type = 'pred', terms = c('happy_EMA.cwp', 'LPPem_Happy_CT')) # quick and dirty plot of the cross-level moderation
+# 
+# dat_all$ID <- dat_all$sub
+# df_275425_cz_long_strain$ID <- as.factor(df_275425_cz_long_strain$ID)
+# df_275425_cz_long_ema <- full_join(df_275425_cz_long_strain, dat_all, by="ID", relationship =
+#   "many-to-many")
+# df_275425_cz_long_ema$beep <- df_275425_cz_long_ema$day*df_275425_cz_long_ema$time_of_day
+# 
+# summary(lmer(lead.happy_EMA ~ beep + ERP*happy_EMA.cwp + (1+happy_EMA.cwp|ID) + (1|site.x), 
+#              data = filter(df_275425_cz_long_ema, Voting=="Like" & Feedback=="Acc"), REML = TRUE))
+```
+#### Calculate inertia estimates for each person using BLUPs
+CAVEAT: This is the type of analysis that Carter has done in the past but is concerned that reviewers will insist on using mixed effects models as done above.
+```{r, eval=FALSE}
+## Note: this generates values called "best linear unbiased predictions" (BLUPs)
+## BLUPs can be useful for plotting (see Figure 2 of https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7914176/ for an example), but you may need to partial out covariates first
+
+df_275425_cz_long_ema <- df_275425_cz_long_ema %>%
+  mutate(trial = time_of_day*cont_days)
+
+blup_inertia_happy <- lmer(lead.happy ~ trial + happy.cwp + (1+happy.cwp|ID), 
+                           data = df_275425_cz_long_ema, REML = TRUE)
+blup_inertia_angry <- lmer(lead.angry ~ trial + angry.cwp + (1+angry.cwp|ID), 
+                           data = df_275425_cz_long_ema, REML = TRUE)
+blup_inertia_sad <- lmer(lead.sad ~ trial + sad.cwp + (1+sad.cwp|ID), 
+                         data = df_275425_cz_long_ema, REML = TRUE)
+
+## Merge these BLUPs into the participant-level data frame
+dat_all_1rowPerPerson <- dat_all_1rowPerPerson %>% 
+  full_join(data.frame(sub = row.names(coef(modAutocorBlup_happy)$sub),
+                       inertiaBLUP_happy = coef(modAutocorBlup_happy)$sub$happy.cwp),
+            by = "sub") %>% 
+  full_join(data.frame(sub = row.names(coef(modAutocorBlup_angry)$sub),
+                       inertiaBLUP_angry = coef(modAutocorBlup_angry)$sub$angry.cwp),
+            by = "sub") %>% 
+  full_join(data.frame(sub = row.names(coef(modAutocorBlup_sad)$sub),
+                       inertiaBLUP_sad = coef(modAutocorBlup_sad)$sub$sad.cwp),
+            by = "sub")
+```
+
+## Instability analysis
+```{r, eval=F}
+# N1
+for (m in c('happy', 'angry', 'sad', 'anxious', 'rejected', 'supported', 'sharedEmotions', 'connect', 'messages', 'conversations')) {
+  print(m)
+  print(eval(parse(text=paste0('
+  round(summary(glmmTMB(
+    ',m,'.WSSD ~ ADI_NATRANK_log_z*AA_AR + (1|ID), 
+    zi = ~ ADI_NATRANK_log_z*AA_AR + (1|ID), 
+    data = filter(df_50150_cz_wide_ema, , is.finite(',m,'.WSSD)),
+    family = poisson, REML=TRUE))$coef$cond[4,4],2)
+    '))))
+}
+
+# RewP
+for (m in c('happy', 'angry', 'sad', 'anxious', 'rejected', 'supported', 'sharedEmotions', 'connect', 'messages', 'conversations')) {
+  print(m)
+  print(eval(parse(text=paste0('
+  round(summary(glmmTMB(
+    ',m,'.WSSD ~ ADI_NATRANK_log_z*AA_AR + (1|ID), 
+    zi = ~ ADI_NATRANK_log_z*AA_AR + (1|ID), 
+    data = filter(df_150275_cz_wide_ema, , is.finite(',m,'.WSSD)),
+    family = poisson, REML=TRUE))$coef$cond[4,4],2)
+    '))))
+}
+
+# P3
+for (m in c('happy', 'angry', 'sad', 'anxious', 'rejected', 'supported', 'sharedEmotions', 'connect', 'messages', 'conversations')) {
+  print(m)
+  print(eval(parse(text=paste0('
+  round(summary(glmmTMB(
+    ',m,'.WSSD ~ ADI_NATRANK_log_z*AA_AR + (1|ID), 
+    zi = ~ ADI_NATRANK_log_z*AA_AR + (1|ID), 
+    data = filter(df_275425_cz_wide_ema, , is.finite(',m,'.WSSD)),
+    family = poisson, REML=TRUE))$coef$cond[4,4],2)
+    '))))
+}
+```
+
+#### Plots
+```{r, eval=F}
+mean_ADI <- mean(df_150275_cz_wide_ema$ADI_NATRANK, na.rm=TRUE)
+sd_ADI <- sd(df_150275_cz_wide_ema$ADI_NATRANK, na.rm=TRUE)
+mean_rewp <- mean(df_150275_cz_wide_ema$AA_AR, na.rm=TRUE)
+sd_rewp <- sd(df_150275_cz_wide_ema$AA_AR, na.rm=TRUE)
+
+df_150275_cz_ema_group <- df_150275_cz_wide_ema %>%
+  group_by(ID,site,ADI_NATRANK, cont_days, sharedEmotions.WSSD, connect.WSSD, conversations.WSSD) %>%
+  reframe(
+    # ADI_NATRANK_group = as.factor(cut(ADI_NATRANK, breaks=c(-Inf, mean_ADI-.5*sd_ADI, mean_ADI+.5*sd_ADI, Inf),
+  #                             labels=c("low","middle","high"))),
+          AA_AR_group = as.factor(cut(AA_AR, breaks=c(-Inf, mean_rewp-.5*sd_rewp, mean_rewp+.5*sd_rewp, Inf),
+                              labels=c("low","middle","high"))),
+          ) %>%
+  group_by(ID,cont_days,AA_AR_group,ADI_NATRANK) %>%
+  filter(complete.cases(AA_AR_group)) %>%
+  reframe(sharedEmotions.WSSD = mean(sharedEmotions.WSSD, na.rm=T),
+          connect.WSSD = mean(connect.WSSD, na.rm=T),
+          conversations.WSSD = mean(conversations.WSSD, na.rm=T)) %>%
+  ungroup()
+
+ggplot(df_150275_cz_ema_group, aes(x=ADI_NATRANK, y=sharedEmotions.WSSD, color=AA_AR_group)) +
+  geom_point(alpha=0.25) + 
+  stat_smooth(aes(group=AA_AR_group),method="lm",size=1,se=T,linetype="longdash")
+
+summary(glmmTMB(
+    sharedEmotions.WSSD ~ ADI_NATRANK_log_z*AA_AR + (1|ID),
+     data = filter(df_150275_cz_wide_ema, is.finite(sharedEmotions.WSSD)),
+    zi = ~ ADI_NATRANK_log_z*AA_AR + (1|ID),
+    family = poisson, REML=TRUE))
+
+plot_cap(
+    model_sharedEmotions_instability_rewp,
+    condition = list(
+      "ADI_NATRANK_log_z" = "threenum",
+        "AA_AR" = "threenum")) +
+  labs(title="ADI") +
+    theme_classic()
+
+
+summary(glmmTMB(
+    sharedEmotions.WSSD ~ ADI_NATRANK_log_z*AA_AR + (1|ID),
+     data = filter(df_275425_cz_wide_ema, is.finite(sharedEmotions.WSSD)),
+    zi = ~ ADI_NATRANK_log_z*AA_AR + (1|ID),
+    family = poisson, REML=TRUE))
+summary(glmmTMB(
+    conversations.WSSD ~ ADI_NATRANK_log_z*AA_AR + (1|ID),
+     data = filter(df_275425_cz_wide_ema, is.finite(sharedEmotions.WSSD)),
+    zi = ~ ADI_NATRANK_log_z*AA_AR + (1|ID),
+    family = poisson, REML=TRUE))
+plot_cap(
+    model_conversations_instability_p3,
+    condition = list(
+      "ADI_NATRANK_log_z" = "threenum",
+        "AA_AR" = "threenum")) +
+  labs(title="ADI") +
+    theme_classic()
+```
+
+
+
+
+## Prediction of mean levels
+### Merge data
+#### Intensives
+```{r}
+df_50150_cz_long_ema <- full_join(df_50150_cz_long_strain, baseline, by="ID", relationship="many-to-many")
+df_150275_cz_long_ema <- full_join(df_150275_cz_long_strain, baseline, by="ID", relationship="many-to-many")
+df_275425_cz_long_ema <- full_join(df_275425_cz_long_strain, baseline, by="ID", relationship="many-to-many")
+
+df_50150_cz_ema <- right_join(df_50150_cz_strain, baseline, by="ID", relationship="many-to-many") %>%
+  filter(complete.cases(Acc_Acc)) %>%
+  mutate(AA_AR = rstandard(lm(Acc_Acc ~ Acc_Rej, .)))
+df_150275_cz_ema <- full_join(df_150275_cz_strain, baseline, by="ID", relationship="many-to-many")%>%
+  filter(complete.cases(Acc_Acc)) %>%
+  mutate(AA_AR = rstandard(lm(Acc_Acc ~ Acc_Rej, .)),
+         AR_AA = rstandard(lm(Acc_Rej ~ Acc_Acc, .)))
+df_275425_cz_ema <- full_join(df_275425_cz_strain, baseline, by="ID", relationship="many-to-many")%>%
+  filter(complete.cases(Acc_Acc)) %>%
+  mutate(AA_AR = rstandard(lm(Acc_Acc ~ Acc_Rej, .)),
+         AR_AA = rstandard(lm(Acc_Rej ~ Acc_Acc, .)))
+```
+
+#### Daily
+```{r}
+df_50150_cz_long_daily <- full_join(df_50150_cz_long_strain, daily, by="ID", relationship="many-to-many")
+df_150275_cz_long_daily <- full_join(df_150275_cz_long_strain, daily, by="ID", relationship="many-to-many")
+df_275425_cz_long_daily <- full_join(df_275425_cz_long_strain, daily, by="ID", relationship="many-to-many")
+
+df_50150_cz_daily <- right_join(df_50150_cz_strain, daily, by="ID", relationship="many-to-many") %>%
+  filter(complete.cases(Acc_Acc)) %>%
+  mutate(AA_AR = rstandard(lm(Acc_Acc ~ Acc_Rej, .)),
+         site = case_match(as.character(id_2_i.x), "CUMC" ~ "Columbia",
+                                   "2" ~ "Northwestern",
+                                   NA ~ NA))
+df_150275_cz_daily <- full_join(df_150275_cz_strain, daily, by="ID", relationship="many-to-many")%>%
+  filter(complete.cases(Acc_Acc)) %>%
+  mutate(AA_AR = rstandard(lm(Acc_Acc ~ Acc_Rej, .)),
+         site = case_match(as.character(id_2_i.x), "CUMC" ~ "Columbia",
+                                   "2" ~ "Northwestern",
+                                   NA ~ NA))
+df_275425_cz_daily <- full_join(df_275425_cz_strain, daily, by="ID", relationship="many-to-many")%>%
+  filter(complete.cases(Acc_Acc)) %>%
+  mutate(AR_AA = rstandard(lm(Acc_Rej ~ Acc_Acc, .)),
+         site = case_match(as.character(id_2_i.x), "CUMC" ~ "Columbia",
+                                   "2" ~ "Northwestern",
+                                   NA ~ NA))
+```
+
+### Regressions
+#### Intensives
+##### NA
+Can also check reverting how NA is calculated (i.e., listwise deletion is any of the four items is missing, pairwise is to calculate NA with whatever items are available). Right now, it uses listwise deletion.
+```{r}
+df_150275_cz_ema$na_cubert <- (df_150275_cz_ema$na)^(1/3) # take the cubed root to normalize the data into one that is normal with inflated zeros
+```
+
+##### ADI predicting NA
+```{r}
+check_model(glmmTMB(na_cubert ~ ADI_NATRANK_log + (1 | ID) + (1 | site),
+                    zi = ~ ADI_NATRANK_log + (1 | ID) + (1 | site),
+    data = df_150275_cz_ema,
+    family=gaussian, REML=TRUE))
+
+summary(glmmTMB(na_cubert ~ ADI_NATRANK_log + (1 | ID) + (1 | site),
+                    zi = ~ ADI_NATRANK_log + (1 | ID) + (1 | site),
+    data = df_150275_cz_ema,
+    family=gaussian, REML=TRUE))
+```
+
+ADI x ERP predicting NA
+```{r}
+check_model(glmmTMB(na_cubert ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+                    zi = ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+    data = df_150275_cz_ema,
+    family=gaussian, REML=TRUE, na.action=na.exclude))
+
+model_150275_ema_na <- glmmTMB(na_cubert ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+                    zi = ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+    data = df_150275_cz_ema,
+    family=gaussian, REML=TRUE, na.action=na.exclude)
+summary(model_150275_ema_na)
+
+df_275425_cz_ema$na_cubert <- (df_275425_cz_ema$na)^(1/3) # take the cubed root to normalize the data into one that is normal with inflated zeros
+
+check_model(glmmTMB(na_cubert ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+                    zi = ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+    data = df_275425_cz_ema,
+    family=gaussian, REML=TRUE, na.action=na.exclude))
+
+model_275425_ema_na <- glmmTMB(na_cubert ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+                    zi = ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+    data = df_275425_cz_ema,
+    family=gaussian, REML=TRUE, na.action=na.exclude)
+summary(model_275425_ema_na)
+
+mean_ADI <- mean(df_150275_cz_ema$ADI_NATRANK, na.rm=TRUE)
+sd_ADI <- sd(df_150275_cz_ema$ADI_NATRANK, na.rm=TRUE)
+mean_rewp <- mean(df_150275_cz_ema$AA_AR, na.rm=TRUE)
+sd_rewp <- sd(df_150275_cz_ema$AA_AR, na.rm=TRUE)
+mean_p3 <- mean(df_275425_cz_ema$AA_AR, na.rm=TRUE)
+sd_p3 <- sd(df_275425_cz_ema$AA_AR, na.rm=TRUE)
+
+RewPa <- mean(df_150275_cz_ema$AA_AR) + sd(df_150275_cz_ema$AA_AR)
+RewP <- mean(df_150275_cz_ema$AA_AR) 
+RewPb <- mean(df_150275_cz_ema$AA_AR) - sd(df_150275_cz_ema$AA_AR)
+RewP_list <- list(AA_AR=round(c(RewPa,RewP,RewPb),2))
+
+emtrends(model_150275_ema_na, pairwise ~AA_AR, var="ADI_NATRANK_log",at=RewP_list, adjust="none")|> test()
+emmip(model_150275_ema_na,AA_AR~ADI_NATRANK_log,
+      at=list(ADI_NATRANK_log=seq(0,5,by=0.5),AA_AR=round(c(RewPa,RewP,RewPb),2)), CIs=TRUE)
+
+P3a <- mean(df_275425_cz_ema$AA_AR) + sd(df_275425_cz_ema$AA_AR)
+P3 <- mean(df_275425_cz_ema$AA_AR) 
+P3b <- mean(df_275425_cz_ema$AA_AR) - sd(df_275425_cz_ema$AA_AR)
+P3_list <- list(AA_AR=round(c(P3a,P3,P3b),2)) 
+
+emtrends(model_275425_ema_na, pairwise ~AA_AR, var="ADI_NATRANK_log",at=P3_list, adjust="none")|> test()
+emmip(model_275425_ema_na,AA_AR~ADI_NATRANK_log,
+      at=list(ADI_NATRANK_log=seq(0,5,by=0.5),AA_AR=round(c(P3a,P3,P3b),2)), CIs=TRUE)
+
+df_150275_cz_ema_group_means_erp <- df_150275_cz_ema %>%
+  group_by(ID,sad,angry,rejected,anxious,na,ADI_NATRANK) %>%
+  reframe(AA_AR_group = as.factor(
+            cut(AA_AR, breaks=c(-Inf, mean_rewp-sd_rewp, mean_rewp+sd_rewp, Inf), 
+                              labels=c("low","moderate","high")))) %>%
+  filter(complete.cases(AA_AR_group)) %>%
+  group_by(ID,AA_AR_group,ADI_NATRANK) %>%
+  reframe(mean_sad = mean(sad, na.rm=T),
+          mean_angry = mean(angry, na.rm=T),
+          mean_rejected = mean(rejected, na.rm=T),
+          mean_anxious = mean(anxious, na.rm=T),
+          mean_na = mean(na, na.rm=T))
+
+df_150275_cz_ema_group_means_adi <- df_150275_cz_ema %>%
+  group_by(ID,sad,angry,rejected,anxious,na,AA_AR) %>%
+  reframe(ADI_group = as.factor(
+            cut(ADI_NATRANK, breaks=c(-Inf, mean_ADI-.5*sd_ADI, mean_ADI+.5*sd_ADI, Inf), 
+                              labels=c("low","moderate","high")))) %>%
+  filter(complete.cases(ADI_group)) %>%
+  group_by(ID,ADI_group,AA_AR) %>%
+  reframe(mean_sad = mean(sad, na.rm=T),
+          mean_angry = mean(angry, na.rm=T),
+          mean_rejected = mean(rejected, na.rm=T),
+          mean_anxious = mean(anxious, na.rm=T),
+          mean_na = mean(na, na.rm=T))
+
+ggplot(df_150275_cz_ema_group_means_erp, aes(x=ADI_NATRANK, y=mean_na, fill=AA_AR_group, color=AA_AR_group)) +
+  geom_point(alpha=0.25) + 
+  stat_smooth(aes(group=AA_AR_group),method="lm",size=1,se=F,linetype="longdash") +
+  scale_color_discrete(name = "RewP") +
+  scale_fill_discrete(name = "RewP")
+
+ggplot(df_150275_cz_ema_group_means_adi, aes(x=AA_AR, y=mean_na, fill=ADI_group, color=ADI_group)) +
+  geom_point(alpha=0.25) + 
+  stat_smooth(aes(group=ADI_group),method="lm",size=1,se=F,linetype="longdash") +
+  scale_color_discrete(name = "ADI") +
+  scale_fill_discrete(name = "ADI")
+
+df_275425_cz_ema_group_means_erp <- df_275425_cz_ema %>%
+  group_by(ID,sad,angry,rejected,anxious,na,ADI_NATRANK) %>%
+  reframe(AA_AR_group = as.factor(
+            cut(AA_AR, breaks=c(-Inf, mean_p3-sd_p3, mean_p3+sd_p3, Inf), 
+                              labels=c("low","moderate","high")))) %>%
+  filter(complete.cases(AA_AR_group)) %>%
+  group_by(ID,AA_AR_group,ADI_NATRANK) %>%
+  reframe(mean_sad = mean(sad, na.rm=T),
+          mean_angry = mean(angry, na.rm=T),
+          mean_rejected = mean(rejected, na.rm=T),
+          mean_anxious = mean(anxious, na.rm=T),
+          mean_na = mean(na, na.rm=T))
+
+df_275425_cz_ema_group_means_adi <- df_275425_cz_ema %>%
+  group_by(ID,sad,angry,rejected,anxious,na,AA_AR) %>%
+  reframe(ADI_group = as.factor(
+            cut(ADI_NATRANK, breaks=c(-Inf, mean_ADI-.5*sd_ADI, mean_ADI+.5*sd_ADI, Inf), 
+                              labels=c("low","moderate","high")))) %>%
+  filter(complete.cases(ADI_group)) %>%
+  group_by(ID,ADI_group,AA_AR) %>%
+  reframe(mean_sad = mean(sad, na.rm=T),
+          mean_angry = mean(angry, na.rm=T),
+          mean_rejected = mean(rejected, na.rm=T),
+          mean_anxious = mean(anxious, na.rm=T),
+          mean_na = mean(na, na.rm=T))
+
+ggplot(df_275425_cz_ema_group_means_erp, aes(x=ADI_NATRANK, y=mean_na, fill=AA_AR_group, color=AA_AR_group)) +
+  geom_point(alpha=0.25) + 
+  stat_smooth(aes(group=AA_AR_group),method="lm",size=1,se=F,linetype="longdash") +
+  scale_color_discrete(name = "P3") +
+  scale_fill_discrete(name = "P3")
+
+ggplot(df_275425_cz_ema_group_means_adi, aes(x=AA_AR, y=mean_na, fill=ADI_group, color=ADI_group)) +
+  geom_point(alpha=0.25) + 
+  stat_smooth(aes(group=ADI_group),method="lm",size=1,se=F,linetype="longdash") +
+  scale_color_discrete(name = "ADI") +
+  scale_fill_discrete(name = "ADI")
+```
+
+###### Covary for deception
+```{r}
+df_150275_cz_ema_rating <- full_join(df_150275_cz_ema, df_BUDS_rating_it_pt, by="ID", relationship = "many-to-many")
+df_275425_cz_ema_rating <- full_join(df_275425_cz_ema, df_BUDS_rating_it_pt, by="ID", relationship = "many-to-many")
+
+summary(glmmTMB(na_cubert ~ ADI_NATRANK_log*AA_AR + SP_debriefing_deceived + (1 | ID),
+                    zi = ~ ADI_NATRANK_log*AA_AR + (1 | ID),
+    data = df_150275_cz_ema_rating,
+    family=gaussian, REML=TRUE))
+
+summary(glmmTMB(na_cubert ~ ADI_NATRANK_log*AA_AR + SP_debriefing_deceived + (1 | ID),
+                    zi = ~ ADI_NATRANK_log*AA_AR + (1 | ID),
+    data = df_275425_cz_ema_rating,
+    family=gaussian, REML=TRUE))
+```
+
+###### With covariates
+```{r}
+summary(glmmTMB(na_cubert ~ ADI_NATRANK_log*AA_AR + Age + Sex + demo_child_hispanic + StressCT + StressTH + IDAS_depression + IDAS_wellbeing + IDAS_panic + IDAS_sa + (1 | ID) + (1 | site),
+                    zi = ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+    data = df_150275_cz_ema,
+    family=gaussian, REML=TRUE))
+
+summary(glmmTMB(na_cubert ~ ADI_NATRANK_log*AA_AR + Age + Sex + demo_child_hispanic + StressCT + StressTH + IDAS_depression + IDAS_wellbeing + IDAS_panic + IDAS_sa + (1 | ID) + (1 | site),
+                    zi = ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+    data = df_275425_cz_ema,
+    family=gaussian, REML=TRUE))
+```
+###### Missing data
+```{r}
+df_275425_missing_na <- df_275425_cz_ema %>%
+  group_by(ID, daysFrom) %>%
+  reframe(all_na = all(is.na(na)),
+          adi_na = all(is.na(ADI_NATRANK_log)),
+          erp_na = all(is.na(AA_AR))) %>%
+  group_by(ID, daysFrom) %>%
+  reframe(all_missing = all(is.na(c(all_na,adi_na,erp_na)))) %>%
+  arrange(desc(all_missing))
+(df_275425_missing_na)
+```
+
+##### PA
+```{r}
+df_150275_cz_ema$pa_scaled <- normalize(df_150275_cz_ema$pa, include_bounds=F)
+df_275425_cz_ema$pa_scaled <- normalize(df_150275_cz_ema$pa, include_bounds=F)
+hist(df_150275_cz_ema$pa)
+
+hist(df_150275_cz_ema$pa)
+# check_model(lmer(pa ~ ADI_NATRANK_log*AA_AR + (1 | ID), data = df_150275_cz_ema))
+
+summary(glmmTMB(pa ~ ADI_NATRANK_log*AA_AR + (1 | ID),
+    data = df_150275_cz_ema,
+    family=gaussian, REML=TRUE))
+summary(glmmTMB(pa ~ ADI_NATRANK_log*AA_AR + (1 | ID),
+    data = df_275425_cz_ema,
+    family=gaussian, REML=TRUE))
+```
+
+##### Effort
+```{r, eval=F}
+df_150275_cz_ema$effort_scaled <- normalize(df_150275_cz_ema$effort, include_bounds=F)
+df_275425_cz_ema$effort_scaled <- normalize(df_275425_cz_ema$effort, include_bounds=F)
+hist(df_150275_cz_ema$effort-1)
+
+check_model(glmmTMB(effort-1 ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+                    zi = ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+    data = df_150275_cz_ema,
+    family=gaussian, REML=TRUE))
+
+summary(glmmTMB(effort-1 ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+                    zi = ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+    data = df_150275_cz_ema,
+    family=gaussian, REML=TRUE))
+
+check_model(glmmTMB(effort_scaled ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+    data = df_150275_cz_ema,
+    family=beta_family(link="logit"), REML=TRUE))
+
+check_model(glmmTMB(effort_scaled ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+    data = df_275425_cz_ema,
+    family=beta_family(link="logit"), REML=TRUE))
+
+summary(glmmTMB(effort_scaled ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+    data = df_150275_cz_ema,
+    family=beta_family(link="logit"), REML=TRUE))
+
+summary(glmmTMB(effort_scaled ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+    data = df_275425_cz_ema,
+    family=beta_family(link="logit"), REML=TRUE))
+```
+
+##### Future
+```{r, eval=F}
+df_150275_cz_ema$future_scaled <- normalize(df_150275_cz_ema$future, include_bounds=F)
+df_275425_cz_ema$future_scaled <- normalize(df_275425_cz_ema$future, include_bounds=F)
+hist(df_150275_cz_ema$future)
+check_model(lmer(future ~ ADI_NATRANK_log*AA_AR + (1 | ID), data = df_150275_cz_ema))
+check_model(lmer(future ~ ADI_NATRANK_log*AA_AR + (1 | ID), data = df_275425_cz_ema))
+
+summary(lmer(future ~ ADI_NATRANK_log*AA_AR + (1 | ID), data = df_150275_cz_ema))
+summary(lmer(future ~ ADI_NATRANK_log*AA_AR + (1 | ID), data = df_275425_cz_ema))
+```
+
+##### Individual items
+###### NA items
+```{r}
+for (d in c(150275, 275425)) {
+  print(d)
+  for (m in c('angry', 'sad', 'anxious', 'rejected')) {
+  print(m)
+  print(eval(parse(text=paste0('
+check_model(glmmTMB(I(',m,'^(1/3)) ~ ADI_NATRANK_log*AA_AR + (1 | ID),
+                    zi = ~ ADI_NATRANK_log*AA_AR,
+    data = df_',d,'_cz_ema,
+    family=gaussian, REML=TRUE))
+'))))
+  }
+}
+
+for (d in c(150275)) {
+  print(d)
+  for (m in c('angry', 'sad', 'anxious', 'rejected')) {
+  print(m)
+  print(eval(parse(text=paste0('
+summary(glmmTMB(I(',m,'^(1/3)) ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+                    zi = ~ ADI_NATRANK_log*AA_AR + (1 | ID),
+    data = df_',d,'_cz_ema,
+    family=gaussian, REML=TRUE))'))))
+  }
+}
+
+df_150275_cz_ema$rejected_cubert <- df_150275_cz_ema$rejected^(1/3)
+df_275425_cz_ema$rejected_cubert <- df_275425_cz_ema$rejected^(1/3)
+
+check_model(glmmTMB(rejected_cubert ~ AA_AR + (1 | ID) + (1 | site),
+                    zi = ~ AA_AR + (1 | ID) + (1 | site),
+    data = df_150275_cz_ema,
+    family=gaussian, REML=TRUE))
+
+summary(glmmTMB(rejected_cubert ~ AA_AR + (1 | ID) + (1 | site),
+                    zi = ~ AA_AR + (1 | ID) + (1 | site),
+    data = df_150275_cz_ema,
+    family=gaussian, REML=TRUE))
+
+summary(glmmTMB(rejected_cubert ~ AA_AR + (1 | ID) + (1 | site),
+                    zi = ~ AA_AR + (1 | ID) + (1 | site),
+    data = df_275425_cz_ema,
+    family=gaussian, REML=TRUE))
+
+summary(glmmTMB(rejected_cubert ~ AR_AA + (1 | ID) + (1 | site),
+                    zi = ~ AR_AA + (1 | ID) + (1 | site),
+    data = df_150275_cz_ema,
+    family=gaussian, REML=TRUE))
+
+summary(glmmTMB(rejected_cubert ~ AR_AA + (1 | ID) + (1 | site),
+                    zi = ~ AR_AA + (1 | ID) + (1 | site),
+    data = df_275425_cz_ema,
+    family=gaussian, REML=TRUE))
+
+check_model(glmmTMB(rejected_cubert ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+                    zi = ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+    data = df_150275_cz_ema,
+    family=gaussian, REML=TRUE))
+
+summary(glmmTMB(rejected_cubert ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+                    zi = ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+    data = df_150275_cz_ema,
+    family=gaussian, REML=TRUE))
+
+summary(glmmTMB(rejected_cubert ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+                    zi = ~ ADI_NATRANK_log*AA_AR + (1 | ID),
+    data = df_275425_cz_ema,
+    family=gaussian, REML=TRUE))
+
+summary(glmmTMB(rejected_cubert ~ ADI_NATRANK_log*AR_AA + (1 | ID) + (1 | site),
+                    zi = ~ ADI_NATRANK_log*AR_AA + (1 | ID),
+    data = df_150275_cz_ema,
+    family=gaussian, REML=TRUE))
+
+summary(glmmTMB(rejected_cubert ~ ADI_NATRANK_log*AR_AA + (1 | ID) + (1 | site),
+                    zi = ~ ADI_NATRANK_log*AR_AA + (1 | ID),
+    data = df_275425_cz_ema,
+    family=gaussian, REML=TRUE))
+
+```
+####### Scatter plots
+```{r, eval=F}
+ggplot(df_150275_cz_ema_group_means, aes(x=ADI_NATRANK, y=mean_sad, color=AA_AR_group)) +
+  geom_point(alpha=0.25) + 
+  stat_smooth(aes(group=AA_AR_group),method="lm",size=1,se=F,linetype="longdash")
+ggplot(df_150275_cz_ema_group_means, aes(x=ADI_NATRANK, y=mean_angry, color=AA_AR_group)) +
+  geom_point(alpha=0.25) + 
+  stat_smooth(aes(group=AA_AR_group),method="lm",size=1,se=F,linetype="longdash")
+ggplot(df_150275_cz_ema_group_means, aes(x=ADI_NATRANK, y=mean_anxious, color=AA_AR_group)) +
+  geom_point(alpha=0.25) + 
+  stat_smooth(aes(group=AA_AR_group),method="lm",size=1,se=F,linetype="longdash")
+ggplot(df_150275_cz_ema_group_means, aes(x=ADI_NATRANK, y=mean_rejected, color=AA_AR_group)) +
+  geom_point(alpha=0.25) + 
+  stat_smooth(aes(group=AA_AR_group),method="lm",size=1,se=F,linetype="longdash")
+
+ggplot(df_275425_cz_ema_group_means, aes(x=ADI_NATRANK, y=mean_sad, color=AA_AR_group)) +
+  geom_point(alpha=0.25) + 
+  stat_smooth(aes(group=AA_AR_group),method="lm",size=1,se=F,linetype="longdash")
+ggplot(df_275425_cz_ema_group_means, aes(x=ADI_NATRANK, y=mean_angry, color=AA_AR_group)) +
+  geom_point(alpha=0.25) + 
+  stat_smooth(aes(group=AA_AR_group),method="lm",size=1,se=F,linetype="longdash")
+ggplot(df_275425_cz_ema_group_means, aes(x=ADI_NATRANK, y=mean_anxious, color=AA_AR_group)) +
+  geom_point(alpha=0.25) + 
+  stat_smooth(aes(group=AA_AR_group),method="lm",size=1,se=F,linetype="longdash")
+ggplot(df_275425_cz_ema_group_means, aes(x=ADI_NATRANK, y=mean_rejected, color=AA_AR_group)) +
+  geom_point(alpha=0.25) + 
+  stat_smooth(aes(group=AA_AR_group),method="lm",size=1,se=F,linetype="longdash")
+```
+
+###### Social items
+```{r, eval=F}
+for (d in c(150275, 275425)) {
+  print(d)
+  for (m in c('effort', 'future')) {
+  print(m)
+  print(eval(parse(text=paste0('
+  # hist(df_',d,'_cz_ema$',m,')
+  df_',d,'_cz_ema$',m,'_scaled <- normalize(df_',d,'_cz_ema$',m,', include_bounds=F)
+  
+check_model(glmmTMB(',m,'^(2) ~ ADI_NATRANK_log*AA_AR + (1 | ID),
+                    zi = ~ ADI_NATRANK_log*AA_AR + (1 | ID),
+    data = df_',d,'_cz_ema,
+    family=gaussian, REML=TRUE))
+'))))
+  }
+}
+
+for (d in c(150275, 275425)) {
+  print(d)
+  for (m in c('effort', 'future')) {
+  print(m)
+  print(eval(parse(text=paste0('
+round(summary(glmmTMB(',m,' ~ ADI_NATRANK_log*AA_AR + (1 | ID),
+                    zi = ~ ADI_NATRANK_log*AA_AR + (1 | ID),
+    data = df_',d,'_cz_ema,
+    family=gaussian, REML=TRUE))$coeff$cond,3)[4,]
+'))))
+  }
+}
+
+for (d in c(150275, 275425)) {
+  print(d)
+  for (m in c('supported', 'connect', 'messages', 'conversations', 'sharedEmotions')) {
+  print(m)
+  print(eval(parse(text=paste0('
+round(summary(glmmTMB(',m,'_scaled ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+                    zi = ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+    data = df_',d,'_cz_ema,
+    family=beta_family, REML=TRUE))$coeff$cond,3)[4,]'))))
+  }
+}
+```
+
+### EXTRANEOUS CODE
+```{r, eval=F}
+for (m in c('happy', 'angry', 'sad', 'anxious', 'rejected', 'supported', 'connect', 'messages', 'conversations', 'sharedEmotions')) {
+  print(m)
+  print(eval(parse(text=paste0('round(summary(glmmTMB(
+    ',m,' ~ ADI_NATRANK_log*AA_AR + (1 | ID),
+    zi = ~ ADI_NATRANK_log*AA_AR + (1 | ID),
+    data = df_150275_cz_ema,
+    family = poisson, REML=TRUE))$coeff$cond,3)'))))
+}
+
+for (m in c('happy', 'angry', 'sad', 'anxious', 'rejected', 'supported', 'connect', 'messages', 'conversations', 'sharedEmotions')) {
+  print(m)
+  print(eval(parse(text=paste0('round(summary(glmmTMB(
+    ',m,' ~ ADI_NATRANK_log*AA_AR + (1 | ID),
+    zi = ~ ADI_NATRANK_log*AA_AR + (1 | ID),
+    data = df_275425_cz_ema,
+    family = poisson, REML=TRUE))$coeff$cond,3)'))))
+}
+# sad is close for both RewP and P300
+
+# 50-150ms (N1)
+model_50150_ema_na <- glmmTMB(
+    na ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+    zi = ~ 1,
+    data = df_50150_cz_ema,
+    family = gaussian, REML=TRUE)
+model_50150_ema_na2 <- glmmTMB(
+    na ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+    zi = ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+    data = df_50150_cz_ema,
+    family = gaussian, REML=TRUE)
+anova(model_50150_ema_na, model_50150_ema_na2)
+summary(model_50150_ema_na2)
+
+# model_50150_ema_angry <- glmmTMB(
+#     angry ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+#     zi = ~ 1,
+#     data = df_50150_cz_ema,
+#     family = poisson, REML=TRUE)
+# model_50150_ema_angry2 <- glmmTMB(
+#     angry ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+#     zi = ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+#     data = df_50150_cz_ema,
+#     family = poisson, REML=TRUE)
+# anova(model_50150_ema_angry, model_50150_ema_angry2)
+# summary(model_50150_ema_angry2)
+
+model_50150_ema_anxious <- glmmTMB(
+    anxious ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+    zi = ~ ADI_NATRANK_log,
+    data = df_50150_cz_ema,
+    family = poisson, REML=TRUE)
+model_50150_ema_anxious2 <- glmmTMB(
+    anxious ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+    zi = ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+    data = df_50150_cz_ema,
+    family = poisson, REML=TRUE)
+anova(model_50150_ema_anxious, model_50150_ema_anxious2)
+summary(model_50150_ema_anxious2)
+
+# 150-275ms (RewP)
+# model_150275_ema_anxious <- glmmTMB(
+#     anxious ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+#     zi = ~ ADI_NATRANK_log,
+#     data = df_150275_cz_ema,
+#     family = poisson, REML=TRUE)
+# model_150275_ema_anxious2 <- glmmTMB(
+#     anxious ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+#     zi = ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+#     data = df_150275_cz_ema,
+#     family = poisson, REML=TRUE)
+# anova(model_150275_ema_anxious, model_150275_ema_anxious2)
+# summary(model_150275_ema_anxious2)
+
+fitdistr(filter(df_150275_cz_ema, is.finite(na))$na, densfun="normal")$loglik
+fitdistr(filter(df_150275_cz_ema, is.finite(na))$na+1, densfun="exponential")$loglik
+
+fitdistr(filter(df_150275_cz_ema, is.finite(future))$future+1, densfun="normal")$loglik
+fitdistr(filter(df_150275_cz_ema, is.finite(future))$future+1, densfun="exponential")$loglik
+
+hist(df_150275_cz_ema$sad)
+fitdistr(filter(df_150275_cz_ema, is.finite(sad))$sad+1, densfun="normal")$loglik
+fitdistr(filter(df_150275_cz_ema, is.finite(sad))$sad+1, densfun="exponential")$loglik
+fitdistr(filter(df_150275_cz_ema, is.finite(sad))$sad+1, densfun="poisson")$loglik
+fitdistr(filter(df_150275_cz_ema, is.finite(sad))$sad+1, densfun="negative binomial")$loglik
+
+
+summary(glmmTMB(sad ~ ADI_NATRANK_log*AA_AR + (1 | ID),
+    zi = ~ ADI_NATRANK_log*AA_AR + (1 | ID),
+    data = df_150275_cz_ema,
+    family = nbinom2, REML=TRUE))
+summary(glmmTMB(sad ~ ADI_NATRANK_log*AA_AR + (1 | ID),
+    zi = ~ ADI_NATRANK_log*AA_AR + (1 | ID),
+    data = df_275425_cz_ema,
+    family = nbinom2, REML=TRUE))
+
+# 275-425ms (P3)
+# summary(lmer(effort ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site), df_275425_cz_ema))
+
+model_275425_ema_sad <- glmmTMB(
+    sad ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+    zi = ~ ADI_NATRANK_log,
+    data = df_275425_cz_ema,
+    family = poisson, REML=TRUE)
+model_275425_ema_sad2 <- glmmTMB(
+    sad ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+    zi = ~ ADI_NATRANK_log*AA_AR + (1 | ID) + (1 | site),
+    data = df_275425_cz_ema,
+    family = poisson, REML=TRUE)
+anova(model_275425_ema_sad, model_275425_ema_sad2)
+summary(model_275425_ema_sad2)
+
+# N1a <- mean(df_50150_cz_ema$AA_AR) + 1.5*sd(df_50150_cz_ema$AA_AR)
+# N1 <- mean(df_50150_cz_ema$AA_AR) 
+# N1b <- mean(df_50150_cz_ema$AA_AR) - 1.5*sd(df_50150_cz_ema$AA_AR)
+# N1_list <- list(AA_AR=round(c(N1a,N1,N1b),2)) 
+# 
+# emtrends(model_50150_ema_na2, pairwise ~AA_AR, var="ADI_NATRANK_log",at=N1_list, adjust="none")|> test()
+# emtrends(model_50150_ema_anxious2, pairwise ~AA_AR, var="ADI_NATRANK_log",at=N1_list, adjust="none")|> test()
+# emmip(model_50150_ema_na2,AA_AR~ADI_NATRANK_log,
+#       at=list(ADI_NATRANK_log=seq(0,5,by=0.5),AA_AR=round(c(N1a,N1,N1b),2)), CIs=TRUE)
+# emmip(model_50150_ema_anxious2,AA_AR~ADI_NATRANK_log,
+#       at=list(ADI_NATRANK_log=seq(0,5,by=0.5),AA_AR=round(c(N1a,N1,N1b),2)), CIs=TRUE)
+
+
+plot_cap(
+    model_150275_cz,
+    condition = list(
+      "ADI_NATRANK_log" = "threenum",
+        "Feedback")) +
+  labs(title="ADI") +
+    theme_classic()
+
+RewPa <- mean(df_150275_cz_ema$AA_AR) + sd(df_150275_cz_ema$AA_AR)
+RewP <- mean(df_150275_cz_ema$AA_AR) 
+RewPb <- mean(df_150275_cz_ema$AA_AR) - sd(df_150275_cz_ema$AA_AR)
+RewP_list <- list(AA_AR=round(c(RewPa,RewP,RewPb),2)) 
+emtrends(model_150275_ema_anxious2, pairwise ~AA_AR, var="ADI_NATRANK_log",at=RewP_list, adjust="none")|> test()
+emmip(model_150275_ema_anxious2,AA_AR~ADI_NATRANK_log,
+      at=list(ADI_NATRANK_log=seq(0,5,by=0.5),AA_AR=round(c(RewPa,RewP,RewPb),2)), CIs=TRUE)
+
+plot_cap(
+    model_275425_cz,
+    condition = list(
+      "ADI_NATRANK_log" = "threenum",
+        "Feedback")) +
+  labs(title="ADI") +
+    theme_classic()
+
+P3a <- mean(df_275425_cz_ema$AA_AR) + sd(df_275425_cz_ema$AA_AR)
+P3 <- mean(df_275425_cz_ema$AA_AR) 
+P3b <- mean(df_275425_cz_ema$AA_AR) - sd(df_275425_cz_ema$AA_AR)
+P3_list <- list(AA_AR=round(c(P3a,P3,P3b),2)) 
+
+emtrends(model_275425_ema_sad2, pairwise ~AA_AR, var="ADI_NATRANK_log",at=P3_list, adjust="none")|> test()
+emtrends(model_275425_ema_anxious2, pairwise ~AA_AR, var="ADI_NATRANK_log",at=P3_list, adjust="none")|> test()
+emmip(model_275425_ema_sad2,AA_AR~ADI_NATRANK_log,
+      at=list(ADI_NATRANK_log=seq(0,5,by=0.5),AA_AR=round(c(P3a,P3,P3b),2)), CIs=TRUE)
+
+
+##### With covariates
+
+# 50-150ms
+model_50150_ema_angry_cov <- glmmTMB(
+    angry ~ ADI_NATRANK_log*AA_AR + Age + Sex + demo_child_hispanic + StressCT + StressTH + IDAS_depression + IDAS_wellbeing + IDAS_panic + IDAS_sa + (1 | ID) + (1 | site),
+    zi = ~ ADI_NATRANK_log*AA_AR + Age + Sex + demo_child_hispanic + StressCT + StressTH + IDAS_depression + IDAS_wellbeing + IDAS_panic + IDAS_sa + (1 | ID) + (1 | site),
+    data = df_50150_cz_ema,
+    family = poisson, REML=TRUE)
+summary(model_50150_ema_angry_cov)
+emtrends(model_50150_ema_angry_cov, pairwise ~AA_AR, var="ADI_NATRANK_log",at=N1_list, adjust="none")|> test()
+
+model_50150_ema_anxious_cov <- glmmTMB(
+    anxious ~ ADI_NATRANK_log*AA_AR + Age + Sex + demo_child_hispanic + StressCT + StressTH + IDAS_depression + IDAS_wellbeing + IDAS_panic + IDAS_sa + (1 | ID) + (1 | site),
+    zi = ~ ADI_NATRANK_log*AA_AR + Age + Sex + demo_child_hispanic + StressCT + StressTH + IDAS_depression + IDAS_wellbeing + IDAS_panic + IDAS_sa + (1 | ID) + (1 | site),
+    data = df_50150_cz_ema,
+    family = poisson, REML=TRUE)
+summary(model_50150_ema_anxious_cov)
+
+# 150-275ms
+model_150275_ema_anxious_cov <- glmmTMB(
+    anxious ~ ADI_NATRANK_log*AA_AR + Age + Sex + demo_child_hispanic + StressCT + StressTH + IDAS_depression + IDAS_wellbeing + IDAS_panic + IDAS_sa + (1 | ID),
+    zi = ~ ADI_NATRANK_log*AA_AR + Age + Sex + demo_child_hispanic + StressCT + StressTH + IDAS_depression + IDAS_wellbeing + IDAS_panic + IDAS_sa + (1 | ID),
+    data = df_150275_cz_ema,
+    family = poisson, REML=TRUE)
+summary(model_150275_ema_anxious_cov)
+
+# 275-425ms
+model_275425_ema_sad_cov <- glmmTMB(
+    sad ~ ADI_NATRANK_log*AA_AR + Age + Sex + demo_child_hispanic + StressCT + StressTH + IDAS_depression + IDAS_wellbeing + IDAS_panic + IDAS_sa + (1 | ID),
+    zi = ~ ADI_NATRANK_log*AA_AR + Age + Sex + demo_child_hispanic + StressCT + StressTH + IDAS_depression + IDAS_wellbeing + IDAS_panic + IDAS_sa + (1 | ID),
+    data = df_275425_cz_ema,
+    family = poisson, REML=TRUE)
+summary(model_275425_ema_sad_cov)
+
+emtrends(model_275425_ema_sad_cov, pairwise ~AA_AR, var="ADI_NATRANK_log",at=P3_list, adjust="none")|> test()
+
+model_275425_ema_anxious_cov <- glmmTMB(
+    anxious ~ ADI_NATRANK_log*AA_AR + Age + Sex + demo_child_hispanic + StressCT + StressTH + IDAS_depression + IDAS_wellbeing + IDAS_panic + IDAS_sa + (1 | ID) + (1 | site),
+    zi = ~ ADI_NATRANK_log*AA_AR + Age + Sex + demo_child_hispanic + StressCT + StressTH + IDAS_depression + IDAS_wellbeing + IDAS_panic + IDAS_sa + (1 | ID) + (1 | site),
+    data = df_275425_cz_ema,
+    family = poisson, REML=TRUE)
+summary(model_275425_ema_anxious_cov)
+```
+
+
+#### Daily
+##### Mean level
+```{r, eval=F}
+summary(lmer(daily^2 ~ ADI_NATRANK_log*AA_AR + (1 | ID), data = df_150275_cz_daily))
+summary(lmer(daily^2 ~ ADI_NATRANK_log*AA_AR + (1 | ID), data = df_275425_cz_daily))
+    
+check_model(lmer(daily^2 ~ ADI_NATRANK_log*AA_AR + (1 | ID), data = df_150275_cz_daily))
+check_model(lmer(daily^2 ~ ADI_NATRANK_log*AA_AR + (1 | ID), data = df_275425_cz_daily))
+
+qqnorm(resid(lmer(daily^2 ~ ADI_NATRANK_log*AA_AR + (1 | ID), data = df_150275_cz_daily))); qqline(resid(lmer(daily^2 ~ ADI_NATRANK_log*AA_AR + (1 | ID), data = df_150275_cz_daily)))
+```
+
+##### Trajectory
+```{r, eval=F}
+df_150275_cz_daily$daily2 <- df_150275_cz_daily$daily^2
+df_275425_cz_daily$daily2 <- df_150275_cz_daily$daily^2
+summary(lmer(daily2 ~ ADI_NATRANK_log*AA_AR*daysFrom + (1 | ID), data = df_150275_cz_daily))
+summary(lmer(daily2 ~ ADI_NATRANK_log*AA_AR*daysFrom + (1 | ID), data = df_275425_cz_daily))
+
+qqnorm(resid(lmer(daily2 ~ ADI_NATRANK_log*AA_AR*daysFrom + (1 | ID), data = df_150275_cz_daily))); qqline(resid(lmer(daily2 ~ ADI_NATRANK_log*AA_AR*daysFrom + (1 | ID), data = df_150275_cz_daily)))
+hist(resid(lmer(daily2 ~ ADI_NATRANK_log*AA_AR*daysFrom + (1 | ID), data = df_150275_cz_daily)))
+```
+
+###### Spaghetti plots
+####### RewP
+```{r, eval=F}
+df_150275_cz_daily_group <- df_150275_cz_daily %>%
+  group_by(ID, site, daysFrom, daily, daily2) %>%
+  reframe(ADI_NATRANK_group = as.factor(cut(ADI_NATRANK, breaks=c(-Inf, mean_ADI-.5*sd_ADI, mean_ADI+.5*sd_ADI, Inf), 
+                              labels=c("low","middle","high"))),
+          AA_AR_group = as.factor(cut(AA_AR, breaks=c(-Inf, mean_rewp-.5*sd_rewp, mean_rewp+.5*sd_rewp, Inf), 
+                              labels=c("low","middle","high"))),
+          ) %>%
+  group_by(ID,daysFrom,ADI_NATRANK_group,AA_AR_group) %>%
+  filter(complete.cases(ADI_NATRANK_group)) %>%
+  reframe(daily2 = mean(daily2, na.rm=T),
+          daily = mean(daily, na.rm=T))
+
+ggplot(df_150275_cz_daily_group, aes(x=daysFrom, y=daily, group=ID, color=ADI_NATRANK_group)) +
+  stat_smooth(aes(group=ADI_NATRANK_group),method="lm",size=1,se=T,linetype="longdash") + 
+  geom_line(alpha=0.15) +
+  facet_wrap(.~AA_AR_group) +
+  labs(title="RewP")
+
+ggplot(df_150275_cz_daily_group, aes(x=daysFrom, y=daily, group=ID, color=AA_AR_group)) +
+  stat_smooth(aes(group=AA_AR_group),method="lm",size=1,se=T,linetype="longdash") + 
+  geom_line(alpha=0.15) +
+  facet_wrap(.~ADI_NATRANK_group) +
+  labs(title="ADI x RewP")
+```
+
+####### P300
+```{r, eval=F}
+mean_ADI <- mean(df_275425_cz_daily$ADI_NATRANK, na.rm=TRUE)
+sd_ADI <- sd(df_275425_cz_daily$ADI_NATRANK, na.rm=TRUE)
+mean_p3 <- mean(df_275425_cz_daily$AA_AR, na.rm=TRUE)
+sd_p3 <- sd(df_275425_cz_daily$AA_AR, na.rm=TRUE)
+
+df_275425_cz_daily_group <- df_275425_cz_daily %>%
+  group_by(ID, site, daysFrom, daily, daily2) %>%
+  reframe(ADI_NATRANK_group = as.factor(cut(ADI_NATRANK, breaks=c(-Inf, mean_ADI-.5*sd_ADI, mean_ADI+.5*sd_ADI, Inf), 
+                              labels=c("low","middle","high"))),
+          AA_AR_group = as.factor(cut(AA_AR, breaks=c(-Inf, mean_rewp-.5*sd_rewp, mean_rewp+.5*sd_rewp, Inf), 
+                              labels=c("low","middle","high"))),
+          ) %>%
+  group_by(ID,daysFrom,ADI_NATRANK_group,AA_AR_group) %>%
+  filter(complete.cases(ADI_NATRANK_group)) %>%
+  reframe(daily2 = mean(daily2, na.rm=T),
+          daily = mean(daily, na.rm=T))
+
+ggplot(df_275425_cz_daily_group, aes(x=daysFrom, y=daily, group=ID, color=ADI_NATRANK_group)) +
+  stat_smooth(aes(group=ADI_NATRANK_group),method="lm",size=1,se=T,linetype="longdash") + 
+  geom_line(alpha=0.15) +
+  facet_wrap(.~AA_AR_group) +
+  labs(title="P3")
+
+ggplot(df_275425_cz_daily_group, aes(x=daysFrom, y=daily, group=ID, color=AA_AR_group)) +
+  stat_smooth(aes(group=AA_AR_group),method="lm",size=1,se=T,linetype="longdash") + 
+  geom_line(alpha=0.15) +
+  facet_wrap(.~ADI_NATRANK_group) +
+  labs(title="ADI x P3")
+```
+
+
+
+### Scatter plots
+```{r}
+df_150275_cz_ema_group_means <- df_150275_cz_ema %>%
+  # filter(daysFrom<91) %>%
+  group_by(ID,sad,angry,rejected,anxious,ADI_NATRANK) %>%
+  reframe(AA_AR_group = as.factor(
+            cut(AA_AR, breaks=c(-Inf, mean_rewp-.5*sd_rewp, mean_rewp+.5*sd_rewp, Inf), 
+                              labels=c("low","moderate","high")))) %>%
+  filter(complete.cases(AA_AR_group)) %>%
+  group_by(ID,AA_AR_group,ADI_NATRANK) %>%
+  reframe(mean_sad = mean(sad, na.rm=T),
+          mean_angry = mean(angry, na.rm=T),
+          mean_rejected = mean(rejected, na.rm=T),
+          mean_anxious = mean(anxious, na.rm=T))
+
+ggplot(df_150275_cz_ema_group_means, aes(x=ADI_NATRANK, y=mean_sad, color=AA_AR_group)) +
+  geom_point(alpha=0.25) + 
+  stat_smooth(aes(group=AA_AR_group),method="lm",size=1,se=F,linetype="longdash")
+
+ggplot(df_150275_cz_ema_group_means, aes(x=ADI_NATRANK, y=mean_angry, color=AA_AR_group)) +
+  geom_point(alpha=0.25) + 
+  stat_smooth(aes(group=AA_AR_group),method="lm",size=1,se=F,linetype="longdash")
+
+ggplot(df_150275_cz_ema_group_means, aes(x=ADI_NATRANK, y=mean_rejected, color=AA_AR_group)) +
+  geom_point(alpha=0.25) + 
+  stat_smooth(aes(group=AA_AR_group),method="lm",size=1,se=F,linetype="longdash")
+  
+ggplot(df_150275_cz_ema_group_means, aes(x=ADI_NATRANK, y=mean_anxious, color=AA_AR_group)) +
+  geom_point(alpha=0.25) + 
+  stat_smooth(aes(group=AA_AR_group),method="lm",size=1,se=T,linetype="longdash")
+
+df_275425_cz_ema_group_means <- df_275425_cz_ema %>%
+  # filter(daysFrom<91) %>%
+  group_by(ID,sad,angry,rejected,anxious,ADI_NATRANK) %>%
+  reframe(AA_AR_group = as.factor(
+            cut(AA_AR, breaks=c(-Inf, mean_rewp-.5*sd_rewp, mean_rewp+.5*sd_rewp, Inf), 
+                              labels=c("low","moderate","high")))) %>%
+  filter(complete.cases(AA_AR_group)) %>%
+  group_by(ID,AA_AR_group,ADI_NATRANK) %>%
+  reframe(mean_sad = mean(sad, na.rm=T),
+          mean_angry = mean(angry, na.rm=T),
+          mean_rejected = mean(rejected, na.rm=T),
+          mean_anxious = mean(anxious, na.rm=T))
+
+ggplot(df_275425_cz_ema_group_means, aes(x=ADI_NATRANK, y=mean_sad, color=AA_AR_group)) +
+  geom_point(alpha=0.25) + 
+  stat_smooth(aes(group=AA_AR_group),method="lm",size=1,se=F,linetype="longdash")
+
+ggplot(df_275425_cz_ema_group_means, aes(x=ADI_NATRANK, y=mean_angry, color=AA_AR_group)) +
+  geom_point(alpha=0.25) + 
+  stat_smooth(aes(group=AA_AR_group),method="lm",size=1,se=F,linetype="longdash")
+
+ggplot(df_275425_cz_ema_group_means, aes(x=ADI_NATRANK, y=mean_rejected, color=AA_AR_group)) +
+  geom_point(alpha=0.25) + 
+  stat_smooth(aes(group=AA_AR_group),method="lm",size=1,se=F,linetype="longdash")
+
+ggplot(df_275425_cz_ema_group_means, aes(x=ADI_NATRANK, y=mean_anxious, color=AA_AR_group)) +
+  geom_point(alpha=0.25) + 
+  stat_smooth(aes(group=AA_AR_group),method="lm",size=1,se=F,linetype="longdash")
+```
+##### RewP prelim findings
+Having a large RewP is protective to all negative emotions: sadness, anger, feelings of rejection, and anxiety.
+
+##### P3 prelim findings
+Having a moderate or large P3 (i.e., smaller P3 to rejection than acceptance) is protective to sadness and anxiety. Having a large P3 (i.e., smaller P3 to rejection than acceptance) is protective to anger and feelings of rejection.
+
+
+#### Spaghetti plots
+```{r, eval=FALSE}
+mean_ADI <- mean(df_150275_cz_wide_ema$ADI_NATRANK, na.rm=TRUE)
+sd_ADI <- sd(df_150275_cz_wide_ema$ADI_NATRANK, na.rm=TRUE)
+mean_rewp <- mean(df_150275_cz_wide_ema$AA_AR, na.rm=TRUE)
+sd_rewp <- sd(df_150275_cz_wide_ema$AA_AR, na.rm=TRUE)
+
+df_150275_cz_ema_group <- df_150275_cz_ema %>%
+  group_by(ID,site,daysFrom, anxious) %>%
+  reframe(ADI_NATRANK_group = as.factor(cut(ADI_NATRANK, breaks=c(-Inf, mean_ADI-.5*sd_ADI, mean_ADI+.5*sd_ADI, Inf), 
+                              labels=c("low","middle","high"))),
+          AA_AR_group = as.factor(cut(AA_AR, breaks=c(-Inf, mean_rewp-.5*sd_rewp, mean_rewp+.5*sd_rewp, Inf), 
+                              labels=c("low","middle","high"))),
+          ) %>%
+  group_by(ID,daysFrom,ADI_NATRANK_group,AA_AR_group) %>%
+  filter(complete.cases(ADI_NATRANK_group)) %>%
+  reframe(anxious = mean(anxious, na.rm=T))
+
+ggplot(filter(df_150275_cz_ema_group, AA_AR_group=="low"), aes(x=daysFrom, y=anxious, group=ID, color=ADI_NATRANK_group)) +
+  stat_smooth(aes(group=ADI_NATRANK_group),method="lm",size=1,se=T,linetype="longdash") + 
+  geom_line(alpha=0.25) +
+  ylim(0,100) + 
+  labs(title="Low RewP")
+
+ggplot(filter(df_150275_cz_ema_group, AA_AR_group=="middle"), aes(x=daysFrom, y=anxious, group=ID, color=ADI_NATRANK_group)) +
+  stat_smooth(aes(group=ADI_NATRANK_group),method="lm",size=1,se=T,linetype="longdash") + 
+  geom_line(alpha=0.25) +
+  ylim(0,100) + 
+  labs(title="Moderate RewP")
+
+ggplot(filter(df_150275_cz_ema_group, AA_AR_group=="high"), aes(x=daysFrom, y=anxious, group=ID, color=ADI_NATRANK_group)) +
+  stat_smooth(aes(group=ADI_NATRANK_group),method="lm",size=1,se=T,linetype="longdash") + 
+  geom_line(alpha=0.25) +
+  ylim(0,100) + 
+  labs(title="High RewP")
+```
+
+# Save and close out
+```{r}
+for (d in c(50150, 150275, 275425)) {
+  print(eval(parse(text=paste0('
+  save(df_',d,'_cz, df_',d,'_cz_long, df_',d,'_cz_rating, df_',d,'_cz_long_strain, df_',d,'_cz_long_rating, df_',d,'_cz_long_ema, df_',d,'_cz_ema, df_',d,'_cz_long_daily, df_',d,'_cz_daily, 
+  file=here("./data/df_',d,'.RData"))
+  '))))
+}
+```
+

@@ -1,0 +1,428 @@
+---
+title: "Data prep script 5: In-task and post-task ratings"
+author: "Brent Rappaport"
+date: "`r format(Sys.time(),  '%Y-%m-%d')`"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+subtitle: Template Rmd
+editor_options:
+  chunk_output_type: console
+toc: yes
+---
+
+# About
+This script organizes behavioral ratings during the Social Feedback task for the BUDS study using data from PREDICT project collaboration between Northwestern (PI: Shankman) and Columbia (PI: Auerbach).
+
+# Get Setup
+## Clear everything & set width
+```{r}
+knitr::opts_chunk$set(set.seed(312), echo=FALSE, results='hide', message=FALSE, warning=FALSE, error=FALSE)
+    options(width=80) #Set width
+    rm(list=ls())     #Remove everything from environment
+    cat("\014")       #Clear Console
+```
+
+## Load Libraries
+```{r}
+  library(knitr)      #allows rmarkdown files
+  library(haven)      #helps import stata
+  library(questionr)  #allows lookfor function
+  library(broom)      #nice statistical output
+  library(here)       #nice file paths
+  library(expss)      #labeling variables/values
+  library(psych)      #used for statistical analyses
+  library(ggplot2)    #creates plots
+  library(MASS)
+  library(papaja)     #generate APA documents
+  library(Hmisc)
+  library(misty)      #ordinal Cronbach's alpha
+  library(lavaan)     #SEM
+  library(papaja)
+  library(pscl)       # for zero inflated models
+  library(lme4)
+  library(lmerTest)
+  library(bbmle)
+  library(marginaleffects)
+  library(bestNormalize) # for normalizing data
+  library(tidyverse)  #plotting/cleaning, etc.
+  library(workflowr)  #helps with workflow
+```
+
+## Get the Working Directory
+```{r}
+  here::i_am("./management/data05_BUDS_ratings.Rmd")
+```
+
+## Load behavioral data
+Remember to immediately rename and remove. Avoid overwriting old data.
+```{r, eval=T}
+subjects <- c(1000,
+1001,
+1004,
+1006,
+1010,
+1012,
+1014,
+1017,
+1021,
+1022,
+1023,
+1024,
+1025,
+1026,
+1027,
+1029,
+1030,
+1031,
+1033,
+1035,
+1036,
+1037,
+1039,
+1040,
+1043,
+1044,
+1046,
+1047,
+1048,
+1049,
+1050,
+1052,
+1053,
+1054,
+1055,
+1057,
+1058,
+1059,
+1060,
+1061,
+1063,
+1064,
+1065,
+1066,
+1067,
+1068,
+1069,
+1070,
+1071,
+1072,
+1074,
+1075,
+1077,
+1078,
+1079,
+1080,
+1081,
+1082,
+1084,
+1085,
+1086,
+1087,
+1088,
+1089,
+1090,
+1091,
+1094,
+1095,
+1096,
+1098,
+1099,
+1100,
+1101,
+1102,
+1103,
+1104,
+1105,
+1106,
+1107,
+1108,
+1109,
+1110,
+1111,
+1112,
+1114,
+1115,
+1117,
+1118,
+1119,
+1120,
+1121,
+1122,
+1123,
+1124,
+1125,
+1126,
+9001,
+9003,
+9004,
+9006,
+9007,
+9008,
+9010,
+9013,
+9014,
+9015,
+9017,
+9018,
+9019,
+9020,
+9021,
+9022,
+9024,
+9026,
+9027,
+9028,
+9030,
+9031,
+9033,
+9034,
+9035,
+9037,
+9038,
+9039,
+9040,
+9042,
+9043,
+9044,
+9045,
+9046,
+9048,
+9049,
+9051,
+9052,
+9053,
+9055,
+9057,
+9059,
+9060,
+9061,
+9062,
+9063,
+9067,
+9068,
+9069,
+9070,
+9072,
+9075,
+9076,
+9077,
+9078,
+9079,
+9080,
+9081,
+9082,
+9083,
+9084,
+9085,
+9087,
+9088,
+9089,
+9091,
+9092,
+9093,
+9094,
+9096,
+9097,
+9098,
+9099,
+9100)
+
+read_utf16_table <- function(path, ...) {
+  stringi::stri_read_lines(
+    con = path,
+    encoding = "UTF-16LE") |> 
+  stringi::stri_join(collapse = "\n") |> 
+  data.table::fread(sep = "\t", ...)
+}
+
+df_beh <- data.frame(NA)
+for (s in subjects) {
+ tryCatch({
+   eval(parse(text=paste0(
+     'df_',s,'_beh <- read_utf16_table(here("../_rawdata/sp_behavioral/',s,'/',s,'_SP-Export.txt"))
+     df_',s,'_beh$ID <- rep(',s,', 101)
+     df_beh <- bind_rows(df_beh,df_',s,'_beh)
+     print(paste0("Done with subject ", s))'
+     )))
+ }, error=function(e){cat("ERROR: ",s, ": ", conditionMessage(e), "\n")})
+}
+
+save(df_beh, file=here("./data/df_beh.RData"))
+```
+
+```{r}
+df_BUDS_rating <- df_beh %>%
+  mutate(PicRating_n=as.numeric(PicRating)) %>%
+  filter(complete.cases(Event) & Event!="none") %>%
+  dplyr::select(ID,Event,PicRating_n) %>%
+  group_by(ID,Event) %>%
+  reframe(rating = mean(PicRating_n)) %>%
+  mutate(Condition=case_match(Event, "Accept-Accept" ~ "Acc_Acc",
+                                     "Accept-Reject" ~ "Acc_Rej",
+                                     "Reject-Reject" ~ "Rej_Rej",
+                                     "Reject-Accept" ~ "Rej_Acc"))
+
+```
+
+# Behavioral
+## In-task ratings
+```{r}
+df_BUDS_rating_it <- df_BUDS_rating %>%
+  mutate(Voting = case_match(Condition, "Acc_Acc" ~ "Like",
+                                     "Acc_Rej" ~ "Like",
+                                     "Rej_Acc" ~ "Dislike",
+                                     "Rej_Rej" ~ "Dislike"),
+         Feedback = case_match(Condition, "Acc_Acc" ~ "Accept",
+                                       "Acc_Rej" ~ "Reject",
+                                       "Rej_Acc" ~ "Accept",
+                                       "Rej_Rej" ~ "Reject")) %>%
+  dplyr::select(-Event) %>%
+  filter(complete.cases(Voting))
+```
+
+## Post-task ratings
+```{r}
+df_BUDS_rating_pt_cu <- read.csv(here("../_rawdata/SP_Task_Debriefing_CU.csv"), colClasses = "character", 10) %>%
+  mutate(ID = id_1_i) %>%
+  dplyr::select(ID, id_2_i, starts_with("SP_debriefing")) %>%
+  filter(complete.cases(ID)) %>%
+  arrange(ID) %>%
+  mutate(SP_debriefing_1 = case_match(SP_debriefing_1, "Very Uninterested =  1" ~ '1',
+                                      "Very Interested  =10" ~ '10',
+                                      NA ~ NA,
+                                      .default = SP_debriefing_1),
+         SP_debriefing_2 = case_match(SP_debriefing_2, "Not Very Happy = 10" ~ '1',
+                                      "Very Happy = 10" ~ '10',
+                                      NA ~ NA,
+                                      .default = SP_debriefing_2),
+         SP_debriefing_3 = case_match(SP_debriefing_3, "Not Very Upset = 1" ~ '1',
+                                      "Very Upset =10" ~ '10',
+                                      NA ~ NA,
+                                      .default = SP_debriefing_3),
+         SP_debriefing_4 = case_match(SP_debriefing_4, "Not at All  = 1" ~ '1',
+                                      "Very Angry =10" ~ '10',
+                                      NA ~ NA,
+                                      .default = SP_debriefing_4),
+         SP_debriefing_5 = case_match(SP_debriefing_5, "Not at All = 1" ~ '1',
+                                      "Very Nervous =10" ~ '10',
+                                      NA ~ NA,
+                                      .default = SP_debriefing_5),
+         SP_debriefing_6a = case_match(SP_debriefing_6a, "Yes" ~ '1',
+                                      "No" ~ '2',
+                                      NA ~ NA,
+                                      .default = SP_debriefing_6a),
+         SP_debriefing_7 = case_match(SP_debriefing_7, "A lot = 10" ~ '10',
+                                      NA ~ NA,
+                                      .default = SP_debriefing_7)) %>%
+      mutate(across(c("ID",contains("SP_debriefing")), as.numeric))
+head(df_BUDS_rating_pt_cu)
+
+df_BUDS_rating_pt_nw <- read.csv(here("../_rawdata/SP_Task_Debriefing_NW.csv")) %>%
+  mutate(ID = id_1_i) %>%
+  dplyr::select(ID, id_2_i, starts_with("SP_debriefing")) %>%
+  mutate_if(is.character, as.numeric) %>%
+  filter(complete.cases(ID)) %>%
+  arrange(ID)
+
+df_BUDS_rating_pt <- df_BUDS_rating_pt_nw %>%
+  mutate(id_2_i = as.character(id_2_i)) %>%
+  bind_rows(df_BUDS_rating_pt_cu) %>%
+  mutate(site = case_match(id_2_i, "CUIMC" ~ "CU",
+                           "2" ~ "NW")) %>%
+  arrange(ID) %>%
+  dplyr::select(-id_2_i) %>%
+  filter(complete.cases(ID)) %>%
+  mutate(SP_debriefing_interested = SP_debriefing_1,
+         SP_debriefing_happy = SP_debriefing_2,
+         SP_debriefing_upset = SP_debriefing_3,
+         SP_debriefing_angry = SP_debriefing_4,
+         SP_debriefing_nervous = SP_debriefing_5,
+         SP_debriefing_deceived = SP_debriefing_6a,
+         SP_debriefing_socialmediause = SP_debriefing_7)
+```
+
+## In-task ratings related to post-task ratings
+```{r}
+df_BUDS_rating_it_pt <- full_join(df_BUDS_rating_it, df_BUDS_rating_pt, by="ID", relationship = "many-to-many")
+
+# How happy were you when someone expressed interest in chatting with you?
+summary(lm(SP_debriefing_2 ~ rating, filter(df_BUDS_rating_it_pt, Condition=="Acc_Acc")))
+ggplot(filter(df_BUDS_rating_it_pt, Condition=="Acc_Acc"), aes(x=rating, y=SP_debriefing_2)) +
+  geom_point() + 
+  stat_smooth(method="lm")
+
+# How upset were you when someone rejected you?
+summary(lm(SP_debriefing_3 ~ rating, filter(df_BUDS_rating_it_pt, Condition=="Acc_Rej")))
+ggplot(filter(df_BUDS_rating_it_pt, Condition=="Acc_Rej"), aes(x=rating, y=SP_debriefing_3)) +
+  geom_point() + 
+  stat_smooth(method="lm")
+
+# How angry did you feel when rejected?
+summary(lm(SP_debriefing_4 ~ rating, filter(df_BUDS_rating_it_pt, Condition=="Acc_Rej")))
+ggplot(filter(df_BUDS_rating_it_pt, Condition=="Acc_Rej"), aes(x=rating, y=SP_debriefing_4)) +
+  geom_point() + 
+  stat_smooth(method="lm")
+
+# How nervous did you feel while waiting for the other person to make their choice?
+summary(lm(SP_debriefing_5 ~ rating, filter(df_BUDS_rating_it_pt, Condition=="Acc_Acc")))
+ggplot(filter(df_BUDS_rating_it_pt, Condition=="Acc_Acc"), aes(x=rating, y=SP_debriefing_5)) +
+  geom_point() + 
+  stat_smooth(method="lm")
+
+# While you were doing the chatroom, did you believe that you would really be chatting with one of these people on the computer after your EEG?
+t.test(rating ~ SP_debriefing_6a, filter(df_BUDS_rating_it_pt, Condition=="Acc_Acc"))
+t.test(rating ~ SP_debriefing_6a, filter(df_BUDS_rating_it_pt, Condition=="Acc_Rej"))
+
+# How much experience do you have using social media instant messaging (chatrooms, instant messenger, etc)?
+summary(lm(SP_debriefing_7 ~ rating, filter(df_BUDS_rating_it_pt, Condition=="Acc_Acc")))
+summary(lm(SP_debriefing_7 ~ rating, filter(df_BUDS_rating_it_pt, Condition=="Rej_Acc")))
+```
+
+## In-task rating and ERP
+```{r}
+load(file=here("./data/BUDS_df_ERP.RData"))
+
+df_50150_cz_rating <- df_50150_cz %>%
+  dplyr::select(ID,AA_AR) %>%
+  full_join(df_BUDS_rating_it_pt, by="ID", relationship = "many-to-many") %>%
+  dplyr::select(ID,site,Condition,rating,AA_AR,SP_debriefing_deceived) %>%
+  group_by(ID,site,Condition,AA_AR,SP_debriefing_deceived) %>%
+  filter(complete.cases(rating)) %>%
+  reframe(rating=mean(rating)) %>%
+  pivot_wider(names_from="Condition", values_from="rating") %>%
+  mutate(rating_r = rstandard(lm(Acc_Acc ~ Acc_Rej, .)))
+  
+# summary(lm(AA_AR ~ rating_r, data = df_50150_cz_rating))
+
+df_150275_cz_rating <- df_150275_cz %>%
+  dplyr::select(ID,AA_AR) %>%
+  full_join(df_BUDS_rating_it_pt, by="ID", relationship = "many-to-many") %>%
+  dplyr::select(ID,site,Condition,rating,AA_AR,SP_debriefing_deceived) %>%
+  group_by(ID,site,Condition,AA_AR,SP_debriefing_deceived) %>%
+  filter(complete.cases(rating)) %>%
+  reframe(rating=mean(rating)) %>%
+  pivot_wider(names_from="Condition", values_from="rating") %>%
+  mutate(rating_r = rstandard(lm(Acc_Acc ~ Acc_Rej, .)))
+  
+# summary(lm(AA_AR ~ rating_r, data = df_150275_cz_rating))
+
+df_275425_cz_rating <- df_275425_cz %>%
+  dplyr::select(ID,AA_AR) %>%
+  full_join(df_BUDS_rating_it_pt, by="ID", relationship = "many-to-many") %>%
+  dplyr::select(ID,site,Condition,rating,AA_AR,SP_debriefing_deceived) %>%
+  group_by(ID,site,Condition,AA_AR,SP_debriefing_deceived) %>%
+  filter(complete.cases(rating)) %>%
+  reframe(rating=mean(rating)) %>%
+  pivot_wider(names_from="Condition", values_from="rating") %>%
+  mutate(rating_r = rstandard(lm(Acc_Acc ~ Acc_Rej, .)))
+  
+# summary(lm(AA_AR ~ rating_r, data = df_275425_cz_rating))
+```
+
+# Save files
+```{r}
+save(df_BUDS_rating, df_BUDS_rating_it_pt, 
+     df_50150_cz_rating, df_150275_cz_rating, df_275425_cz_rating, file=here("./data/BUDS_behavior.RData"))
+```
