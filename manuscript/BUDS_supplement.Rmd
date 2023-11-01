@@ -58,11 +58,6 @@ affiliation:
   - id            : "2"
     institution   : "Columbia University"
 
-abstract: |
-  
-
-  
-keywords          : "social feedback, socioeconomic status, area deprivation, negative affect, social acceptance, social rejection, discrimination"
 
 bibliography      : "BUDS.bib"
 floatsintext      : no
@@ -277,34 +272,6 @@ plot_stats <- function(model, var) {
 
 # Results
 ## Behavioral ratings
-
-### In-task ratings
-```{r}
-apa_print(t.test(rating ~ Feedback, filter(df_BUDS_rating_it_pt, Voting=="Like"), paired=TRUE))$full_result
-
-summary(lm(rating ~ Feedback*Voting, df_BUDS_rating_it_pt))
-
-in_task_rating_summary_stats <- summarySE(df_BUDS_rating_it_pt, measurevar="rating", groupvars=c("Feedback","Voting")) %>%
-  filter(complete.cases(rating))
-in_task_rating_summary_stats$Voting <- c("Low-value", "High-value", "Low-value", "High-value")
-rating_plot <- ggplot(in_task_rating_summary_stats, aes(y=rating, x=Voting, fill=Feedback)) +
-  geom_bar(position = "dodge", stat = "identity", colour="black") +
-  geom_errorbar(aes(ymin=rating-ci, ymax=rating+ci), width=.2, position=position_dodge(.9)) +
-  scale_fill_manual(values = c("gray", "white"), name = "Feedback") +
-  theme_apa() +
-  labs(x="Peer value", y="In task, post-trial feedback rating")
-
-# ggpaired(filter(df_BUDS_rating_it_pt,complete.cases(rating)), y="rating", x="Voting", color="Feedback", line.color = "Feedback", line.size = 0) +
-#   scale_color_manual(values = c("black", "darkgray"), name = "Feedback") +
-#   theme_apa() +
-#   labs(x="Peer value", y="In task, post-trial feedback rating")
-```
-
-(ref:rating_plot-caption) Mean ratings across all participants by Feedback and Value.
-```{r rating_plot, fig.cap = "(ref:rating_plot-caption)"}
-plot(rating_plot)
-```
-
 ### Post-task ratings
 ```{r}
 post_task_table <- st(dplyr::select(df_BUDS_rating_it_pt, SP_debriefing_interested:SP_debriefing_nervous,SP_debriefing_socialmediause),
@@ -317,34 +284,9 @@ post_task_table <- st(dplyr::select(df_BUDS_rating_it_pt, SP_debriefing_interest
 apa_table(post_task_table)
 ```
 
-During post-task debriefing, `r table(df_BUDS_rating_it_pt$SP_debriefing_deceived)[2]` participants reported on the question "While you were doing the chatroom, did you believe that you would really be chatting with one of these people on the computer after your EEG?" In the Results we note where analyses covarying for this differed from primary analyses.
-
-
-## Task-derived ERPs
-```{r}
-Cz_ga_aa_ar_plot <- ggplot(data=filter(df_ga_Cz_long, Condition=="Acc_Acc" | Condition=="Acc_Rej" | Condition=="AA_AR"), aes(x=Time, y=grand_average, color=Condition)) +
-  geom_line(linewidth=1) +
-  xlim(-200,1000) +
-  annotate("rect", xmin=50, xmax=150, ymin=-5, ymax=Inf, alpha=0.2, fill="orange") +
-  annotate("rect", xmin=150, xmax=275, ymin=-5, ymax=Inf, alpha=0.2, fill="yellow") +
-  annotate("rect", xmin=275, xmax=425, ymin=-5, ymax=Inf, alpha=0.2, fill="blue") +
-  geom_rect(aes(xmin=0, xmax=0, ymin=-5, ymax=12), color="black") +
-  geom_rect(aes(xmin=-200, xmax=1000, ymin=0, ymax=0), color="black") +
-  scale_color_manual(breaks=c("Acc_Acc","Acc_Rej","AA_AR"),
-                     values=c("Acc_Acc"="green", "AA_AR"="black", "Acc_Rej"="red"), 
-                     labels=c("Acceptance","Rejection","Difference"), name=NULL) +
-  labs(x="Time (ms)", y="Cz") +
-  theme_apa() + theme(legend.position="top")
-
-# load(file=here("/data/BUDS_cleaning04_topo_windows.RData"))
-```
-```{r}
-plot(Cz_ga_aa_ar_plot)
-```
-
 ## Feedback x Value x ADI interaction
 ### N1
-```{r, eval=F}
+```{r, eval=T}
 # models_50150_cz_table <- lmer_adi_interaction_table(df_50150_cz_long)
 # models_50150_cz_table$component <- "50150_cz"
 
@@ -403,22 +345,15 @@ plot_50150_adi <- ggplot(filter(model_50150_adi, ADI_NATRANK_z!="Mean"), aes(x=A
 ## Covaring for age, sex, hispanic ethnicity, stress, IDAS
 ### RewP
 ```{r}
-summary(lmer(formula = ERP ~ Feedback*ADI_NATRANK_c + Age + Sex + demo_child_hispanic + StressCT + StressTH + IDAS_depression + IDAS_anxiety + IDAS_wellbeing + (1 | ID), data = filter(df_150275_cz_long_strain, Voting=="Like")))
-
-# plot_cap(
-#     lmer(formula = ERP ~ Feedback*ADI_NATRANK_c + Age + Sex + demo_child_hispanic + StressCT + StressTH + IDAS_depression + IDAS_anxiety + IDAS_wellbeing + (1 | ID) + (1 | site), data = filter(df_150275_cz_long_strain, Voting=="Like")),
-#     condition = list(
-#       "ADI_NATRANK_c" = "threenum",
-#         "Feedback")) +
-#   labs(title="ADI") +
-#     theme_classic()
+summary(lmer(formula = ERP ~ Feedback*ADI_NATRANK_c + Age + Sex + demo_child_hispanic + White_nonwhite + StressCT + StressTH + IDAS_wellbeing + (1 | ID) + (1 | site), data = filter(df_150275_cz_long_strain, Voting=="Like")))
 
 # summary(lm(formula = AA_AR ~ ADI_NATRANK_c + Age + Sex + demo_child_hispanic + StressCT + StressTH + IDAS_depression + IDAS_anxiety + IDAS_wellbeing, data = filter(df_150275_cz_long_strain, Voting=="Like" & Feedback=="Acc")))
 ```
 
 ### P3
 ```{r}
-summary(lmer(formula = ERP ~ Feedback*ADI_NATRANK_c + Age + Sex + demo_child_hispanic + StressCT + StressTH + IDAS_depression + IDAS_anxiety + IDAS_wellbeing + (1 | ID) + (1 | site), data = filter(df_275425_cz_long_strain, Voting=="Like")))
+summary(lmer(formula = ERP ~ Feedback*ADI_NATRANK_c + 
+               Age + Sex + demo_child_hispanic + White_nonwhite + StressCT + StressTH + IDAS_wellbeing + (1 | ID) + (1 | site), data = filter(df_275425_cz_long_strain, Voting=="Like")))
 
 # plot_cap(
 #     lmer(formula = ERP ~ Feedback*ADI_NATRANK_c + Age + Sex + demo_child_hispanic + StressCT + StressTH + IDAS_depression + IDAS_anxiety + IDAS_wellbeing + (1 | ID) + (1 | site), data = filter(df_275425_cz_long_strain, Voting=="Like")),
@@ -430,208 +365,24 @@ summary(lmer(formula = ERP ~ Feedback*ADI_NATRANK_c + Age + Sex + demo_child_his
 
 # summary(lm(formula = AA_AR ~ ADI_NATRANK_c + Age + Sex + demo_child_hispanic + StressCT + StressTH + IDAS_depression + IDAS_anxiety + IDAS_wellbeing, data = filter(df_275425_cz_long_strain, Voting=="Like" & Feedback=="Acc")))
 ```
+The interactions between ADI and Feedback condition predicting mean RewP and P3 amplitude remain significant even when covarying for age, sex, hispanic ethnicity, majority/minority race, stress life event frequency and severity, and self-reported well-being.
+
 
 ## Covaring for belief in deception
 ### RewP
 ```{r}
 df_150275_cz_long_rating <- full_join(df_150275_cz_long, df_150275_cz_rating, by="ID")
 
-summary(lmer(formula = ERP ~ Feedback*ADI_NATRANK_c + SP_debriefing_deceived + (1 | ID), data = filter(df_150275_cz_long_rating, Voting=="Like")))
-
-# plot_cap(
-#     lmer(formula = ERP ~ Feedback*ADI_NATRANK_c + SP_debriefing_deceived + (1 | ID), data = filter(df_150275_cz_long_rating, Voting=="Like")),
-#     condition = list(
-#       "ADI_NATRANK_c" = "threenum",
-#         "Feedback")) +
-#   labs(title="ADI") +
-#     theme_classic()
+summary(lmer(formula = ERP ~ Feedback*ADI_NATRANK_c + SP_debriefing_deceived + site.x + (1 | ID), data = filter(df_150275_cz_long_rating, Voting=="Like")))
 ```
 
 ### P3
 ```{r}
 df_275425_cz_long_rating <- full_join(df_275425_cz_long, df_275425_cz_rating, by="ID")
 
-# summary(lmer(formula = ERP ~ Feedback*ADI_NATRANK_c + SP_debriefing_deceived + (1 | ID) + (1 | site.x), data = filter(df_275425_cz_long_rating, Voting=="Like")))
-# 
-# plot_cap(
-#     lmer(formula = ERP ~ Feedback*ADI_NATRANK_c + SP_debriefing_deceived + (1 | ID) + (1 | site.x), data = filter(df_275425_cz_long_rating, Voting=="Like")),
-#     condition = list(
-#       "ADI_NATRANK_c" = "threenum",
-#         "Feedback")) +
-#   labs(title="ADI") +
-#     theme_classic()
+summary(lmer(formula = ERP ~ Feedback*ADI_NATRANK_c + SP_debriefing_deceived + (1 | ID) + (1 | site.x), data = filter(df_275425_cz_long_rating, Voting=="Like")))
 ```
 
-
-## ADDI: Discrimination
-```{r}
-paste0("N = ",sum(complete.cases(df_150275_cz$AA_AR) & complete.cases(df_150275_cz$addi_total_c)))
-
-summary(lm(ADI_NATRANK_c ~ addi_total_c,df_150275_cz))
-summary(lm(ADI_NATRANK_c ~ addi_total_c,df_150275_cz))
-```
-
-### RewP
-```{r}
-model_150275_cz_addi <- lmer(formula = ERP ~ Feedback*Voting*addi_total_c + (1 | ID), data = df_150275_cz_long)
-model_150275_cz_addi_high <- lmer(formula = ERP ~ Feedback*addi_total_c + (1 | ID), data = filter(df_150275_cz_long,Voting=="Like"))
-model_150275_cz_addi_low <- lmer(formula = ERP ~ Feedback*addi_total_c + (1 | ID), data = filter(df_150275_cz_long,Voting=="Dislike"))
-
-model_150275_addi <- plot_cap(
-    model_150275_cz_addi,
-    condition = list(
-      "addi_total_c" = "threenum",
-        "Feedback",
-        "Voting"),
-    draw=FALSE) %>%
-    mutate(Value = case_match(Voting, "Dislike" ~ "Low",
-                                    "Like" ~ "High"),
-         Feedback = case_match(Feedback, "Acc" ~ "Acceptance",
-                                    "Rej" ~ "Rejection"))
-
-plot_150275_addi_t <- data.frame(
-  label = c(plot_stats(model_150275_cz_addi_high, "Feedback1:addi_total_c"),
-            plot_stats(model_150275_cz_addi_low, "Feedback1:addi_total_c")), 
-  Value  = c("High", "Low"),
-  Feedback=c("Acc","Rej"))
-
-plot_150275_addi <- ggplot(filter(model_150275_addi, addi_total_c!="Mean"), aes(x=addi_total_c, y=estimate, fill=Feedback)) +
-  geom_bar(position = "dodge", stat = "identity", colour="black") +
-  geom_errorbar(aes(ymin=estimate-std.error, ymax=estimate+std.error), width=.2, position=position_dodge(.9)) +
-  scale_fill_manual(values = c("darkgreen", "red"), name = "Feedback") +
-  facet_wrap(~Value) +
-  geom_text(data = data.frame(
-  label = c(plot_stats(model_150275_cz_addi_high, "Feedback1:addi_total_c"),
-            plot_stats(model_150275_cz_addi_low, "Feedback1:addi_total_c")),
-  Value  = c("High", "Low"),
-  Feedback=c("Acceptance","Rejection")), aes(x = 1.5, y = 10, label = label)) +
-  theme_apa() +
-  labs(x="Discrimination", y="RewP") +
-  theme(strip.background = element_blank(),axis.title.x=element_blank())
-
-# Bar plot black and white
-# plot_150275_addi <- ggplot(model_150275_addi, aes(x=addi_total_c, y=estimate, fill=Feedback)) +
-#   geom_bar(position = "dodge", stat = "identity", colour="black") +
-#   geom_errorbar(aes(ymin=estimate-std.error, ymax=estimate+std.error), width=.2, position=position_dodge(.9)) +
-#   scale_fill_manual(values = c("gray", "white"), name = "Feedback") +
-#   facet_wrap(~Value) +
-#   geom_text(data = data.frame(
-#   label = c(plot_stats(model_150275_cz_addi_high, "Feedback1:addi_total_c"),
-#             plot_stats(model_150275_cz_addi_low, "Feedback1:addi_total_c")),
-#   Value  = c("High", "Low"),
-#   Feedback=c("Acceptance","Rejection")),
-#             aes(x = 2, y = 10, label = label)) +
-#   theme_apa() +
-#   labs(x="", y="RewP") +
-#   theme(axis.text.x=element_blank())
-
-
-# plot_150275_addi <- ggplot(df_150275_cz_long, aes(x=addi_total_c, y=ERP, color=Feedback)) +
-#   facet_wrap(~Value) +
-#   geom_point(alpha = .3) +
-#   geom_smooth(aes(group=Feedback), method = "lm") +
-#   scale_color_manual(values = c("darkgreen", "red"), name = "Feedback") +
-#   theme(strip.background = element_blank(), strip.text.x = element_blank()) +
-#   # geom_text(data = plot_150275_addi_t, size=4, aes(x = 2, y = 34, label = label)) +
-#   theme_apa() +
-#   labs(x="", y="RewP") +
-#   theme(axis.text.x=element_blank(),
-#         legend.position = "none")
-```
-
-### P3
-```{r}
-model_275425_cz_addi <- lmer(formula = ERP ~ Feedback*Voting*addi_total_c + (1 | ID), data = df_275425_cz_long)
-model_275425_cz_addi_high <- lmer(formula = ERP ~ Feedback*addi_total_c + (1 | ID), data = filter(df_275425_cz_long,Voting=="Like"))
-model_275425_cz_addi_low <- lmer(formula = ERP ~ Feedback*addi_total_c + (1 | ID), data = filter(df_275425_cz_long,Voting=="Dislike"))
-
-model_275425_addi <- plot_cap(
-    model_275425_cz_addi,
-    condition = list(
-      "addi_total_c" = "threenum",
-        "Feedback",
-        "Voting"),
-    draw=FALSE) %>%
-    mutate(Value = case_match(Voting, "Dislike" ~ "Low",
-                                    "Like" ~ "High"),
-         Feedback = case_match(Feedback, "Acc" ~ "Acceptance",
-                                    "Rej" ~ "Rejection"))
-
-plot_275425_addi_t <- data.frame(
-  label = c(plot_stats(model_275425_cz_addi_high, "Feedback1:addi_total_c"),
-            plot_stats(model_275425_cz_addi_low, "Feedback1:addi_total_c")), 
-  Value  = c("High", "Low"),
-  Feedback=c("Acc","Rej"))
-
-plot_275425_addi <- ggplot(filter(model_275425_addi, addi_total_c!="Mean"), aes(x=addi_total_c, y=estimate, fill=Feedback)) +
-  geom_bar(position = "dodge", stat = "identity", colour="black") +
-  geom_errorbar(aes(ymin=estimate-std.error, ymax=estimate+std.error), width=.2, position=position_dodge(.9)) +
-  scale_fill_manual(values = c("darkgreen", "red"), name = "Feedback") +
-  facet_wrap(~Value) +
-  geom_text(data = data.frame(
-  label = c(plot_stats(model_275425_cz_addi_high, "Feedback1:addi_total_c"),
-            plot_stats(model_275425_cz_addi_low, "Feedback1:addi_total_c")),
-  Value  = c("High", "Low"),
-  Feedback=c("Acceptance","Rejection")), aes(x = 1.5, y = 12, label = label)) +
-  theme_apa() +
-  labs(x="Self-reported \ndiscrimination distress", y="RewP") +
-  theme(strip.background = element_blank())
-
-# Black and white bar plots
-# plot_275425_addi <- ggplot(model_275425_addi, aes(x=addi_total_c, y=estimate, fill=Feedback)) +
-#   geom_bar(position = "dodge", stat = "identity", colour="black") +
-#   geom_errorbar(aes(ymin=estimate-std.error, ymax=estimate+std.error), width=.2, position=position_dodge(.9)) +
-#   scale_fill_manual(values = c("gray", "white"), name = "Feedback") +
-#   facet_wrap(~Value) +
-#   geom_text(data = data.frame(
-#   label = c(plot_stats(model_275425_cz_addi_high, "Feedback1:addi_total_c"),
-#             plot_stats(model_275425_cz_addi_low, "Feedback1:addi_total_c")), 
-#   Value  = c("High", "Low"),
-#   Feedback=c("Acceptance","Rejection")), 
-#             aes(x = 2, y = 11, label = label)) +
-#   theme_apa() +
-#   labs(x="Self-reported discrimination", y="P3") +
-#   theme(strip.background = element_blank(), strip.text.x = element_blank())
-
-# plot_275425_addi <- ggplot(df_275425_cz_long, aes(x=addi_total_c, y=ERP, color=Feedback)) +
-#   facet_wrap(~Value) +
-#   geom_point(alpha = .3) +
-#   geom_smooth(aes(group=Feedback), method = "lm") +
-#   scale_color_manual(values = c("darkgreen", "red"), name = "Feedback") +
-#   theme(strip.background = element_blank(), strip.text.x = element_blank()) +
-#   geom_text(data = plot_275425_addi_t, size=4, aes(x = 2, y = 34, label = label)) +
-#   theme_apa() +
-#   labs(x="", y="P3") +
-#   theme(axis.text.x=element_blank(),
-#         legend.position = "none")
-```
-
-```{r}
-addi_plots_nocov <- ggarrange(plot_150275_addi, plot_275425_addi,
-          labels = c("A","B"),
-          label.x = c(rep(.04,4)),
-          label.y = c(rep(1,4)),
-          common.legend = TRUE, legend = "bottom",
-          ncol = 1, nrow = 2,
-          align="v")
-addi_plots_nocov <- annotate_figure(addi_plots_nocov, left=text_grob("Mean amplitude (µV)", color = "black", rot = 90, size=14))
-addi_plots_nocov
-```
-
-```{r}
-adi_addi_plots_nocov <- ggarrange(plot_150275_adi, 
-                                  plot_150275_addi+labs(x="", y=""),
-                                  plot_275425_adi+labs(x="ADI", y=""), 
-                                  plot_275425_addi+labs(x="Self-reported discrimination", y=""),
-          labels = c("A1","A2","B1","B2"),
-          label.x = c(rep(.04,4)),
-          label.y = c(rep(1,4)),
-          common.legend = TRUE, legend = "bottom",
-          ncol = 2, nrow = 2,
-          align="v")
-adi_addi_plots_nocov <- annotate_figure(adi_addi_plots_nocov, left=text_grob("Mean amplitude (µV)", color = "black", rot = 90, size=14))
-adi_addi_plots_nocov
-```
 
 ## EMA
 ```{r}
@@ -717,72 +468,29 @@ mean_ADI <- mean(df_150275_cz_ema$ADI_NATRANK_c, na.rm=TRUE)
 sd_ADI <- sd(df_150275_cz_ema$ADI_NATRANK_c, na.rm=TRUE)
 mean_rewp <- mean(df_150275_cz_ema$AA_AR_c, na.rm=TRUE)
 sd_rewp <- sd(df_150275_cz_ema$AA_AR_c, na.rm=TRUE)
-mean_p3 <- mean(df_275425_cz_ema$AA_AR_c, na.rm=TRUE)
-sd_p3 <- sd(df_275425_cz_ema$AA_AR_c, na.rm=TRUE)
-```
-
-##### RewP
-```{r, results='hide', eval=FALSE}
-RewPa <- mean(df_150275_cz_ema$AA_AR_c) + sd(df_150275_cz_ema$AA_AR_c)
-RewPb <- mean(df_150275_cz_ema$AA_AR_c) - sd(df_150275_cz_ema$AA_AR_c)
-RewP_list <- list(AA_AR_c=round(c(RewPa,RewPb),2))
-
-rewp_ss <- emtrends(model_150275_ema_na, pairwise ~AA_AR_c, var="ADI_NATRANK_c",at=RewP_list, adjust="none")|> test()
-
-interact_plot(model_150275_ema_na, pred = ADI_NATRANK_c, modx = AA_AR_c, partial.residuals = TRUE,
-              modx.values = c(mean_rewp-sd_rewp,mean_rewp+sd_rewp))
-
-interact_plot(model_150275_ema_na, pred = ADI_NATRANK_c, modx = AA_AR_c, plot.points = TRUE,
-              modx.values = c(mean_rewp-sd_rewp,mean_rewp+sd_rewp), allow.new.levels=TRUE)
-
-summary(lm(na_cubert ~ AA_AR_c, dplyr::filter(df_150275_cz_ema, ADI_NATRANK_c < -2)))
 ```
 
 ### Covary for deception
 ```{r}
-df_150275_cz_ema_rating <- df_150275_cz_ema %>%
-  select(-site) %>%
-  full_join(df_BUDS_rating_it_pt, by="ID", relationship = "many-to-many")
 df_275425_cz_ema_rating <- df_275425_cz_ema %>%
     select(-site) %>%
   full_join(df_BUDS_rating_it_pt, by="ID", relationship = "many-to-many")
 
-model_150275_ema_na_dec <- glmmTMB(na_cubert ~ ADI_NATRANK_c*AA_AR_c + SP_debriefing_deceived + (1 | ID) + (1 | site),
-                    zi = ~ ADI_NATRANK_c*AA_AR_c + (1 | ID) + (1 | site),
-    data = df_150275_cz_ema_rating,
-    family=gaussian, REML=TRUE)
-
-# tidy(model_150275_ema_na_dec)[5,]
-
 model_275425_ema_na_dec <- glmmTMB(na_cubert ~ ADI_NATRANK_c*AA_AR_c + SP_debriefing_deceived + (1 | ID) + (1 | site),
-                    zi = ~ ADI_NATRANK_c*AA_AR_c + (1 | ID),
+                    zi = ~ ADI_NATRANK_c*AA_AR_c + (1 | ID) + (1 | site),
     data = df_275425_cz_ema_rating,
     family=gaussian, REML=TRUE)
 
 # tidy(model_275425_ema_na_dec)[5,]
 ```
+Interactions between ADI and P3 predicting mean negative affect over the following week were non-significant when covarying for age, sex, hispanic ethnicity, majority/minority race, stress life event frequency and severity, and self-reported well-being.
 
 ### Covaring for age, sex, hispanic ethnicity, stress, IDAS
 ```{r}
-model_150275_ema_na_cov <- glmmTMB(na_cubert ~ ADI_NATRANK_c*AA_AR_c + Age + Sex + demo_child_hispanic + StressCT + StressTH + IDAS_depression + IDAS_wellbeing + IDAS_panic + IDAS_sa + (1 | ID),
-                    zi = ~ ADI_NATRANK_c*AA_AR_c + (1 | ID),
-    data = df_150275_cz_ema,
+model_275425_ema_na_cov <- glmmTMB(na_cubert ~ ADI_NATRANK_c*AA_AR_c + Age + Sex + demo_child_hispanic + White_nonwhite + StressCT + StressTH + IDAS_wellbeing + (1 | ID) + (1 | site),
+                    zi = ~ ADI_NATRANK_c*AA_AR_c + (1 | ID) + (1 | site),
+    data = df_275425_cz_ema_rating,
     family=gaussian, REML=TRUE)
-
-interact_plot(model_150275_ema_na_cov, pred = ADI_NATRANK_c, modx = AA_AR_c, partial.residuals = TRUE,
-              modx.values = c(mean_rewp-sd_rewp,mean_rewp+sd_rewp))
-
-tidy(model_150275_ema_na_cov)[13,]
-
-model_275425_ema_na_cov <- glmmTMB(na_cubert ~ ADI_NATRANK_c*AA_AR_c + Age + Sex + demo_child_hispanic + StressCT + StressTH + IDAS_depression + IDAS_wellbeing + IDAS_panic + IDAS_sa + (1 | ID),
-                    zi = ~ ADI_NATRANK_c*AA_AR_c + (1 | ID),
-    data = df_275425_cz_ema,
-    family=gaussian, REML=TRUE)
-
-interact_plot(model_275425_ema_na_cov, pred = ADI_NATRANK_c, modx = AA_AR_c, partial.residuals = TRUE,
-              modx.values = c(mean_p3-sd_p3,mean_p3+sd_p3))
-
-tidy(model_275425_ema_na_cov)[13,]
 ```
 
 ### ADDI x ERP predicting NA

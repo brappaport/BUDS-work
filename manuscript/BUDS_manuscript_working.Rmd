@@ -285,7 +285,9 @@ Prior tasks have examined relationships between social feedback brain responsivi
 
 Psychophysiological tasks, with their high temporal resolution, can clarify whether area deprivation is associated with heightened sensitivity to rejection, blunted responses to acceptance, or decreased attention to social feedback. These questions can be tested using distinct ERP components: P3 for rejection sensitivity, RewP for acceptance sensitivity, and N1 for attention to social feedback. These components have been identified in similar social feedback tasks (CITE).
 
-Strengths of the current study include: 1) novel identification of ERPs in a task previously used exclusively with fMRI, 2) a diverse sample of youth from two major metropolitan areas, 3) objective and validated measures of area deprivation, 4) inclusion of clinically and demographically relevant covariates, and 4) ecological momentary assessment of participants' affect during the week following the task.
+Finally, in prior studies, measuring symptoms has relied on self-report on questionnaires at single time points. Numerous issues have been raised with this, including bias in reporting and lack of ecological validity (CITE). Ecological momentary assessment addresses many of these concerns, as participants respond to questionnaires many times throughout their day-to-day lives [@moskowitzEcologicalMomentaryAssessment2006]. For this reason, it is thought to provide a more sensitive and accurate measure of participants' symptoms.
+
+The current study, then, aims to robustly test the following primary hypotheses: 1) area deprivation will moderate brain responses to different kinds of peer feedback (acceptance and rejection), 2) area deprivation will also moderate the association between brain responses to peer feedback and EMA reports of psychopathology. Follow up analyses will also explore: 1) whether self-report discrimination distress moderates brain responses to different kinds of peer feedback, 2)  whether self-report discrimination distress will also moderate the association between brain responses to peer feedback to and EMA reports of psychopathology. In doing so, this study becomes the first to examine whether area deprivation/SES moderate associations between brain responses to social feedback and symptoms of psychopathology. It will also inform whether discrimination represents a particularly active *aspect* of area deprivation that confers risk for psychopathology. Methodological strengths of the current study include: 1) novel identification of ERPs in a task previously used exclusively with fMRI, 2) a diverse sample of youth from two major metropolitan areas, 3) objective and validated measures of area deprivation, 4) inclusion of clinically and demographically relevant covariates, and 5) ecological momentary assessment of participants' affect during the week following the ERP task.
 
 # Methods
 ## Participants (Maddie)
@@ -1136,7 +1138,7 @@ adi_plots_na <- ggarrange(plot_150275_adi_na, plot_275425_adi_na,
 adi_plots_na <- annotate_figure(adi_plots_na, bottom=text_grob("Area Deprivation", color = "black", size=14))
 adi_plots_na
 ```
-
+Interactions between ADI and RewP predicting mean negative affect over the following week were not significant. Interactions between ADI and P3 predicting mean negative affect over the following week (see Figure ##), however, were significant. Moreover, these effects remained significant when covarying for age, sex, hispanic ethnicity, majority/minority race, stress life event frequency and severity, and self-reported well-being (see Supplement).
 
 #### Simple slopes
 ```{r}
