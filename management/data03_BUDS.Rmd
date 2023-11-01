@@ -55,6 +55,7 @@ select <- dplyr::select
 ## Get the Working Directory
 ```{r}
   here::i_am("./management/data03_BUDS.Rmd")
+here <- here::here()
 ```
 
 ## Load ERP data
@@ -64,8 +65,8 @@ subjects <- c(1000,
 1001,
 1004,
 1006,
-# 1010,
-# 1012,
+1010,
+1012,
 1014,
 1017,
 1021,
@@ -109,7 +110,7 @@ subjects <- c(1000,
 1069,
 1070,
 1071,
-# 1072,
+1072,
 1074,
 1075,
 1077,
@@ -158,13 +159,13 @@ subjects <- c(1000,
 1126,
 9001,
 9003,
-# 9004,
+9004,
 9006,
 9007,
 9008,
 9010,
 9013,
-# 9014,
+9014,
 9015,
 9017,
 9018,
@@ -231,13 +232,19 @@ subjects <- c(1000,
 9099,
 9100)
 
+too_few_segments <- c(9035, 1124, 1101, 1084, 9081, 1090, 9017, 9014, 
+                      1055, 9051)
+bad_data <- c(1072, 9004)
+
+subjects <- setdiff(subjects, c(too_few_segments,bad_data))
+
 channels <- c("Fp1", "Fz", "F3", "F7", "FT9", "FC5", "FC1", 
               "C3", "TP9", "CP5", "CP1", 
               "Pz", "P3", "P7", "CPz", "Oz", "POz", "P4", "P8", "TP10", 
               "CP6", "CP2", "Cz", "C4", "AFz", 
               "FT10", "FC6", "FC2", "F4", "F8", "Fp2", "FCz")
 time_windows <- c("150275", "50150", "275425", "150350", "200400", "250450", "4001000", "6001500")
-time_windows <- c("150275", "50150", "275425")
+# time_windows <- c("150275", "50150", "275425")
 
 for ( t in time_windows) {
   eval(parse(text=paste0('df_',t,' <- as.data.frame(NA)')))
@@ -282,6 +289,54 @@ save(df_275425, df_150350, df_250450, df_200400, df_4001000, df_6001500, df_1502
      df_odd_150350, df_odd_250450, df_odd_200400, df_odd_4001000, df_odd_6001500, df_odd_275425, df_odd_150275, df_odd_50150,
      file=here("./data/ERP_data.RData"))
 ```
+
+#### Single trial ERP data
+```{r}
+too_few_segments <- c(9035, 1124, 1101, 1084, 9081, 1090, 9017, 9014, 1055, 9051)
+bad_data <- c(1072, 9004)
+
+files_artifacts  <- list.files(path=here("./data/eeg_processing_fully_auto/Scripts/Events/feedback/"), 
+                     pattern='\\_event_all.csv',
+                     full.names=TRUE)
+df_artifacts <- lapply(files_artifacts, read.csv, header = TRUE) %>%
+  do.call(rbind , .) %>%
+     filter(bindescr!="") %>%
+     mutate(ID = subject,
+            trial = epochN) %>%
+     select(ID,artifactFlag,trial,bindescr) %>%
+  filter(!ID %in% c(too_few_segments,bad_data))
+  
+
+files_50150  <- list.files(path=here("./data/eeg_processing_fully_auto/Scripts/trial_level_data/50150/"), 
+                     pattern='\\_Cz_50150_TrialLevelMeanAmplitude.csv',
+                     full.names=TRUE)
+df_50150 <- lapply(files_50150, read.csv, header = TRUE) %>%
+       do.call(rbind, .) %>%
+       right_join(df_artifacts, by=c("ID","trial"))
+
+files_150275  <- list.files(path=here("./data/eeg_processing_fully_auto/Scripts/trial_level_data/150275/"), 
+                     pattern='\\_Cz_150275_TrialLevelMeanAmplitude.csv',
+                     full.names=TRUE)
+df_150275 <- lapply(files_150275, read.csv, header = TRUE) %>%
+       do.call(rbind, .) %>%
+       right_join(df_artifacts, by=c("ID","trial"))
+
+files_275425  <- list.files(path=here("./data/eeg_processing_fully_auto/Scripts/trial_level_data/275425/"), 
+                     pattern='\\_Cz_275425_TrialLevelMeanAmplitude.csv',
+                     full.names=TRUE)
+df_275425 <- lapply(files_275425, read.csv, header = TRUE) %>%
+       do.call(rbind, .) %>%
+       right_join(df_artifacts, by=c("ID","trial"))
+
+write.csv(df_50150, "./data/trial_Cz_50150ms.csv")
+write.csv(df_150275, "./data/trial_Cz_150275ms.csv")
+write.csv(df_275425, "./data/trial_Cz_275425ms.csv")
+
+write.csv(filter(df_50150,artifactFlag==0), "./data/trial_Cz_50150ms_clean.csv")
+write.csv(filter(df_150275,artifactFlag==0), "./data/trial_Cz_150275ms_clean.csv")
+write.csv(filter(df_275425,artifactFlag==0), "./data/trial_Cz_275425ms_clean.csv")
+```
+
 
 ## Load ERP data
 ```{r}
@@ -597,50 +652,117 @@ geocode_data$FIPS <- as.numeric(as.character((paste0(geocode_data$V9,geocode_dat
 # Import subject ID 
 subj_rownumber <- openxlsx::read.xlsx(here("../_rawdata/Columbia/PREDICT_Addresses_formula.xlsx"))[,1:2]
 geocode_data2 <- full_join(subj_rownumber,geocode_data, by="V1")
-adi_codes <- read.csv(here("./data/ADI/national/US_2020_ADI_Census Block Group_v3.2.csv"))
+adi_codes <- read.csv(here("./data/ADI/national/US_2021_ADI_Census_Block_Group_v4_0_1.csv"))
 
-geocode_data_with_adi <- left_join(geocode_data2, adi_codes, by="FIPS") %>%
-  dplyr::select(c(ID,ADI_NATRANK,ADI_STATERNK)) %>%
-  mutate(ADI_NATRANK = as.integer(as.character(ADI_NATRANK)),
-         ADI_NATRANK_log = log(ADI_NATRANK))
+geocode_data_with_adi <- left_join(geocode_data2, adi_codes, by="FIPS")
+geocode_data_with_adi$ADI_NATRANK <- as.numeric(as.character(geocode_data_with_adi$ADI_NATRANK))
+```
+### Manually enter ADI values for those missing it (based on surrounding neighborhoods)
+Drawn from https://www.neighborhoodatlas.medicine.wisc.edu/mapping
+```{r}
+geocode_data_with_adi[geocode_data_with_adi$ID==1000,"ADI_NATRANK"] <- NA
+geocode_data_with_adi[geocode_data_with_adi$ID==1001,"ADI_NATRANK"] <- NA
+geocode_data_with_adi[geocode_data_with_adi$ID==1010,"ADI_NATRANK"] <- 24
+geocode_data_with_adi[geocode_data_with_adi$ID==1022,"ADI_NATRANK"] <- NA
+geocode_data_with_adi[geocode_data_with_adi$ID==1039,"ADI_NATRANK"] <- NA
+geocode_data_with_adi[geocode_data_with_adi$ID==1043,"ADI_NATRANK"] <- NA # this is a small side street that looks to only exist in one tract with NATRANK of 6
+geocode_data_with_adi[geocode_data_with_adi$ID==1053,"ADI_NATRANK"] <- NA
+geocode_data_with_adi[geocode_data_with_adi$ID==1060,"ADI_NATRANK"] <- 4
+geocode_data_with_adi[geocode_data_with_adi$ID==1071,"ADI_NATRANK"] <- NA
+geocode_data_with_adi[geocode_data_with_adi$ID==1074,"ADI_NATRANK"] <- NA
+geocode_data_with_adi[geocode_data_with_adi$ID==1094,"ADI_NATRANK"] <- 8
+geocode_data_with_adi[geocode_data_with_adi$ID==1099,"ADI_NATRANK"] <- 12
+geocode_data_with_adi[geocode_data_with_adi$ID==1108,"ADI_NATRANK"] <- 11
+geocode_data_with_adi[geocode_data_with_adi$ID==1111,"ADI_NATRANK"] <- 7
+geocode_data_with_adi[geocode_data_with_adi$ID==1112,"ADI_NATRANK"] <- (9+4)/2
+geocode_data_with_adi[geocode_data_with_adi$ID==1114,"ADI_NATRANK"] <- (9+4)/2 # Are these really the same?
+geocode_data_with_adi[geocode_data_with_adi$ID==1117,"ADI_NATRANK"] <- (5+4+21)/3
+geocode_data_with_adi[geocode_data_with_adi$ID==1118,"ADI_NATRANK"] <- NA
+geocode_data_with_adi[geocode_data_with_adi$ID==1120,"ADI_NATRANK"] <- NA
+geocode_data_with_adi[geocode_data_with_adi$ID==1121,"ADI_NATRANK"] <- NA
+geocode_data_with_adi[geocode_data_with_adi$ID==1122,"ADI_NATRANK"] <- NA
+geocode_data_with_adi[geocode_data_with_adi$ID==1123,"ADI_NATRANK"] <- NA
+geocode_data_with_adi[geocode_data_with_adi$ID==1125,"ADI_NATRANK"] <- NA
+geocode_data_with_adi[geocode_data_with_adi$ID==1126,"ADI_NATRANK"] <- NA
 
-df_275425_cz <- left_join(df_275425_cz, geocode_data_with_adi, by="ID") %>%
-  filter(complete.cases(AA_AR)) %>%
-  mutate(ADI_NATRANK_log_c = scale(center=TRUE, scale=FALSE, ADI_NATRANK_log),
-         ADI_NATRANK_log_z = scale(center=TRUE, scale=TRUE, ADI_NATRANK_log))
-df_150275_cz <- left_join(df_150275_cz, geocode_data_with_adi, by="ID") %>%
-  filter(complete.cases(AA_AR)) %>%
-  mutate(ADI_NATRANK_log_c = scale(center=TRUE, scale=FALSE, ADI_NATRANK_log),
-         ADI_NATRANK_log_z = scale(center=TRUE, scale=TRUE, ADI_NATRANK_log))
-df_50150_cz <- left_join(df_50150_cz, geocode_data_with_adi, by="ID") %>%
-  filter(complete.cases(AA_AR)) %>%
-  mutate(ADI_NATRANK_log_c = scale(center=TRUE, scale=FALSE, ADI_NATRANK_log),
-         ADI_NATRANK_log_z = scale(center=TRUE, scale=TRUE, ADI_NATRANK_log))
+geocode_data_with_adi[geocode_data_with_adi$ID==9006,"ADI_NATRANK"] <- 22
+geocode_data_with_adi[geocode_data_with_adi$ID==9010,"ADI_NATRANK"] <- 46
+geocode_data_with_adi[geocode_data_with_adi$ID==9027,"ADI_NATRANK"] <- NA
+geocode_data_with_adi[geocode_data_with_adi$ID==9039,"ADI_NATRANK"] <- 28
+geocode_data_with_adi[geocode_data_with_adi$ID==9044,"ADI_NATRANK"] <- (21+29)/2
+geocode_data_with_adi[geocode_data_with_adi$ID==9052,"ADI_NATRANK"] <- NA
+geocode_data_with_adi[geocode_data_with_adi$ID==9060,"ADI_NATRANK"] <- 57
+geocode_data_with_adi[geocode_data_with_adi$ID==9069,"ADI_NATRANK"] <- 3
+geocode_data_with_adi[geocode_data_with_adi$ID==9087,"ADI_NATRANK"] <- NA
+geocode_data_with_adi[geocode_data_with_adi$ID==9091,"ADI_NATRANK"] <- 28
+
+geocode_data_with_adi_log <- geocode_data_with_adi %>%
+  mutate(ADI_NATRANK_log = log(ADI_NATRANK)) %>%
+  dplyr::select(c(ID,ADI_NATRANK,ADI_NATRANK_log))
+
+df_275425_cz <- left_join(df_275425_cz, geocode_data_with_adi_log, by="ID") %>%
+  filter(complete.cases(AA_AR))
+df_275425_cz$ADI_NATRANK_c = scale(center=TRUE, scale=FALSE, df_275425_cz$ADI_NATRANK)
+df_275425_cz$ADI_NATRANK_z = scale(center=TRUE, scale=TRUE, df_275425_cz$ADI_NATRANK)
+df_275425_cz$ADI_NATRANK_log_c = scale(center=TRUE, scale=FALSE, df_275425_cz$ADI_NATRANK_log)
+df_275425_cz$ADI_NATRANK_log_z = scale(center=TRUE, scale=TRUE, df_275425_cz$ADI_NATRANK_log)
+
+df_150275_cz <- left_join(df_150275_cz, geocode_data_with_adi_log, by="ID") %>%
+  filter(complete.cases(AA_AR))
+df_150275_cz$ADI_NATRANK_c = scale(center=TRUE, scale=FALSE, df_150275_cz$ADI_NATRANK)
+df_150275_cz$ADI_NATRANK_z = scale(center=TRUE, scale=TRUE, df_150275_cz$ADI_NATRANK)
+df_150275_cz$ADI_NATRANK_log_c = scale(center=TRUE, scale=FALSE, df_150275_cz$ADI_NATRANK_log)
+df_150275_cz$ADI_NATRANK_log_z = scale(center=TRUE, scale=TRUE, df_150275_cz$ADI_NATRANK_log)
+
+df_50150_cz <- left_join(df_50150_cz, geocode_data_with_adi_log, by="ID") %>%
+  filter(complete.cases(AA_AR))
+df_50150_cz$ADI_NATRANK_c = scale(center=TRUE, scale=FALSE, df_50150_cz$ADI_NATRANK)
+df_50150_cz$ADI_NATRANK_z = scale(center=TRUE, scale=TRUE, df_50150_cz$ADI_NATRANK)
+df_50150_cz$ADI_NATRANK_log_c = scale(center=TRUE, scale=FALSE, df_50150_cz$ADI_NATRANK_log)
+df_50150_cz$ADI_NATRANK_log_z = scale(center=TRUE, scale=TRUE, df_50150_cz$ADI_NATRANK_log)
 
 corr.test(df_150275_cz$AA_AR, df_275425_cz$AA_AR)
 corr.test(df_150275_cz$Acc_Acc, df_275425_cz$Acc_Rej)
 
-df_275425_cz_long <- left_join(df_275425_cz_long, geocode_data_with_adi, by="ID") %>%
+df_275425_cz_long <- left_join(df_275425_cz_long, geocode_data_with_adi_log, by="ID") %>%
         mutate(site = case_match(as.character(id_2_i), "CUMC" ~ "Columbia",
                                    "2" ~ "Northwestern",
                                    NA ~ NA)) %>%
   group_by(Voting, Feedback) %>%
-  mutate(ADI_NATRANK_log_c = scale(center=TRUE, scale=FALSE, ADI_NATRANK_log),
+  mutate(ADI_NATRANK_c = scale(center=TRUE, scale=FALSE, ADI_NATRANK),
+         ADI_NATRANK_z = scale(center=TRUE, scale=TRUE, ADI_NATRANK),
+         ADI_NATRANK_log_c = scale(center=TRUE, scale=FALSE, ADI_NATRANK_log),
          ADI_NATRANK_log_z = scale(center=TRUE, scale=TRUE, ADI_NATRANK_log))
-df_150275_cz_long <- left_join(df_150275_cz_long, geocode_data_with_adi, by="ID") %>%
+df_150275_cz_long <- left_join(df_150275_cz_long, geocode_data_with_adi_log, by="ID") %>%
         mutate(site = case_match(as.character(id_2_i), "CUMC" ~ "Columbia",
                                    "2" ~ "Northwestern",
                                    NA ~ NA)) %>%
   group_by(Voting, Feedback) %>%
-  mutate(ADI_NATRANK_log_c = scale(center=TRUE, scale=FALSE, ADI_NATRANK_log),
+  mutate(ADI_NATRANK_c = scale(center=TRUE, scale=FALSE, ADI_NATRANK),
+         ADI_NATRANK_z = scale(center=TRUE, scale=TRUE, ADI_NATRANK),
+         ADI_NATRANK_log_c = scale(center=TRUE, scale=FALSE, ADI_NATRANK_log),
          ADI_NATRANK_log_z = scale(center=TRUE, scale=TRUE, ADI_NATRANK_log))
-df_50150_cz_long <- left_join(df_50150_cz_long, geocode_data_with_adi, by="ID") %>%
+df_50150_cz_long <- left_join(df_50150_cz_long, geocode_data_with_adi_log, by="ID") %>%
         mutate(site = case_match(as.character(id_2_i), "CUMC" ~ "Columbia",
                                    "2" ~ "Northwestern",
                                    NA ~ NA)) %>%
   group_by(Voting, Feedback) %>%
-  mutate(ADI_NATRANK_log_c = scale(center=TRUE, scale=FALSE, ADI_NATRANK_log),
+  mutate(ADI_NATRANK_c = scale(center=TRUE, scale=FALSE, ADI_NATRANK),
+         ADI_NATRANK_z = scale(center=TRUE, scale=TRUE, ADI_NATRANK),
+         ADI_NATRANK_log_c = scale(center=TRUE, scale=FALSE, ADI_NATRANK_log),
          ADI_NATRANK_log_z = scale(center=TRUE, scale=TRUE, ADI_NATRANK_log))
+```
+
+#### Number missing ADI
+```{r, eval=FALSE}
+missing <- df_150275_cz[,c("ID","id_2_i","ADI_NATRANK")] %>%
+  filter(is.na(ADI_NATRANK) | ADI_NATRANK=="GQ") %>%
+  select(ID)
+sum(is.na(df_150275_cz$ADI_NATRANK))
+sum(!is.na(df_150275_cz$ADI_NATRANK))
+
+address <- left_join(geocode_data2, adi_codes, by="FIPS") %>% filter(ID<8999)
+address[address$ID==1001,"V2"]
 ```
 
 # STRAIN

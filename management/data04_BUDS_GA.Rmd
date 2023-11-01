@@ -230,6 +230,37 @@ subjects <- c(1000,
 #               "F3","F4","F7","F8","FC1","FC2","FC5","FC6","FCz","FT10","FT9","Fp1","Fp2","Fz",
 #               "Oz","P4","P7","P8","PO7","PO8","POz","Pz","TP10","TP9")
 
+bad_150275 <- c(1025,
+1055,
+1084,
+1090,
+1101,
+1122,
+1124,
+9015,
+9017,
+9019,
+9035,
+9051,
+9057,
+9081,
+9082)
+
+bad_275425 <- c(1055,
+1084,
+1090,
+1101,
+1124,
+9015,
+9017,
+9019,
+9035,
+9051,
+9081,
+9082)
+
+subjects <- setdiff(subjects, c(bad_150275,bad_275425))
+
 library(eegUtils)
 EEG <- import_set('./data/eeg_processing_fully_auto/DataPreprocessed/1000_continuous_icaed.set')
 chanlocs <- EEG$chan_info
