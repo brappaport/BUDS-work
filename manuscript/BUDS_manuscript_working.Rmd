@@ -391,7 +391,7 @@ For all composites, listwise deletion was used (i.e., if subjects were missing a
 
 ## Measures
 
-### Area Deprivation Index (ADI) (Lili)
+### SES: Area Deprivation Index (ADI) (Lili)
 
 The area deprivation index [@kindMakingNeighborhoodDisadvantageMetrics2018a; @universityofwisconsinschoolofmedicineandpublichealthAreaDeprivationIndex2023] is a composite measure based on 17 dimensions of socioeconomic disadvantage including education, employment, housing quality, and poverty-related factors, all measured via the American Community Survey.
 Neighborhoods are determined based on census tracts and are ranked from 1 to 100, where a higher ranking indicates greater levels of neighborhood disadvantage.
@@ -399,7 +399,7 @@ In cases when ADI values were missing for subjects (e.g., suppression due to a h
 This was often tracts \<1 mile from the original address.
 Of note, we reverse scored the ADI to make it interpretable as SES (i.e., higher scores represent greater SES/lower ADI).
 
-### Adolescent Discrimination Distress Index (ADDI) (Lili)
+### Discrimination distress: Adolescent Discrimination Distress Index (ADDI) (Lili)
 
 Discrimination-related distress was measured using the Adolescent Discrimination Distress Index [ADDI, @fisherDiscriminationDistressAdolescence2000].
 The ADDI is a 15-item self-report measure that assesses the distress experienced in response to perceived racial-ethnic discrimination across institutional, educational, and peer contexts.
@@ -409,13 +409,13 @@ In the current study, full-scale summary scores were used, where higher scores i
 
 ### Covariates
 
-#### Inventory of Depression and Anxiety Symptoms (IDAS-II) (Maddie)
+#### Depression and anxiety symptoms: Inventory of depression and anxiety symptoms (IDAS-II) (Maddie)
 
 The expanded Inventory of Depression and Anxiety Symptoms (IDAS-II; Watson, et al., 2012) is a 99-item, self-report instrument that measures the severity of depression, anxiety, and bipolar disorder symptoms over the past two weeks.
 Items are scored on a 5-point scale (1 = not at all; 5 = extremely).
 For the present study, 52-items were selected to assess current depression and anxiety symptoms.
 
-#### Stress and Adversity Inventory (Lili)
+#### Stressful life events and severity of stressful life events: Stress and adversity inventory (STRAIN) (Lili)
 
 The Stress and Adversity Inventory for Adolescents (STRAIN, @slavichStressAdversityInventory2019) was administered to measure participants' exposure to acute and lifetime stressors.
 This interview assesses exposures to 75 different stressors across 12 primary life domains (i.e. Housing, Education, Work, Treatment/Health, Marital/Partner, Reproduction, Financial, Legal/Crime, Other Relationships, Parent/Guardian, Death, Life-Threatening Situations) and five social-psychological characteristics (i.e. Interpersonal Loss, Physical Danger, Humiliation, Entrapment, Role Change/Disruption).
@@ -426,23 +426,19 @@ In prior studies, the STRAIN has shown excellent test-retest reliability for tot
 
 ## Data analysis
 
-### Behavioral ratings and ERP task effects
+### ERP task effects and behavioral ratings
 
-Paired samples t-tests were used to compare behavioral ratings and ERP responses to acceptance and rejection from a) high-valued peers, and b) low-value peers.
+Paired samples t-tests were used to compare ERP responses to acceptance and rejection from a) high-valued peers, and b) low-value peers and behavioral ratings.
 
-### Regression models
+### Multilevel multiple regression models
 
-Analyses were supplemented with multiple regressions which included the following covariates:
-
-#### Multilevel multiple regression models
-
-##### SES x Feedback type
+#### SES x Feedback type
 
 Multilevel multiple regression models (MLMs) were used to test whether SES interacted with Feedback type to predict ERP mean amplitude moderated associations.
 This models random intercept effects of study site.
 In some models, the random effect of site accounted for so little variance (likely due to the fact that there were only two sites) that the model was singular (i.e., that the variance of the random effect was essentially zero); in these cases site was included instead as a fixed effect (i.e., covariate).
 
-##### SES x ERP component predicting EMA measures
+#### SES x ERP component predicting EMA measures
 
 Multilevel multiple regression models (MLMs) were used to test whether ERP mean amplitude moderated associations ADI and mean negative affect over the following week.
 These models included random intercept effects of subject and study site.
@@ -641,11 +637,9 @@ post_task_table <- st(dplyr::select(df_BUDS_rating_it_pt, SP_debriefing_interest
 
 During post-task debriefing, ``` r``table(df_BUDS_rating_it_pt$SP_debriefing_deceived)[1] ``` participants responsed 'yes' and `r table(df_BUDS_rating_it_pt$SP_debriefing_deceived)[2]` participants responded 'no' to the question "While you were doing the chatroom, did you believe that you would really be chatting with one of these people on the computer after your EEG?" Given the potential for deception to affect results, we present additional analyses covarying for this in the Supplement.
 
-## Feedback x Value x ADI interaction
+## Feedback type x peer value x SES interaction
 
 Because the N1 did demonstrate acceptable internal consistency or dependability, we did not include it in further analyses.
-
-### RewP
 
 ```{r}
 # models_150275_cz_table <- lmer_adi_interaction_table(df_150275_cz_long)
@@ -725,8 +719,6 @@ df_150275_cz_long$Value <- case_match(df_150275_cz_long$Voting, "Like" ~ "High",
 #   theme(axis.text.x=element_blank(),
 #         legend.position = "none")
 ```
-
-### P3
 
 ```{r}
 # models_275425_cz_table <- lmer_adi_interaction_table(df_275425_cz_long)
@@ -848,9 +840,9 @@ model_275425_adi_cov <- lmer(formula = ERP ~ Feedback*ADI_NATRANK_c + Age + Sex 
 df_150275_cz_long_rating <- full_join(df_150275_cz_long, df_150275_cz_rating, by="ID")
 df_275425_cz_long_rating <- full_join(df_275425_cz_long, df_275425_cz_rating, by="ID")
 
-model_150275_adi_dec <- lmer(formula = ERP ~ Feedback*ADI_NATRANK_c + SP_debriefing_deceived + (1 | ID), data = filter(df_150275_cz_long_rating, Voting=="Like"))
+model_150275_adi_dec <- lmer(formula = ERP ~ Feedback*ADI_NATRANK_c + SP_debriefing_deceived + (1 | ID) + site.x, data = filter(df_150275_cz_long_rating, Voting=="Like"))
 
-model_275425_adi_dec <- lmer(formula = ERP ~ Feedback*ADI_NATRANK_c + SP_debriefing_deceived + (1 | ID), data = filter(df_275425_cz_long_rating, Voting=="Like"))
+model_275425_adi_dec <- lmer(formula = ERP ~ Feedback*ADI_NATRANK_c + SP_debriefing_deceived + (1 | ID) + site.x, data = filter(df_275425_cz_long_rating, Voting=="Like"))
 ```
 
 ```{r over 18 to identify those with college addresses, eval=FALSE}
@@ -872,13 +864,15 @@ save(over_18_150275, file=here("../data/over_18_150275.RData"))
 save(over_18_275425, file=here("../data/over_18_275425.RData"))
 ```
 
-We found support for aim 1; SES (operationalized as national US area deprivation index percentile) was significantly related to brain responses to different kinds of peer feedback (see Figure .\\ref{adi_plots_nocov}).
+We found support for aim 1; SES (operationalized as national US area deprivation index percentile) was significantly related to brain responses to different kinds of peer feedback (see Figure .\\ref{adi_addi_plots_nocov}).
 Specifically, the SES x Feedback type interaction was significant for the RewP (`r plot_stats(model_150275_cz_high, "Feedback1:ADI_NATRANK_z")`), indicating that higher SES adolescents showed greater differentiation between acceptance and rejection compared to lower SES adolescents (who at -1 standard deviation showed very little difference between acceptance and rejection).
-On the other hand, this interaction was trending for the P300 (``` r``plot_stats(model_275425_cz_high, "Feedback1:ADI_NATRANK_z") ```), showing the opposite direction: higher SES adolescents showed less differentiation between acceptance and rejection compared to lower SES adolescents (who at -1 standard deviation showed greater responses to rejection than acceptance).
+On the other hand, this interaction was trending for the P300 (`r plot_stats(model_275425_cz_high, "Feedback1:ADI_NATRANK_z")`), showing the opposite direction: higher SES adolescents showed less differentiation between acceptance and rejection compared to lower SES adolescents (who at -1 standard deviation showed greater responses to rejection than acceptance).
 Of note, no SES x Feedback type interactions were significant for feedback from low value peers.
-Results were consistent when covarying for demographic factors (e.g., age, sex assigned at birth) and stressors/symptoms (total stressful life events, severity of stressful life events, self-reported depression, self-reported anxiety).
+Results were consistent when covarying for demographic factors (e.g., age, sex assigned at birth) and stressors/symptoms (total stressful life events, severity of stressful life events, self-reported depression, self-reported anxiety), and whether or not adolescents reported being deceived.
 
-## EMA
+<!--# Technically the P300xADI interaction is significant when controlling for deception, but it's at p=0.048 so I didnt think it made sense to refer to it as an inconsistency. -->
+
+## Feedback x SES predicting negative affect
 
 ```{r}
 # Pairwise vs listwise deletion issues
@@ -918,7 +912,7 @@ df_150275_cz_ema$na_cubert <- df_150275_cz_ema$na^(1/3)
 df_275425_cz_ema$na_cubert <- df_275425_cz_ema$na^(1/3)
 ```
 
-### ADI and ADDI predicting NA
+### SES and discrimination distress predicting negative affect
 
 ```{r, include=FALSE}
 summary(glmmTMB(addi_total ~ ADI_NATRANK_c,
@@ -956,7 +950,7 @@ ggplot(df_150275_cz_ema, aes(y=na_cubert, x=addi_total_z)) +
   labs(x="ADDI", y="Negative affect (cubed root)")
 ```
 
-### ADI x ERP predicting NA
+### SES x RewP and P300 predicting negative affect
 
 ```{r}
 model_150275_ema_na <- glmmTMB(na_cubert ~ ADI_NATRANK_c*AA_AR_c + (1 | ID) + (1 | site),
@@ -1010,50 +1004,27 @@ adi_plots_na <- annotate_figure(adi_plots_na, bottom=text_grob("Mean activity (Â
 adi_plots_na
 ```
 
-Findings support hypotheses in aim 3 for the P300 but not for the RewP ERP component.
+```{r}
+model_275425_ema_na_cov <- glmmTMB(na_cubert ~ ADI_NATRANK_c*AA_AR_c + 
+                                     Age + Sex + StressCT + StressTH + IDAS_depression +IDAS_anxiety +
+                                     (1 | ID) + (1 | site),
+                    zi = ~ ADI_NATRANK_c*AA_AR_c + site + (1 | ID),
+    data = df_275425_cz_ema,
+    family=gaussian, REML=TRUE)
+
+df_275425_cz_ema_rating <- df_275425_cz_ema %>%
+    select(-site) %>%
+  full_join(df_BUDS_rating_it_pt, by="ID", relationship = "many-to-many")
+
+model_275425_ema_na_dec <- glmmTMB(na_cubert ~ ADI_NATRANK_c*AA_AR_c + SP_debriefing_deceived + (1 | ID) + (1 | site),
+                    zi = ~ ADI_NATRANK_c*AA_AR_c + site + (1 | ID),
+    data = df_275425_cz_ema_rating,
+    family=gaussian, REML=TRUE)
+```
+
+Findings support hypotheses in aim 2 for the P300 but not for the RewP ERP component.
 SES did not moderate the relationship between RewP brain activity and mean negative affect over the following week; however SES did significantly moderate the association between P300 brain activity and mean negative affect over the following week (see Figure \##).
 Moreover, these effects remained significant when covarying for age, sex assigned at birth, stress life event frequency and severity, and self-reported anxiety and depression; they also remained significant when covarying for deception (see Supplement).
-
-#### Simple slopes
-
-```{r}
-mean_p3 <- mean(df_275425_cz_ema$AA_AR_c, na.rm=TRUE)
-sd_p3 <- sd(df_275425_cz_ema$AA_AR_c, na.rm=TRUE)
-```
-
-```{r}
-P3a <- mean(df_275425_cz_ema$AA_AR_c) + sd(df_275425_cz_ema$AA_AR_c)
-P3b <- mean(df_275425_cz_ema$AA_AR_c) - sd(df_275425_cz_ema$AA_AR_c)
-P3_list <- list(AA_AR_c=round(c(P3a,P3b),2)) 
-
-p3_ss <- emtrends(model_275425_ema_na, pairwise ~AA_AR_c, var="ADI_NATRANK_c",at=P3_list, adjust="none")|> test()
-
-emtrends(model_275425_ema_na, pairwise ~AA_AR_c, var="ADI_NATRANK_c",at=P3_list, adjust="none")|> test()
-
-interact_plot(glmmTMB(na_cubert ~ ADI_NATRANK_c*AA_AR_c + (1 | ID) + (1 | site),
-                    zi = ~ ADI_NATRANK_c*AA_AR_c + (1 | ID) + (1 | site),
-    data = df_275425_cz_ema,
-    family=gaussian, REML=TRUE, na.action=na.exclude),
-    data = df_275425_cz_ema,
-    pred = ADI_NATRANK_c, modx = AA_AR_c, plot.points = TRUE,
-              modx.values = c(mean_p3-sd_p3,mean_p3+sd_p3),point.alpha = 0.2, colors="CUD Bright")
-
-plot(ggeffects::johnson_neyman(ggpredict(m_acc, 
-                                         terms = c("ADI_NATRANK","AA_AR")),
-                               vcov = sandwich::vcovHC))
-
-
-P3a <- mean(df_275425_cz_ema$AR_AA) + sd(df_275425_cz_ema$AR_AA)
-P3b <- mean(df_275425_cz_ema$AR_AA) - sd(df_275425_cz_ema$AR_AA)
-P3_list <- list(AR_AA=round(c(P3a,P3b),2)) 
-
-model_275425_ema_na_AR <- glmmTMB(na_cubert ~ ADI_NATRANK_c*AR_AA + (1 | ID) + (1 | site),
-                    zi = ~ ADI_NATRANK_c*AR_AA + (1 | ID) + (1 | site),
-    data = df_275425_cz_ema,
-    family=gaussian, REML=TRUE, na.action=na.exclude)
-
-emtrends(model_275425_ema_na_AR, pairwise ~AR_AA, var="ADI_NATRANK_c",at=P3_list, adjust="none")|> test()
-```
 
 ```{r}
 mean_ses <- mean(df_275425_cz_ema$ADI_NATRANK_c, na.rm=TRUE)
@@ -1062,159 +1033,42 @@ SESa <- mean_ses + sd_ses
 SESb <- mean_ses - sd_ses
 SES_list <- list(ADI_NATRANK_c=round(c(SESa,SESb),2)) 
 
+######## REJ > ACC ######## 
 m_rej <- glmmTMB(na_cubert ~ ADI_NATRANK_c*AR_AA_c + (1 | ID) + (1 | site),
                     zi = ~ ADI_NATRANK_c*AR_AA_c + (1 | ID) + (1 | site),
     data = df_275425_cz_ema,
     family=gaussian, REML=TRUE, na.action=na.exclude)
 
-adi_ss_ar <- emtrends(m_rej, pairwise ~ADI_NATRANK_c, var="AR_AA_c",at=SES_list, adjust="none")|> test()
+adi_ss_rej <- emtrends(m_rej, pairwise ~ADI_NATRANK_c, var="AR_AA_c",at=SES_list, adjust="none")|> test()
 
+interact_plot(m_rej,
+    data = df_275425_cz_ema,
+    pred = AR_AA_c, modx = ADI_NATRANK_c, plot.points = TRUE,
+              modx.values = c(round(mean_ses-sd_ses,0),round(mean_ses+sd_ses,0)),
+    point.alpha = 0.2, colors="CUD Bright")
+
+# plot(ggeffects::johnson_neyman(ggpredict(glmmTMB(na_cubert ~ ADI_NATRANK_c*AR_AA_c + (1 | ID) + (1 | site),
+#                     zi = ~ ADI_NATRANK_c*AR_AA_c + (1 | ID) + (1 | site),
+#                     data = df_275425_cz_ema,
+#                     family=gaussian, REML=FALSE, na.action=na.exclude),
+#     terms = c("AR_AA_c","ADI_NATRANK_c")),
+#     vcov = sandwich::vcovHC))
+
+
+
+######## ACC > REJ ######## 
 m_acc <- glmmTMB(na_cubert ~ ADI_NATRANK_c*AA_AR_c + (1 | ID) + (1 | site),
                     zi = ~ ADI_NATRANK_c*AA_AR_c + (1 | ID) + (1 | site),
     data = df_275425_cz_ema,
     family=gaussian, REML=TRUE, na.action=na.exclude)
 
-adi_ss_a <- emtrends(m_acc, pairwise ~ADI_NATRANK_c, var="AA_AR_c",at=SES_list, adjust="none")|> test()
+adi_ss_acc <- emtrends(m_acc, pairwise ~ADI_NATRANK_c, var="AA_AR_c",at=SES_list, adjust="none")|> test()
 ```
 
-Simple slope analyses show additionally that lower SES adolescents show a negative relationship between P300 responses to acceptance and negative affect.
-However, because prior analyses suggest that lower SES youth demonstrate an enhanced P300 to rejection relative to acceptance, we further interogated this finding.
+Follow-up simple slope analyses show additionally that lower SES adolescents show a negative relationship between P300 responses to acceptance and negative affect.
+However, because prior analyses suggest that lower SES youth demonstrate an enhanced P300 to rejection relative to acceptance, we further interrogated this finding.
 When a residualized score was calculated for ERP brain responses to rejection (relative to acceptance), we found, consistent with the prior finding, that lower SES adolescents show a positive relationship between P300 responses to rejection and subsequent negative affect.
-That is, youth with lower SES show a potential, specific vulnerability to heightened rejection sensitivity leading to greater negative affect.
-
-```{r, eval=FALSE}
-ADIa <- mean(df_275425_cz_ema$ADI_NATRANK, na.rm=T) + sd(df_275425_cz_ema$ADI_NATRANK, na.rm=T)
-ADIb <- mean(df_275425_cz_ema$ADI_NATRANK, na.rm=T) - sd(df_275425_cz_ema$ADI_NATRANK, na.rm=T)
-ADI_list <- list(ADI_NATRANK=round(c(ADIa,ADIb),2)) 
-
-m_acc <- glmmTMB(na_cubert ~ ADI_NATRANK*AA_AR + (1 | ID) + (1 | site),
-                    zi = ~ ADI_NATRANK*AA_AR + (1 | ID) + (1 | site),
-    data = df_275425_cz_ema,
-    family=gaussian, REML=FALSE, na.action=na.exclude)
-
-adi_ss <- emtrends(m_acc, pairwise ~ADI_NATRANK, var="AA_AR",at=ADI_list, adjust="none")|> test()
-
-plot(ggeffects::johnson_neyman(ggpredict(m_acc, 
-                                         terms = c("AA_AR","ADI_NATRANK")),
-                               vcov = sandwich::vcovHC))
-
-
-interact_plot(m_acc,
-    data = df_275425_cz_ema,
-    pred = AA_AR, modx = ADI_NATRANK, plot.points = TRUE,
-              modx.values = c(mean_ADI-sd_ADI,mean_ADI+sd_ADI),
-    point.alpha = 0.2, colors="CUD Bright")
-```
-
-```{r}
-P3a <- mean(df_275425_cz_ema$AR_AA) + sd(df_275425_cz_ema$AR_AA)
-P3b <- mean(df_275425_cz_ema$AR_AA) - sd(df_275425_cz_ema$AR_AA)
-P3_list <- list(AR_AA=round(c(P3a,P3b),2)) 
-
-model_275425_ema_na_AR <- glmmTMB(na_cubert ~ ADI_NATRANK_c*AR_AA + (1 | ID) + (1 | site),
-                    zi = ~ ADI_NATRANK_c*AR_AA + (1 | ID) + (1 | site),
-    data = df_275425_cz_ema,
-    family=gaussian, REML=TRUE, na.action=na.exclude)
-
-emtrends(model_275425_ema_na_AR, pairwise ~AR_AA, var="ADI_NATRANK_c",at=P3_list, adjust="none")|> test()
-
-interact_plot(glmmTMB(na_cubert ~ ADI_NATRANK_c*AA_AR_c + (1 | ID) + (1 | site),
-                    zi = ~ ADI_NATRANK_c*AA_AR_c + (1 | ID) + (1 | site),
-    data = df_275425_cz_ema,
-    family=gaussian, REML=TRUE, na.action=na.exclude),
-    data = df_275425_cz_ema,
-    pred = ADI_NATRANK_c, modx = AA_AR_c, plot.points = TRUE,
-              modx.values = c(mean_p3-sd_p3,mean_p3+sd_p3),point.alpha = 0.2, colors="CUD Bright")
-
-plot(ggeffects::johnson_neyman(ggpredict(m_acc, 
-                                         terms = c("ADI_NATRANK","AA_AR")),
-                               vcov = sandwich::vcovHC))
-```
-
-ADI as the moderator
-
-```{r}
-emtrends(glmmTMB(na_cubert ~ ADI_NATRANK*AR_AA + (1 | ID) + (1 | site),
-                    zi = ~ ADI_NATRANK*AR_AA + (1 | ID) + (1 | site),
-    data = df_275425_cz_ema,
-    family=gaussian, REML=TRUE, na.action=na.exclude),
-pairwise ~ADI_NATRANK, var="AR_AA",at=ADI_list, adjust="none")|> test()
-
-interact_plot(glmmTMB(na_cubert ~ ADI_NATRANK*AR_AA + (1 | ID) + (1 | site),
-                    zi = ~ ADI_NATRANK*AR_AA + (1 | ID),
-    data = df_275425_cz_ema,
-    family=gaussian, REML=TRUE, na.action=na.exclude),
-    data = df_275425_cz_ema,
-    pred = AR_AA, modx = ADI_NATRANK, plot.points = TRUE,
-              modx.values = c(round(mean_ADI-sd_ADI,0),round(mean_ADI+sd_ADI,0)),
-    point.alpha = 0.2, colors="CUD Bright")
-
-m_rej <- glmmTMB(na_cubert ~ ADI_NATRANK*AR_AA + (1 | ID) + (1 | site),
-                    zi = ~ ADI_NATRANK*AR_AA + site + (1 | ID),
-    data = df_275425_cz_ema,
-    family=gaussian, REML=FALSE, na.action=na.exclude)
-
-plot(ggeffects::johnson_neyman(ggpredict(m_rej,
-                                         terms = c("AR_AA","ADI_NATRANK")),
-                               vcov = sandwich::vcovHC))
-```
-
-When examining response to acceptance, those with an ADI greater than 32nd percentile show a negative relationship between P300 and negative affect, such that those with a smaller response to rejection experience less negative affect.
-
-When examining response to rejection, those with an ADI greater than 24th percentile show a positive relationship between P300 and negative affect, such that those with a greater response to rejection experience greater negative affect.
-
-### Covary for deception
-
-```{r}
-df_150275_cz_ema_rating <- df_150275_cz_ema %>%
-  select(-site) %>%
-  full_join(df_BUDS_rating_it_pt, by="ID", relationship = "many-to-many")
-df_275425_cz_ema_rating <- df_275425_cz_ema %>%
-    select(-site) %>%
-  full_join(df_BUDS_rating_it_pt, by="ID", relationship = "many-to-many")
-
-model_150275_ema_na_dec <- glmmTMB(na_cubert ~ ADI_NATRANK_c*AA_AR_c + SP_debriefing_deceived + (1 | ID) + (1 | site),
-                    zi = ~ ADI_NATRANK_c*AA_AR_c + (1 | ID) + (1 | site),
-    data = df_150275_cz_ema_rating,
-    family=gaussian, REML=TRUE)
-
-# tidy(model_150275_ema_na_dec)[5,]
-
-model_275425_ema_na_dec <- glmmTMB(na_cubert ~ ADI_NATRANK_c*AA_AR_c + SP_debriefing_deceived + (1 | ID) + (1 | site),
-                    zi = ~ ADI_NATRANK_c*AA_AR_c + (1 | ID),
-    data = df_275425_cz_ema_rating,
-    family=gaussian, REML=TRUE)
-
-# tidy(model_275425_ema_na_dec)[5,]
-```
-
-### Covaring for age, sex, stress, IDAS
-
-```{r}
-model_150275_ema_na_cov <- glmmTMB(na_cubert ~ ADI_NATRANK_c*AA_AR_c + Age + Sex + StressCT + StressTH + IDAS_depression + IDAS_anxiety + (1 | ID) + (1 | site),
-                    zi = ~ ADI_NATRANK_c*AA_AR_c + (1 | ID) + site,
-    data = df_150275_cz_ema,
-    family=gaussian, REML=TRUE)
-
-interact_plot(model_150275_ema_na_cov, pred = ADI_NATRANK_c, modx = AA_AR_c, partial.residuals = TRUE,
-              modx.values = c(mean_rewp-sd_rewp,mean_rewp+sd_rewp))
-
-tidy(model_150275_ema_na_cov)[13,]
-
-model_275425_ema_na_cov <- glmmTMB(na_cubert ~ ADI_NATRANK_c*AA_AR_c + 
-                                     Age + Sex + StressCT + StressTH + IDAS_wellbeing + 
-                                     (1 | ID) + (1 | site),
-                    zi = ~ ADI_NATRANK_c*AA_AR_c + site + (1 | ID),
-    data = df_275425_cz_ema,
-    family=gaussian, REML=TRUE)
-
-interact_plot(model_275425_ema_na_cov, pred = ADI_NATRANK_c, modx = AA_AR_c, partial.residuals = TRUE,
-              modx.values = c(mean_p3-sd_p3,mean_p3+sd_p3))
-
-tidy(model_275425_ema_na_cov)[13,]
-```
-
-### ADDI x ERP predicting NA
+That is, youth with lower SES show a potential, specific vulnerability to heightened rejection sensitivity leading to greater negative affect.ADDI x ERP predicting NA
 
 ```{r}
 model_150275_addi_na <- glmmTMB(na_cubert ~ addi_total_z*AA_AR_c + (1 | ID) + (1 | site),
@@ -1240,7 +1094,7 @@ plot_275425_addi_na <- ggpredict(model_275425_addi_na, terms = c("addi_total_z",
   scale_linetype_discrete(labels=c('-SD', 'Mean', '+SD'))
 ```
 
-## ADDI: Discrimination
+## Discrimination distress
 
 ```{r}
 paste0("N = ",sum(complete.cases(df_150275_cz$AA_AR) & complete.cases(df_150275_cz$addi_total_z)))
@@ -1249,12 +1103,13 @@ paste0("N = ",sum(complete.cases(df_150275_cz$AA_AR) & complete.cases(df_150275_
 # summary(lm(ADI_NATRANK_c ~ addi_total_z,df_150275_cz))
 ```
 
-### RewP
-
 ```{r}
 model_150275_cz_addi <- lmer(formula = ERP ~ Feedback*Voting*addi_total_z + site + (1 | ID), data = df_150275_cz_long)
 model_150275_cz_addi_high <- lmer(formula = ERP ~ Feedback*addi_total_z + site + (1 | ID), data = filter(df_150275_cz_long,Voting=="Like"))
 model_150275_cz_addi_low <- lmer(formula = ERP ~ Feedback*addi_total_z + site + (1 | ID), data = filter(df_150275_cz_long,Voting=="Dislike"))
+
+model_150275_cz_addi_high_cov <- lmer(formula = ERP ~ Feedback*addi_total_z + Age + Sex + StressCT + StressTH + IDAS_depression + IDAS_anxiety + (1 | ID) + site, 
+                                      data = filter(df_150275_cz_long_strain,Voting=="Like"))
 
 # summary(lmer(formula = ERP ~ Feedback*addi_total_z + site + (1 | ID), data = filter(df_150275_cz_long,Voting=="Like")))
 # summary(lmer(formula = ERP ~ Feedback*addi_educ + site + (1 | ID), data = filter(df_150275_cz_long,Voting=="Like"))) #*
@@ -1324,12 +1179,17 @@ plot_150275_addi <- ggplot(filter(model_150275_addi, addi_total_z!="Mean"), aes(
 #         legend.position = "none")
 ```
 
-### P3
-
 ```{r}
-model_275425_cz_addi <- lmer(formula = ERP ~ Feedback*Voting*addi_total_z + (1 | ID) + (1 | site), data = df_275425_cz_long)
+model_275425_cz_addi_cov <- lmer(formula = ERP ~ Feedback*Voting*addi_total_z + (1 | ID) + (1 | site), data = df_275425_cz_long)
 model_275425_cz_addi_high <- lmer(formula = ERP ~ Feedback*addi_total_z + (1 | ID) + (1 | site), data = filter(df_275425_cz_long,Voting=="Like"))
 model_275425_cz_addi_low <- lmer(formula = ERP ~ Feedback*addi_total_z + (1 | ID) + (1 | site), data = filter(df_275425_cz_long,Voting=="Dislike"))
+
+model_275425_cz_addi_high_cov <- lmer(formula = ERP ~ Feedback*addi_total_z + Age + Sex + StressCT + StressTH + IDAS_depression + IDAS_anxiety + (1 | ID) + (1 | site), 
+                                      data = filter(df_275425_cz_long_strain,Voting=="Like"))
+
+model_275425_cz_addi_high_dec <- lmer(formula = ERP ~ Feedback*addi_total_z + SP_debriefing_deceived + (1 | site.x) + (1 | ID), data = filter(df_275425_cz_long_rating,Voting=="Like"))
+
+# df_275425_cz_ema_rating
 
 # summary(lmer(formula = ERP ~ Feedback*addi_total_z + site + (1 | ID), data = filter(df_275425_cz_long,Voting=="Like"))) #*
 # summary(lmer(formula = ERP ~ Feedback*addi_educ + site + (1 | ID), data = filter(df_275425_cz_long,Voting=="Like"))) #*
@@ -1347,6 +1207,15 @@ model_275425_addi <- plot_cap(
     mutate(Value = case_match(Voting, "Dislike" ~ "Low",
                                     "Like" ~ "High"),
          Feedback = case_match(Feedback, "Acc" ~ "Acceptance",
+                                    "Rej" ~ "Rejection"))
+
+plot_275425_addi_cov <- plot_cap(
+    model_275425_cz_addi_high,
+    condition = list(
+      "addi_total_z" = "threenum",
+        "Feedback"),
+    draw=FALSE) %>%
+    mutate(Feedback = case_match(Feedback, "Acc" ~ "Acceptance",
                                     "Rej" ~ "Rejection"))
 
 plot_275425_addi_t <- data.frame(
@@ -1367,6 +1236,14 @@ plot_275425_addi <- ggplot(filter(model_275425_addi, addi_total_z!="Mean"), aes(
   Feedback=c("Acceptance","Rejection")), aes(x = 1.5, y = 12, label = label)) +
   theme_apa() +
   labs(x="Self-reported \ndiscrimination distress", y="RewP") +
+  theme(strip.background = element_blank())
+
+ggplot(filter(plot_275425_addi_cov, addi_total_z!="Mean"), aes(x=addi_total_z, y=estimate, fill=Feedback)) +
+  geom_bar(position = "dodge", stat = "identity", colour="black") +
+  geom_errorbar(aes(ymin=estimate-std.error, ymax=estimate+std.error), width=.2, position=position_dodge(.9)) +
+  scale_fill_manual(values = c("darkgreen", "red"), name = "Feedback") +
+  theme_apa() +
+  labs(x="Self-reported \ndiscrimination distress", y="P300") +
   theme(strip.background = element_blank())
 
 # Black and white bar plots
@@ -1410,7 +1287,7 @@ addi_plots_nocov <- annotate_figure(addi_plots_nocov, left=text_grob("Mean ampli
 addi_plots_nocov
 ```
 
-```{r}
+```{r adi_addi_plots_nocov}
 adi_addi_plots_nocov <- ggarrange(plot_150275_adi, 
                                   plot_150275_addi+labs(x="", y=""),
                                   plot_275425_adi+labs(x="ADI", y="P3"), 
@@ -1425,7 +1302,14 @@ adi_addi_plots_nocov <- annotate_figure(adi_addi_plots_nocov, left=text_grob("Me
 adi_addi_plots_nocov
 ```
 
-## 
+We found partial support for hypotheses of aim 3.
+For this aim we examined the same effects using discrimination in lieu of SES.
+Self-report discrimination distress was significantly related to to brain responses to different kinds of peer feedback (see Figure .\\ref{adi_addi_plots_nocov}).
+Specifically, the Discrimination distress x Feedback type interaction was not significant for the RewP (`r plot_stats(model_150275_cz_addi_high, "Feedback1:addi_total_z")`), but was significant for the P300 (`r plot_stats(model_275425_cz_addi_high, "Feedback1:addi_total_z")`): adolescents who had experienced less discrimination distress showed less differentiation between acceptance and rejection compared to adolescents who had experienced greater discrimination distress (who at -1 standard deviation showed greater responses to rejection than acceptance).
+
+This finding is identical to the finding for SES (albeit this effect is significant at p\<0.05, while the interaction between SES and P300 was at trend levels [0.05\<p\<0.10]).
+Moreover, as we found with SES, no SES x Feedback type interactions were significant for feedback from low value peers.
+Results were consistent when covarying for demographic factors (e.g., age, sex assigned at birth) and stressors/symptoms (total stressful life events, severity of stressful life events, self-reported depression, self-reported anxiety), and when covarying for deception except in one case: when demographic and stressor/symptoms covariates were included, the model for the RewP indicated a significant relationship, whereby adolescents with less discrimination distress showed greater differentiation between acceptance and rejection compared to adolescents with greater discrimination distress.
 
 # Discussion
 
