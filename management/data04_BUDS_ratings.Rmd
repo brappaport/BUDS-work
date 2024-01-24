@@ -1,5 +1,5 @@
 ---
-title: "Data prep script 5: In-task and post-task ratings"
+title: "Data prep script 4: In-task and post-task ratings"
 author: "Brent Rappaport"
 date: "`r format(Sys.time(),  '%Y-%m-%d')`"
 output:
@@ -52,7 +52,7 @@ knitr::opts_chunk$set(set.seed(312), echo=FALSE, results='hide', message=FALSE, 
 
 ## Get the Working Directory
 ```{r}
-  here::i_am("./management/data05_BUDS_ratings.Rmd")
+  here::i_am("./management/data04_BUDS_ratings.Rmd")
 ```
 
 ## Load behavioral data

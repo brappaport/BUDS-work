@@ -13,7 +13,7 @@ toc: yes
 ---
 
 # About
-This script imports and merges the self-report data from BUDS study: Bullying, Unsupportive family/peers, Discrimination, and Social feedback study using data from PREDICT project collaboration between Northwestern (PI: Shankman) and Columbia (PI: Auerbach).
+This script generates grand average waveforms and topographical maps for the Social Processing task from the PREDICT study.
 
 # 1. Get Setup
 ## Clear everything & set width
@@ -44,7 +44,7 @@ here <- here::here
 
 ## Get the Working Directory
 ```{r}
-  here::i_am("./management/data04_BUDS_GA.Rmd")
+  here::i_am("./management/data06_BUDS_GA.Rmd")
 ```
 
 ```{r}

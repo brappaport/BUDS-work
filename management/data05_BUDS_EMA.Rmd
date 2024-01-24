@@ -1,5 +1,5 @@
 ---
-title: "Data prep script 6: Importing and combining EMA data"
+title: "Data prep script 5: Importing and combining EMA data"
 author: "Brent Rappaport"
 date: "`r format(Sys.time(),  '%Y-%m-%d')`"
 output:
@@ -56,7 +56,7 @@ select <- dplyr::select
 
 ## Get the Working Directory
 ```{r}
-  here::i_am("./management/data03_BUDS.Rmd")
+  here::i_am("./management/data05_BUDS_EMA.Rmd")
 ```
 
 ## Load EMA data
@@ -919,6 +919,7 @@ df_275425_cz_daily <- full_join(df_275425_cz_strain, daily, by="ID", relationshi
 for (d in c(50150, 150275, 275425)) {
   print(eval(parse(text=paste0('
   save(df_',d,'_cz, df_',d,'_cz_long, 
+  df_',d,'_cz_strain, 
   df_',d,'_cz_long_strain, 
   df_',d,'_cz_long_ema, df_',d,'_cz_ema, 
   df_',d,'_cz_long_daily, df_',d,'_cz_daily, 
