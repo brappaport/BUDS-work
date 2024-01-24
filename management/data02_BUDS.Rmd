@@ -64,24 +64,28 @@ BUDS_cleaning03 <- BUDS_cleaning02
 ## Make variable list
 addi_vars <- c("addi_1b_i","addi_2b_i","addi_3b_i","addi_4b_i","addi_5b_i","addi_6b_i","addi_7b_i","addi_8b_i","addi_9b_i","addi_10b_i",
                                 "addi_11b_i","addi_12b_i","addi_13b_i","addi_14b_i","addi_15b_i")
-BUDS_cleaning03_cleaned=BUDS_cleaning03
+BUDS_cleaning03_cleaned <- BUDS_cleaning03
 for (var in addi_vars) {
  eval(parse(text=paste0('
   BUDS_cleaning03_cleaned$',var,'_correct <- dplyr::recode_factor(BUDS_cleaning03$',var,', "Not at all"=1, "Slightly"=2, "Moderately"=3,"Considerably"=4,"Extremely"=5, `1`=1, `2`=2, `3`=3, `4`=4,`5`=5)')))
 }
 
-### FIX THE REST OF THIS
+addi_vars_correct <- paste0(addi_vars,"_correct")
 
-BUDS_cleaning03_cleaned[,addi_vars] <- sapply(BUDS_cleaning03_cleaned[,addi_vars], as.numeric) # make variables of numeric class
+BUDS_cleaning03_cleaned[,addi_vars_correct] <- sapply(BUDS_cleaning03_cleaned[,addi_vars_correct], as.numeric) # make variables of numeric class
+
+# Sort by least to most endorsed item
+# sort(apply(BUDS_cleaning03_cleaned[,addi_vars_correct], 2, function(x) sum(x>0, na.rm=T)))
 
 ## score
-BUDS_cleaning03_cleaned$addi_total <- rowSums(BUDS_cleaning03_cleaned[,addi_vars], na.rm=TRUE)
+BUDS_cleaning03_cleaned$addi_total <- rowSums(BUDS_cleaning03_cleaned[,addi_vars_correct], na.rm=TRUE)
+BUDS_cleaning03_cleaned$addi_total_no6 <- rowSums(BUDS_cleaning03_cleaned[,addi_vars_correct[addi_vars_correct != "addi_6b_i_correct"]], na.rm=TRUE)
 BUDS_cleaning03_cleaned$addi_total_c <- scale(BUDS_cleaning03_cleaned$addi_total, scale=FALSE, center=TRUE)
 BUDS_cleaning03_cleaned$addi_total_z <- scale(BUDS_cleaning03_cleaned$addi_total, scale=TRUE, center=TRUE)
 BUDS_cleaning03_cleaned$addi_01 <- ifelse(BUDS_cleaning03_cleaned$addi_total>0, 1, 0)
-BUDS_cleaning03_cleaned$addi_educ <- rowSums(BUDS_cleaning03_cleaned[,addi_vars[c(1,2,3,6)]], na.rm=TRUE)
-BUDS_cleaning03_cleaned$addi_instit <- rowSums(BUDS_cleaning03_cleaned[,addi_vars[c(7,9,10,13,14)]], na.rm=TRUE)
-BUDS_cleaning03_cleaned$addi_distress <- rowSums(BUDS_cleaning03_cleaned[,addi_vars[c(4,5,8,11,15)]], na.rm=TRUE)
+BUDS_cleaning03_cleaned$addi_educ <- rowSums(BUDS_cleaning03_cleaned[,addi_vars_correct[c(1,2,3,6)]], na.rm=TRUE)
+BUDS_cleaning03_cleaned$addi_instit <- rowSums(BUDS_cleaning03_cleaned[,addi_vars_correct[c(7,9,10,13,14)]], na.rm=TRUE)
+BUDS_cleaning03_cleaned$addi_peer <- rowSums(BUDS_cleaning03_cleaned[,addi_vars_correct[c(4,5,8,11,15)]], na.rm=TRUE)
 ```
 ### Alphas
 ```{r}
@@ -199,7 +203,7 @@ psych::alpha(BUDS_cleaning05[,c(promis_vars_correct[c(9:12)])])$total$std.alpha
 hist(BUDS_cleaning05$addi_total)
 hist(BUDS_cleaning05$addi_educ)
 hist(BUDS_cleaning05$addi_instit)
-hist(BUDS_cleaning05$addi_distress)
+hist(BUDS_cleaning05$addi_peer)
 
 hist(BUDS_cleaning05$bcs_physical_vic)
 hist(BUDS_cleaning05$bcs_physical_vic_01)
@@ -286,7 +290,7 @@ correlation_matrix <- function(df,
 }
 ```
 ```{r}
-all_measures <- c("addi_total","addi_educ","addi_instit","addi_distress",
+all_measures <- c("addi_total","addi_educ","addi_instit","addi_peer",
                   "bcs_total_vic","bcs_physical_vic_01","bcs_verbal_vic","bcs_rel_vic","bcs_cyber_vic",
                   "promis_peer_tscore","promis_fam_tscore")
 

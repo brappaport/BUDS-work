@@ -48,32 +48,37 @@ Remember to immediately rename and remove. Avoid overwriting old data.
 ```{r}
 # Import data from Columbia University
 BUDS_cleaning01_columbia <- read.csv(here("../_rawdata/Columbia/SP_Self-Report_Baseline (3.17.21)_March 6, 2023_13.46.csv"), header=TRUE)
-var.labels = BUDS_cleaning01_columbia[2,]; label(BUDS_cleaning01_columbia) <- as.list(var.labels[match(names(BUDS_cleaning01_columbia), names(var.labels))])
+# var.labels = BUDS_cleaning01_columbia[2,]; label(BUDS_cleaning01_columbia) <- var.labels[match(names(BUDS_cleaning01_columbia), names(var.labels))]
 
 BUDS_cleaning02_columbia <- read.csv(here("../_rawdata/Columbia/SP_Self-Report_Baseline (9.2020)_March 1, 2023_07.26.csv"), header=TRUE)
-var.labels = BUDS_cleaning02_columbia[2,]; label(BUDS_cleaning02_columbia) <- as.list(var.labels[match(names(BUDS_cleaning02_columbia), names(var.labels))])
+# var.labels = BUDS_cleaning02_columbia[2,]; label(BUDS_cleaning02_columbia) <- var.labels[match(names(BUDS_cleaning02_columbia), names(var.labels))]
 BUDS_cleaning03_columbia <- bind_rows(BUDS_cleaning01_columbia, BUDS_cleaning02_columbia)
 
 # Import data from Northwestern University
 BUDS_cleaning01_nw1 <- read.csv(here("../_rawdata/Northwestern/SP Self-Report Baseline 9001-9012.csv"), header=TRUE)
 # Use the first row as the variable labels
-var.labels = BUDS_cleaning01_nw1[1,]; label(BUDS_cleaning01_nw1) <- as.list(var.labels[match(names(BUDS_cleaning01_nw1), names(var.labels))])
+# var.labels = BUDS_cleaning01_nw1[1,]; label(BUDS_cleaning01_nw1) <- var.labels[match(names(BUDS_cleaning01_nw1), names(var.labels))]
 BUDS_cleaning02_nw1 <- BUDS_cleaning01_nw1[-(1),]; rm("BUDS_cleaning01_nw1")
 
 BUDS_cleaning01_nw2 <- read.csv(here("../_rawdata/Northwestern/SP Self-Report Baseline 9013-9038.csv"), header=TRUE)
 # Use the first row as the variable labels
-var.labels = BUDS_cleaning01_nw2[1,]; label(BUDS_cleaning01_nw2) <- as.list(var.labels[match(names(BUDS_cleaning01_nw2), names(var.labels))])
+# var.labels = BUDS_cleaning01_nw2[1,]; label(BUDS_cleaning01_nw2) <- var.labels[match(names(BUDS_cleaning01_nw2), names(var.labels))]
 BUDS_cleaning02_nw2 <- BUDS_cleaning01_nw2[-(1),]; rm("BUDS_cleaning01_nw2")
 
 BUDS_cleaning01_nw3 <- read.csv(here("../_rawdata/Northwestern/SP Self-Report Baseline 9039-9100.csv"), header=TRUE)
 # Use the first row as the variable labels
-var.labels = BUDS_cleaning01_nw3[1,]; label(BUDS_cleaning01_nw3) <- as.list(var.labels[match(names(BUDS_cleaning01_nw3), names(var.labels))])
+# var.labels = BUDS_cleaning01_nw3[1,]; label(BUDS_cleaning01_nw3) <- var.labels[match(names(BUDS_cleaning01_nw3), names(var.labels))]
 BUDS_cleaning02_nw3 <- BUDS_cleaning01_nw3[-(1),]; rm("BUDS_cleaning01_nw3")
 
 BUDS_cleaning02_nw <- bind_rows(BUDS_cleaning02_nw1, BUDS_cleaning02_nw2, BUDS_cleaning02_nw3)
 
 BUDS_cleaning02 <- bind_rows(BUDS_cleaning03_columbia, BUDS_cleaning02_nw)
-BUDS_cleaning02$ID <- BUDS_cleaning02$id_1_i
+BUDS_cleaning02 <- BUDS_cleaning02 %>%
+  mutate(ID = as.integer(id_1_i)) %>%
+  filter(!is.na(ID))
+
+# Which subjects have more than 1 row of data?
+BUDS_cleaning02[duplicated(BUDS_cleaning02$ID),"ID"]
 
 # CHANGE THIS
 # BUDS_cleaning02 <- BUDS_cleaning02 %>%

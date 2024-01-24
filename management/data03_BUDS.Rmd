@@ -291,14 +291,14 @@ save(df_275425, df_150350, df_250450, df_200400, df_4001000, df_6001500, df_1502
 ```
 
 #### Single trial ERP data
-```{r}
+```{r, eval=FALSE}
 too_few_segments <- c(9035, 1124, 1101, 1084, 9081, 1090, 9017, 9014, 1055, 9051)
 bad_data <- c(1072, 9004)
 
 files_artifacts  <- list.files(path=here("./data/eeg_processing_fully_auto/Scripts/Events/feedback/"), 
                      pattern='\\_event_all.csv',
                      full.names=TRUE)
-df_artifacts <- lapply(files_artifacts, read.csv, header = TRUE) %>%
+df_artifacts <- lapply(files_artifacts, read.csv, header = TRUE) >%
   do.call(rbind , .) %>%
      filter(bindescr!="") %>%
      mutate(ID = subject,
@@ -336,7 +336,6 @@ write.csv(filter(df_50150,artifactFlag==0), "./data/trial_Cz_50150ms_clean.csv")
 write.csv(filter(df_150275,artifactFlag==0), "./data/trial_Cz_150275ms_clean.csv")
 write.csv(filter(df_275425,artifactFlag==0), "./data/trial_Cz_275425ms_clean.csv")
 ```
-
 
 ## Load ERP data
 ```{r}
@@ -471,7 +470,7 @@ BUDS_cleaning05_idas_num$IDAS_anxiety = rowMeans(BUDS_cleaning05_idas_num[,c(ida
 # BUDS_cleaning05_idas_num$IDAS_claus = rowMeans(BUDS_cleaning05_idas_num[,idas_claus], na.rm=F)
 
 cor.test(BUDS_cleaning05_idas_num$IDAS_panic, BUDS_cleaning05_idas_num$IDAS_sa)
-hist(sqrt(BUDS_cleaning05_idas_num$IDAS_sa))
+# hist(sqrt(BUDS_cleaning05_idas_num$IDAS_sa))
 
 library(ggpubr)
 shapiro.test(BUDS_cleaning05_idas_num$IDAS_depression)
@@ -537,8 +536,16 @@ merge_self_report_with_erp <- function(data, electrode, self_report_data, demo_d
   "many-to-many") %>%
   filter(!is.na(Acc_All)) %>%
   ungroup() %>%
-  mutate(A_all = stdres(lm(Acc_All ~ Rej_All, .)),
+  mutate(Acc_All_z = scale(Acc_All, center=T, scale=T),
+         Rej_All_z = scale(Rej_All, center=T, scale=T),
+         Acc_Acc_z = scale(Acc_Acc, center=T, scale=T),
+         Acc_Rej_z = scale(Acc_Rej, center=T, scale=T),
+         Rej_Rej_z = scale(Rej_Rej, center=T, scale=T),
+         Rej_Acc_z = scale(Rej_Acc, center=T, scale=T),
+         
+         A_all = stdres(lm(Acc_All ~ Rej_All, .)),
          AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, .)),
+         AA_AR_diff = Acc_Acc - Acc_Rej,
          RA_RR = stdres(lm(Rej_Acc ~ Rej_Rej, .)),
          AA_RA = stdres(lm(Acc_Acc ~ Rej_Acc, .)),
          R_all = stdres(lm(Rej_All ~ Acc_All, .)),
@@ -560,7 +567,11 @@ data %>%
          Like_Acc_c = scale(Acc_Acc, center=T, scale=F),
          Dislike_Acc_c = scale(Rej_Acc, center=T, scale=F),
          Like_Rej_c = scale(Acc_Rej, center=T, scale=F),
-         Dislike_Rej_c = scale(Rej_Rej, center=T, scale=F)) %>%
+         Dislike_Rej_c = scale(Rej_Rej, center=T, scale=F),
+         Like_Acc_z = scale(Acc_Acc, center=T, scale=T),
+         Dislike_Acc_z = scale(Rej_Acc, center=T, scale=T),
+         Like_Rej_z = scale(Acc_Rej, center=T, scale=T),
+         Dislike_Rej_z = scale(Rej_Rej, center=T, scale=T)) %>%
   pivot_longer(cols=c("Like_Acc","Dislike_Acc","Like_Rej","Dislike_Rej"), names_to=c("Voting","Feedback"), names_sep="_", values_to="ERP")
 }
 
@@ -641,7 +652,7 @@ df_odd_275425_cz <- df_odd_275425_cz[,1:7] %>%
 # Import Area Deprivation Index data
 ```{r, include=F}
 # Import address info and sort by row number, to tie to subject number
-geocode_data <- read.csv(here("../_rawdata/GeocodeResults_edited.csv"), header=F, colClasses='character') %>%
+geocode_data <- read.csv(here("../_rawdata/GeocodeResults.csv"), header=F, colClasses='character') %>%
   mutate(V1=as.integer(as.character(V1))) %>%
   arrange(V1)
   # dplyr::slice(length(V1), 1:length(V1))
@@ -650,7 +661,7 @@ geocode_data <- read.csv(here("../_rawdata/GeocodeResults_edited.csv"), header=F
 geocode_data$FIPS <- as.numeric(as.character((paste0(geocode_data$V9,geocode_data$V10,geocode_data$V11,substr(geocode_data$V12,1,1)))))
 
 # Import subject ID 
-subj_rownumber <- openxlsx::read.xlsx(here("../_rawdata/Columbia/PREDICT_Addresses_formula.xlsx"))[,1:2]
+subj_rownumber <- openxlsx::read.xlsx(here("../_rawdata/Address/PREDICT_ids.xlsx"))
 geocode_data2 <- full_join(subj_rownumber,geocode_data, by="V1")
 adi_codes <- read.csv(here("./data/ADI/national/US_2021_ADI_Census_Block_Group_v4_0_1.csv"))
 
@@ -660,42 +671,63 @@ geocode_data_with_adi$ADI_NATRANK <- as.numeric(as.character(geocode_data_with_a
 ### Manually enter ADI values for those missing it (based on surrounding neighborhoods)
 Drawn from https://www.neighborhoodatlas.medicine.wisc.edu/mapping
 ```{r}
-geocode_data_with_adi[geocode_data_with_adi$ID==1000,"ADI_NATRANK"] <- NA
-geocode_data_with_adi[geocode_data_with_adi$ID==1001,"ADI_NATRANK"] <- NA
+geocode_data_with_adi[geocode_data_with_adi$ID==1008,"ADI_NATRANK"] <- 1 # but on college campus
+geocode_data_with_adi[geocode_data_with_adi$ID==1009,"ADI_NATRANK"] <- 1 # but on college campus, though this address was their family address before college per Lili
 geocode_data_with_adi[geocode_data_with_adi$ID==1010,"ADI_NATRANK"] <- 24
-geocode_data_with_adi[geocode_data_with_adi$ID==1022,"ADI_NATRANK"] <- NA
-geocode_data_with_adi[geocode_data_with_adi$ID==1039,"ADI_NATRANK"] <- NA
-geocode_data_with_adi[geocode_data_with_adi$ID==1043,"ADI_NATRANK"] <- NA # this is a small side street that looks to only exist in one tract with NATRANK of 6
-geocode_data_with_adi[geocode_data_with_adi$ID==1053,"ADI_NATRANK"] <- NA
+geocode_data_with_adi[geocode_data_with_adi$ID==1043,"ADI_NATRANK"] <- 6 # this is a very small side street that only exist in one tract
 geocode_data_with_adi[geocode_data_with_adi$ID==1060,"ADI_NATRANK"] <- 4
-geocode_data_with_adi[geocode_data_with_adi$ID==1071,"ADI_NATRANK"] <- NA
-geocode_data_with_adi[geocode_data_with_adi$ID==1074,"ADI_NATRANK"] <- NA
-geocode_data_with_adi[geocode_data_with_adi$ID==1094,"ADI_NATRANK"] <- 8
-geocode_data_with_adi[geocode_data_with_adi$ID==1099,"ADI_NATRANK"] <- 12
+geocode_data_with_adi[geocode_data_with_adi$ID==1071,"ADI_NATRANK"] <- 31
+geocode_data_with_adi[geocode_data_with_adi$ID==1074,"ADI_NATRANK"] <- 49
 geocode_data_with_adi[geocode_data_with_adi$ID==1108,"ADI_NATRANK"] <- 11
 geocode_data_with_adi[geocode_data_with_adi$ID==1111,"ADI_NATRANK"] <- 7
 geocode_data_with_adi[geocode_data_with_adi$ID==1112,"ADI_NATRANK"] <- (9+4)/2
-geocode_data_with_adi[geocode_data_with_adi$ID==1114,"ADI_NATRANK"] <- (9+4)/2 # Are these really the same?
+geocode_data_with_adi[geocode_data_with_adi$ID==1114,"ADI_NATRANK"] <- (9+4)/2 # international student who's original home is in Columbia
 geocode_data_with_adi[geocode_data_with_adi$ID==1117,"ADI_NATRANK"] <- (5+4+21)/3
-geocode_data_with_adi[geocode_data_with_adi$ID==1118,"ADI_NATRANK"] <- NA
-geocode_data_with_adi[geocode_data_with_adi$ID==1120,"ADI_NATRANK"] <- NA
-geocode_data_with_adi[geocode_data_with_adi$ID==1121,"ADI_NATRANK"] <- NA
-geocode_data_with_adi[geocode_data_with_adi$ID==1122,"ADI_NATRANK"] <- NA
-geocode_data_with_adi[geocode_data_with_adi$ID==1123,"ADI_NATRANK"] <- NA
-geocode_data_with_adi[geocode_data_with_adi$ID==1125,"ADI_NATRANK"] <- NA
-geocode_data_with_adi[geocode_data_with_adi$ID==1126,"ADI_NATRANK"] <- NA
+geocode_data_with_adi[geocode_data_with_adi$ID==1122,"ADI_NATRANK"] <- 23
 
+geocode_data_with_adi[geocode_data_with_adi$ID==9005,"ADI_NATRANK"] <- 13
 geocode_data_with_adi[geocode_data_with_adi$ID==9006,"ADI_NATRANK"] <- 22
 geocode_data_with_adi[geocode_data_with_adi$ID==9010,"ADI_NATRANK"] <- 46
-geocode_data_with_adi[geocode_data_with_adi$ID==9027,"ADI_NATRANK"] <- NA
-geocode_data_with_adi[geocode_data_with_adi$ID==9039,"ADI_NATRANK"] <- 28
-geocode_data_with_adi[geocode_data_with_adi$ID==9044,"ADI_NATRANK"] <- (21+29)/2
-geocode_data_with_adi[geocode_data_with_adi$ID==9052,"ADI_NATRANK"] <- NA
-geocode_data_with_adi[geocode_data_with_adi$ID==9060,"ADI_NATRANK"] <- 57
+# geocode_data_with_adi[geocode_data_with_adi$ID==9027,"ADI_NATRANK"] MISSING ADDRESS, but sibling of 9026 so see below
+geocode_data_with_adi[geocode_data_with_adi$ID==9039,"ADI_NATRANK"] <- 44 # previously 28 but on college campus
+geocode_data_with_adi[geocode_data_with_adi$ID==9044,"ADI_NATRANK"] <- (21+29)/2 # but on college campus
+geocode_data_with_adi[geocode_data_with_adi$ID==9052,"ADI_NATRANK"] <- 29
+geocode_data_with_adi[geocode_data_with_adi$ID==9056,"ADI_NATRANK"] <- 7 # previously NA but on college campus
+geocode_data_with_adi[geocode_data_with_adi$ID==9059,"ADI_NATRANK"] <- (21+29)/2 # but on college campus
+geocode_data_with_adi[geocode_data_with_adi$ID==9060,"ADI_NATRANK"] <- 57 # but on on college campus but previous address was in Mexico
 geocode_data_with_adi[geocode_data_with_adi$ID==9069,"ADI_NATRANK"] <- 3
-geocode_data_with_adi[geocode_data_with_adi$ID==9087,"ADI_NATRANK"] <- NA
-geocode_data_with_adi[geocode_data_with_adi$ID==9091,"ADI_NATRANK"] <- 28
+geocode_data_with_adi[geocode_data_with_adi$ID==9082,"ADI_NATRANK"] <- 54
+geocode_data_with_adi[geocode_data_with_adi$ID==9091,"ADI_NATRANK"] <- 21 # previously 28 but on college campus
+geocode_data_with_adi[geocode_data_with_adi$ID==9127,"ADI_NATRANK"] <- 63 # current address is on college campus, this reflects participant family's address before college
+geocode_data_with_adi[geocode_data_with_adi$ID==9128,"ADI_NATRANK"] <- 73 # current address is on college campus, this reflects participant family's address before college
 
+# 9027 and 9026 are siblings, so we are assuming that they live in the same address and thus have the same ADI
+geocode_data_with_adi[geocode_data_with_adi$ID==9027,"ADI_NATRANK"] <- geocode_data_with_adi[geocode_data_with_adi$ID==9026,"ADI_NATRANK"]
+
+geocode_data_with_adi$ADI_NATRANK <- 100-geocode_data_with_adi$ADI_NATRANK
+```
+
+#### Number missing ADI
+```{r, eval=FALSE}
+missing <- geocode_data_with_adi[,c("ID","ADI_NATRANK")] %>%
+  filter(is.na(ADI_NATRANK) | ADI_NATRANK=="GQ") %>%
+  select(ID)
+sum(is.na(df_150275_cz$ADI_NATRANK))
+sum(!is.na(df_150275_cz$ADI_NATRANK))
+
+address <- left_join(geocode_data2, adi_codes, by="FIPS")
+address[address$ID==9059,"V2"]
+
+# Subjects over 18
+load(file=here("./data/over_18_150275.RData"))
+load(file=here("./data/over_18_275425.RData"))
+over_18 <- address %>%
+  filter(ID %in% over_18_150275$ID) %>%
+  select(ID, V2)
+```
+
+### Merging ADI data with datasets
+```{r}
 geocode_data_with_adi_log <- geocode_data_with_adi %>%
   mutate(ADI_NATRANK_log = log(ADI_NATRANK)) %>%
   dplyr::select(c(ID,ADI_NATRANK,ADI_NATRANK_log))
@@ -751,18 +783,6 @@ df_50150_cz_long <- left_join(df_50150_cz_long, geocode_data_with_adi_log, by="I
          ADI_NATRANK_z = scale(center=TRUE, scale=TRUE, ADI_NATRANK),
          ADI_NATRANK_log_c = scale(center=TRUE, scale=FALSE, ADI_NATRANK_log),
          ADI_NATRANK_log_z = scale(center=TRUE, scale=TRUE, ADI_NATRANK_log))
-```
-
-#### Number missing ADI
-```{r, eval=FALSE}
-missing <- df_150275_cz[,c("ID","id_2_i","ADI_NATRANK")] %>%
-  filter(is.na(ADI_NATRANK) | ADI_NATRANK=="GQ") %>%
-  select(ID)
-sum(is.na(df_150275_cz$ADI_NATRANK))
-sum(!is.na(df_150275_cz$ADI_NATRANK))
-
-address <- left_join(geocode_data2, adi_codes, by="FIPS") %>% filter(ID<8999)
-address[address$ID==1001,"V2"]
 ```
 
 # STRAIN
