@@ -13,7 +13,7 @@ toc: yes
 ---
 
 # About
-This script filter and scores the self-report data from BUDS study: Bullying, Unsupportive family/peers, Discrimination, and Social feedback study using data from PREDICT project collaboration between Northwestern (PI: Shankman) and Columbia (PI: Auerbach).
+This script filter and scores the self-report data from BUDS study, a study of social feedback and SES using data from PREDICT project collaboration between Northwestern (PI: Shankman) and Columbia (PI: Auerbach).
 
 # Get Setup
 ## Clear everything & set width
@@ -54,17 +54,20 @@ select <- dplyr::select
 
 ## Get the Working Directory
 ```{r}
-  here::i_am("./management/data03_BUDS.Rmd")
-here <- here::here()
+here::i_am("./management/data03_BUDS.Rmd")
+# Set import directory
+erp_data_dir <- here::here("data/eeg_processing/")
 ```
 
-## Load ERP data
-Remember to immediately rename and remove. Avoid overwriting old data.
-```{r, eval=F}
+## Subjects
+```{r}
 subjects <- c(1000,
 1001,
+1002,
 1004,
 1006,
+1008,
+1009,
 1010,
 1012,
 1014,
@@ -85,6 +88,7 @@ subjects <- c(1000,
 1037,
 1039,
 1040,
+1041,
 1043,
 1044,
 1046,
@@ -111,6 +115,7 @@ subjects <- c(1000,
 1070,
 1071,
 1072,
+1073,
 1074,
 1075,
 1077,
@@ -130,6 +135,7 @@ subjects <- c(1000,
 1094,
 1095,
 1096,
+1097,
 1098,
 1099,
 1100,
@@ -145,8 +151,10 @@ subjects <- c(1000,
 1110,
 1111,
 1112,
+1113,
 1114,
 1115,
+1116,
 1117,
 1118,
 1119,
@@ -160,6 +168,7 @@ subjects <- c(1000,
 9001,
 9003,
 9004,
+9005,
 9006,
 9007,
 9008,
@@ -193,10 +202,12 @@ subjects <- c(1000,
 9046,
 9048,
 9049,
+9050,
 9051,
 9052,
 9053,
 9055,
+9056,
 9057,
 9059,
 9060,
@@ -230,33 +241,65 @@ subjects <- c(1000,
 9097,
 9098,
 9099,
-9100)
+9100
+)
 
-too_few_segments <- c(9035, 1124, 1101, 1084, 9081, 1090, 9017, 9014, 
-                      1055, 9051)
-bad_data <- c(1072, 9004)
+segments <- read.csv(paste0(erp_data_dir, "SegmentCount/summary_erp_bin_RewP.csv"))
 
-subjects <- setdiff(subjects, c(too_few_segments,bad_data))
+subjects_150275 <- segments %>%
+  dplyr::filter(Acc_Acc < 13 | Acc_Rej < 11) %>%
+  select(subject)
+subjects_150275 <- setdiff(subjects, subjects_150275$subject)
 
-channels <- c("Fp1", "Fz", "F3", "F7", "FT9", "FC5", "FC1", 
+subjects_275425 <- segments %>%
+  dplyr::filter(Acc_Acc < 12 | Acc_Rej < 11) %>%
+  select(subject)
+subjects_275425 <- setdiff(subjects, subjects_275425$subject)
+
+# unique(c(subjects_150275$subject,subjects_275425$subject))
+# segments[segments$subject==1025,]
+```
+
+
+## Load ERP data
+Remember to immediately rename and remove. Avoid overwriting old data.
+```{r, eval=FALSE}
+channels_oldmontage <- c("Fp1", "Fz", "F3", "F7", "FT9", "FC5", "FC1", 
               "C3", "TP9", "CP5", "CP1", 
               "Pz", "P3", "P7", "CPz", "Oz", "POz", "P4", "P8", "TP10", 
               "CP6", "CP2", "Cz", "C4", "AFz", 
               "FT10", "FC6", "FC2", "F4", "F8", "Fp2", "FCz")
-time_windows <- c("150275", "50150", "275425", "150350", "200400", "250450", "4001000", "6001500")
-# time_windows <- c("150275", "50150", "275425")
+channels <- c("Fp1", "Fz", "F3", "F7", "FT9", "PO7", "FC1", 
+              "C3", "TP9", "CP5", "CP1", 
+              "Pz", "P3", "P7", "CPz", "Oz", "POz", "P4", "P8", "TP10", 
+              "CP6", "CP2", "Cz", "C4", "AFz", 
+              "FT10", "PO8", "FC2", "F4", "F8", "Fp2", "FCz")
+time_windows <- c("50150", "150275", "275425")
 
 for ( t in time_windows) {
   eval(parse(text=paste0('df_',t,' <- as.data.frame(NA)')))
   for (s in subjects) {
+    tryCatch({
+    ifelse(s < 1009 | (s > 9000 & s < 9006),
+         eval(parse(text=paste0(
+     'df_',s,'_',t,' <- as.data.frame(read.csv(here::here(paste0(erp_data_dir,"Results/subj_erp_Feedback/',s,'_component_',t,'.csv")), header=FALSE))
+     colnames(df_',s,'_',t,') <- c("Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All")
+     df_',s,'_',t,'$ID <- rep(',s,', 32)
+     df_',s,'_',t,'$Channel <- channels_oldmontage
+     df_',t,' <- bind_rows(df_',t,',df_',s,'_',t,')
+     print(paste0("Done with subject ", s))'
+     )))
+     ,
    eval(parse(text=paste0(
-     'df_',s,'_',t,' <- as.data.frame(read.csv(here("./data/eeg_processing_fully_auto/Scripts/Results/subj_erp_Feedback/',s,'_component_',t,'.csv"), header=FALSE))
+     'df_',s,'_',t,' <- as.data.frame(read.csv(here::here(paste0(erp_data_dir,"Results/subj_erp_Feedback/',s,'_component_',t,'.csv")), header=FALSE))
      colnames(df_',s,'_',t,') <- c("Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All")
      df_',s,'_',t,'$ID <- rep(',s,', 32)
      df_',s,'_',t,'$Channel <- channels
      df_',t,' <- bind_rows(df_',t,',df_',s,'_',t,')
      print(paste0("Done with subject ", s))'
      )))
+    )
+    }, error=function(e){cat("ERROR : For subject ",s, "; ", conditionMessage(e), "\n")})
   }
 }
 
@@ -269,13 +312,15 @@ for (t in time_windows) {
     tryCatch({
    eval(parse(text=paste0('
      print(paste0("Load subject ",s,"_even data now"))
-     df_even_',s,'_',t,' <- as.data.frame(read.delim(here("./data/eeg_processing_fully_auto/Scripts/Results/subj_erp_Feedback/split_half/even/',s,'_component_',t,'.txt"), header=TRUE))
+     df_even_',s,'_',t,' <- as.data.frame(
+     read.delim(here::here(paste0(erp_data_dir,"Results/subj_erp_Feedback/split_half/even/',s,'_component_',t,'.txt")), 
+                header=TRUE))
      df_even_',s,'_',t,'$ID <- rep(',s,', 1)
      df_even_',t,' <- bind_rows(df_even_',t,',df_even_',s,'_',t,')'
      )))
    eval(parse(text=paste0('
    print(paste0("Load subject ",s,"_odd data now"))
-     df_odd_',s,'_',t,' <- as.data.frame(read.delim(here("./data/eeg_processing_fully_auto/Scripts/Results/subj_erp_Feedback/split_half/odd/',s,'_component_',t,'.txt"), header=TRUE))
+     df_odd_',s,'_',t,' <- as.data.frame(read.delim(here::here(paste0(erp_data_dir,"Results/subj_erp_Feedback/split_half/odd/',s,'_component_',t,'.txt")), header=TRUE))
      df_odd_',s,'_',t,'$ID <- rep(',s,', 1)
      df_odd_',t,' <- bind_rows(df_odd_',t,',df_odd_',s,'_',t,')'
      )))
@@ -283,45 +328,48 @@ for (t in time_windows) {
   }
 }
 
-# load(file=here("./data/ERP_data.RData"))
-save(df_275425, df_150350, df_250450, df_200400, df_4001000, df_6001500, df_150275, df_50150,
-     df_even_150350, df_even_250450, df_even_200400, df_even_4001000, df_even_6001500, df_even_275425, df_even_150275, df_even_50150,
-     df_odd_150350, df_odd_250450, df_odd_200400, df_odd_4001000, df_odd_6001500, df_odd_275425, df_odd_150275, df_odd_50150,
-     file=here("./data/ERP_data.RData"))
+df_150275 <- filter(df_150275, ID %in% subjects_150275)
+df_even_150275 <- filter(df_even_150275, ID %in% subjects_150275)
+df_odd_150275 <- filter(df_odd_150275, ID %in% subjects_150275)
+
+df_275425 <- filter(df_275425, ID %in% subjects_275425)
+df_even_275425 <- filter(df_even_275425, ID %in% subjects_275425)
+df_odd_275425 <- filter(df_odd_275425, ID %in% subjects_275425)
+
+# load(file=here::here("./data/ERP_data.RData"))
+save(df_50150, df_150275, df_275425,
+     df_even_50150, df_even_150275, df_even_275425,
+     df_odd_50150, df_odd_150275, df_odd_275425,
+     file=here::here("./data/ERP_data.RData"))
 ```
 
 #### Single trial ERP data
 ```{r, eval=FALSE}
-too_few_segments <- c(9035, 1124, 1101, 1084, 9081, 1090, 9017, 9014, 1055, 9051)
-bad_data <- c(1072, 9004)
-
-files_artifacts  <- list.files(path=here("./data/eeg_processing_fully_auto/Scripts/Events/feedback/"), 
+files_artifacts  <- list.files(path=here::here(paste0(erp_data_dir, "Events/feedback/")), 
                      pattern='\\_event_all.csv',
                      full.names=TRUE)
-df_artifacts <- lapply(files_artifacts, read.csv, header = TRUE) >%
+df_artifacts <- lapply(files_artifacts, read.csv, header = TRUE) %>%
   do.call(rbind , .) %>%
      filter(bindescr!="") %>%
      mutate(ID = subject,
             trial = epochN) %>%
-     select(ID,artifactFlag,trial,bindescr) %>%
-  filter(!ID %in% c(too_few_segments,bad_data))
-  
+     select(ID,artifactFlag,trial,bindescr)
 
-files_50150  <- list.files(path=here("./data/eeg_processing_fully_auto/Scripts/trial_level_data/50150/"), 
+files_50150  <- list.files(path="/projects/p31735/BUDS/eeg_processing/Scripts/trial_level_data/Cz",
                      pattern='\\_Cz_50150_TrialLevelMeanAmplitude.csv',
                      full.names=TRUE)
 df_50150 <- lapply(files_50150, read.csv, header = TRUE) %>%
        do.call(rbind, .) %>%
        right_join(df_artifacts, by=c("ID","trial"))
 
-files_150275  <- list.files(path=here("./data/eeg_processing_fully_auto/Scripts/trial_level_data/150275/"), 
+files_150275  <- list.files(path="/projects/p31735/BUDS/eeg_processing/Scripts/trial_level_data/Cz",
                      pattern='\\_Cz_150275_TrialLevelMeanAmplitude.csv',
                      full.names=TRUE)
 df_150275 <- lapply(files_150275, read.csv, header = TRUE) %>%
        do.call(rbind, .) %>%
        right_join(df_artifacts, by=c("ID","trial"))
 
-files_275425  <- list.files(path=here("./data/eeg_processing_fully_auto/Scripts/trial_level_data/275425/"), 
+files_275425  <- list.files(path="/projects/p31735/BUDS/eeg_processing/Scripts/trial_level_data/Cz", 
                      pattern='\\_Cz_275425_TrialLevelMeanAmplitude.csv',
                      full.names=TRUE)
 df_275425 <- lapply(files_275425, read.csv, header = TRUE) %>%
@@ -339,12 +387,13 @@ write.csv(filter(df_275425,artifactFlag==0), "./data/trial_Cz_275425ms_clean.csv
 
 ## Load ERP data
 ```{r}
-load(here("./data/ERP_data.RData"))
+load(here::here("./data/ERP_data.RData"))
+# load(here::here("./data/November_ERP_data.RData"))
 ```
 
 ## Load self-report data
 ```{r}
-load(here("data/BUDS_cleaning05.RData"))
+load(here::here("data/BUDS_cleaning05.RData"))
 BUDS_cleaning05$ID <- as.integer(as.character(BUDS_cleaning05$id_1_i))
 BUDS_cleaning05 <- BUDS_cleaning05 %>%
   filter(!is.na(ID))
@@ -353,19 +402,19 @@ BUDS_cleaning05 <- BUDS_cleaning05 %>%
 # Participant self-reported race
 ```{r}
 # Import raw data files
-nw_demo1 <- read.csv(here("../_rawdata/demo/nw/SP Demographics Child+Parent+18 Merged_9001-9042.csv"), colClasses="character", header=TRUE)[-c(1:2),] %>%
+nw_demo1 <- read.csv(here::here("../_rawdata/demo/nw/SP Demographics Child+Parent+18 Merged_9001-9042.csv"), colClasses="character", header=TRUE)[-c(1:2),] %>%
     dplyr::select(c(id_1_i, demo_child_gender, demo_child_sex, demo_child_race, demo_child_hispanic, demo_child_sex_or))
-nw_demo2 <- read.csv(here("../_rawdata/demo/nw/SP Demographics 11.4.21_May 18, 2023_9042-9110.csv"), colClasses="character", header=TRUE)[-c(1:2),] %>%
+nw_demo2 <- read.csv(here::here("../_rawdata/demo/nw/SP Demographics 11.4.21_May 18, 2023_9042-9110.csv"), colClasses="character", header=TRUE)[-c(1:2),] %>%
     dplyr::select(c(id_1_i, demo_child_gender, demo_child_sex, demo_child_race, demo_child_hispanic, demo_child_sex_or))
 
 nw_demo <- nw_demo1 %>%
   full_join(nw_demo2) %>% # merge two NW files together
   filter(complete.cases(demo_child_race)) # only keep participants with race data
 
-cu_demo1 <- read.csv(here("../_rawdata/demo/cu/SP_Demographics (4.13.21)_November 1, 2021_12.34.csv"), colClasses="character", header=TRUE)[-c(1:2),] %>%
+cu_demo1 <- read.csv(here::here("../_rawdata/demo/cu/SP_Demographics (4.13.21)_November 1, 2021_12.34.csv"), colClasses="character", header=TRUE)[-c(1:2),] %>%
   filter(complete.cases(demo_child_race)) %>% # only keep participants with race data
   dplyr::select(c(id_1_i, demo_child_gender, demo_child_sex, demo_child_race, demo_child_hispanic, demo_child_sex_or))
-cu_demo2 <- read.csv(here("../_rawdata/demo/cu/SP_Demographics (9.22.21)_July 18, 2023_08.08.csv"), colClasses="character", header=TRUE)[-c(1:2),] %>%
+cu_demo2 <- read.csv(here::here("../_rawdata/demo/cu/SP_Demographics (9.22.21)_July 18, 2023_08.08.csv"), colClasses="character", header=TRUE)[-c(1:2),] %>%
   filter(complete.cases(demo_child_race)) %>% # only keep participants with race data
   dplyr::select(c(id_1_i, demo_child_gender, demo_child_sex, demo_child_race, demo_child_hispanic, demo_child_sex_or))
 
@@ -396,9 +445,9 @@ BUDS_cleaning05_demo <- rbind(cu_demo, nw_demo) %>%
                                       "6" ~ "Do not identify as any of these options", 
                                       "99" ~ "Prefer not to answer",
                                       .default=demo_child_gender),
-         demo_child_sex = case_match(demo_child_sex,
-                                     "1" ~ "male", "2" ~ "female",
-                                     .default=demo_child_sex),
+         demo_child_sex = as.factor(case_match(demo_child_sex,
+                                     "1" ~ "Male", "2" ~ "Female", "" ~ NA,
+                                     .default=demo_child_sex)),
          demo_child_sex_or = case_match(demo_child_sex_or,
                                         "1" ~ "Heterosexual", "2" ~ "Gay or Lesbian",
                                         "3" ~ "Bisexual or pansexual", 
@@ -419,24 +468,8 @@ BUDS_cleaning05_demo <- rbind(cu_demo, nw_demo) %>%
   mutate(White_nonwhite = case_match(demo_child_race, c("White") ~ "White",
          c("More than one race", "Asian", "Black or African American", "American Indian/Alaska Native", "Native Hawaiian or Other Pacific Islander") ~ "Non_white")) %>%
   dplyr::select(c(ID, demo_child_gender, demo_child_sex, demo_child_race, demo_child_hispanic, White_nonwhite))
-```
 
-# Import 6 month followup
-```{r, eval=FALSE}
-# Import data from Columbia University
-BUDS_cleaning01_columbia_6month <- read.csv(here("../_rawdata/Columbia/SP_Self-Report_6-Month (3.17.21)_August 14, 2023_12.21.csv"), header=TRUE)
-var.labels = BUDS_cleaning01_columbia_6month[2,]; label(BUDS_cleaning01_columbia_6month) <- as.list(var.labels[match(names(BUDS_cleaning01_columbia_6month), names(var.labels))])
-
-# Import data from Northwestern University
-BUDS_cleaning01_nw_6month <- read.csv(here("../_rawdata/Northwestern/SP_Self-Report_6-Month_11.4.21_3.7.23.csv"), header=TRUE)
-# Use the first row as the variable labels
-var.labels = BUDS_cleaning01_nw_6month[1,]; label(BUDS_cleaning01_nw_6month) <- as.list(var.labels[match(names(BUDS_cleaning01_nw_6month), names(var.labels))])
-BUDS_cleaning02_nw_6month <- BUDS_cleaning01_nw_6month[-(1),]; rm("BUDS_cleaning01_nw_6month")
-
-BUDS_cleaning01_6month <- bind_rows(BUDS_cleaning01_columbia_6month, BUDS_cleaning02_nw_6month)
-BUDS_cleaning01_6month$ID <- BUDS_cleaning01_6month$id_1_6
-BUDS_cleaning02_6month <- BUDS_cleaning01_6month %>%
-  filter(ID!="9075 - incorrect")
+contrasts(BUDS_cleaning05_demo$demo_child_sex) = contr.sum(2)
 ```
 
 # Create IDAS score
@@ -447,7 +480,7 @@ BUDS_cleaning05_idas <- as.data.frame(BUDS_cleaning05)[-c(1:2),] %>%
   mutate_all(as.character())
 idas <- colnames(BUDS_cleaning05_idas[,-1])
 BUDS_cleaning05_idas_num <- BUDS_cleaning05_idas %>%
-  mutate(across(all_of(c(idas)), ~ case_match(as.character(.), "1" ~ 1, "2" ~ 2, "3" ~ 3, "4" ~ 4, "5" ~ 5,
+  dplyr::mutate(across(all_of(c(idas)), ~ dplyr::case_match(as.character(.), "1" ~ 1, "2" ~ 2, "3" ~ 3, "4" ~ 4, "5" ~ 5,
                                                        "Not at all" ~ 1,
                                                        "A little bit" ~ 2,
                                                        "Moderately" ~ 3,
@@ -467,10 +500,8 @@ BUDS_cleaning05_idas_num$IDAS_wellbeing = rowMeans(BUDS_cleaning05_idas_num[,ida
 BUDS_cleaning05_idas_num$IDAS_panic = rowMeans(BUDS_cleaning05_idas_num[,idas_panic], na.rm=F)
 BUDS_cleaning05_idas_num$IDAS_sa = rowMeans(BUDS_cleaning05_idas_num[,idas_sa], na.rm=F)
 BUDS_cleaning05_idas_num$IDAS_anxiety = rowMeans(BUDS_cleaning05_idas_num[,c(idas_panic,idas_sa)], na.rm=F)
-# BUDS_cleaning05_idas_num$IDAS_claus = rowMeans(BUDS_cleaning05_idas_num[,idas_claus], na.rm=F)
 
 cor.test(BUDS_cleaning05_idas_num$IDAS_panic, BUDS_cleaning05_idas_num$IDAS_sa)
-# hist(sqrt(BUDS_cleaning05_idas_num$IDAS_sa))
 
 library(ggpubr)
 shapiro.test(BUDS_cleaning05_idas_num$IDAS_depression)
@@ -486,35 +517,6 @@ shapiro.test(BUDS_cleaning05_idas_num$IDAS_wellbeing)
 ggdensity(BUDS_cleaning05_idas_num, x = "IDAS_wellbeing", fill = "lightgray", title = "IDAS_wellbeing") +
   scale_x_continuous(limits = c(-1, 6)) +
   stat_overlay_normal_density(color = "red", linetype = "dashed")
-```
-
-## 6 month followup
-```{r, eval=FALSE}
-BUDS_cleaning05_idas_6month <- as.data.frame(BUDS_cleaning02_6month)[-c(1:2),] %>%
-  select(ID,contains("idas")) %>%
-  mutate_all(as.character())
-idas <- colnames(BUDS_cleaning05_idas_6month[,-1])
-BUDS_cleaning05_idas_num_6month <- BUDS_cleaning05_idas_6month %>%
-  mutate(across(all_of(c(idas)), ~ case_match(as.character(.), "1" ~ 1, "2" ~ 2, "3" ~ 3, "4" ~ 4, "5" ~ 5,
-                                                       "Not at all" ~ 1,
-                                                       "A little bit" ~ 2,
-                                                       "Moderately" ~ 3,
-                                                       "Quite a bit" ~ 4,
-                                                       "Extremely" ~ 5)))
-
-idas_dep <- c("idas_1_6","idas_2_6","idas_5_6","idas_6_6","idas_8_6","idas_9_6","idas_11_6","idas_13_6","idas_21_6","idas_26_6","idas_27r","idas_30_6","idas_31_6","idas_40_6","idas_48_6","idas_51_6","idas_52_6","idas_57_6","idas_61_6","idas_64r")
-idas_wb <- c("idas_3_6","idas_10_6","idas_23_6","idas_27_6","idas_50_6","idas_53_6","idas_59_6","idas_64_6")
-
-BUDS_cleaning05_idas_num_6month$idas_27r = 6 - BUDS_cleaning05_idas_num_6month$idas_27_6
-BUDS_cleaning05_idas_num_6month$idas_64r = 6 - BUDS_cleaning05_idas_num_6month$idas_64_6
-BUDS_cleaning05_idas_num_6month$IDAS_depression_6month = rowMeans(BUDS_cleaning05_idas_num_6month[,idas_dep])
-BUDS_cleaning05_idas_num_6month$IDAS_wellbeing_6month = rowMeans(BUDS_cleaning05_idas_num_6month[,idas_wb])
-BUDS_cleaning05_idas_num_6month$ID <- unlabel(as.integer(BUDS_cleaning05_idas_num_6month$ID))
-
-BUDS_cleaning05_idas_baseand6 <- left_join(BUDS_cleaning05_idas_num,
-                                           dplyr::select(BUDS_cleaning05_idas_num_6month, ID, IDAS_depression_6month, IDAS_wellbeing_6month), by="ID") %>%
-  filter(complete.cases(IDAS_depression_6month) & complete.cases(IDAS_depression)) %>%
-  mutate(IDAS_depression_6month_r = rstandard(lm(IDAS_depression_6month ~ IDAS_depression, .)))
 ```
 
 # Merge self-report and ERP data
@@ -554,38 +556,43 @@ merge_self_report_with_erp <- function(data, electrode, self_report_data, demo_d
          AA_AR_c = scale(AA_AR, center=T, scale=F),
          AA_AR_z = scale(AA_AR, center=T, scale=T),
          AR_AA_c = scale(AR_AA, center=T, scale=F),
-         AR_AA_z = scale(AR_AA, center=T, scale=T))
+         AR_AA_z = scale(AR_AA, center=T, scale=T)) %>%
+  # remove duplicated ID values, just select the first row
+  group_by(ID) %>%
+  arrange(ID) %>%
+  filter(row_number()==1) %>%
+  ungroup() %>%
+  # center covariates
+  mutate(site = case_match(as.character(id_2_i), "CUMC" ~ "Columbia",
+                                   "2" ~ "Northwestern",
+                                   NA ~ NA),
+         # Age_c = scale(Age, center=T, scale=F),
+         # StressCT_c = scale(Age, center=T, scale=F),
+         # StressTH_c = scale(StressTH, center=T, scale=F),
+         IDAS_depression_c = scale(IDAS_depression, center=T, scale=F),
+         IDAS_anxiety_c = scale(IDAS_anxiety, center=T, scale=F))
 }
 
-merge_self_report_with_erp_long <- function(data) {
-data %>%
-  mutate(Like_Acc=Acc_Acc,
-         Dislike_Acc=Rej_Acc,
-         Like_Rej=Acc_Rej,
-         Dislike_Rej=Rej_Rej,
-         
-         Like_Acc_c = scale(Acc_Acc, center=T, scale=F),
-         Dislike_Acc_c = scale(Rej_Acc, center=T, scale=F),
-         Like_Rej_c = scale(Acc_Rej, center=T, scale=F),
-         Dislike_Rej_c = scale(Rej_Rej, center=T, scale=F),
-         Like_Acc_z = scale(Acc_Acc, center=T, scale=T),
-         Dislike_Acc_z = scale(Rej_Acc, center=T, scale=T),
-         Like_Rej_z = scale(Acc_Rej, center=T, scale=T),
-         Dislike_Rej_z = scale(Rej_Rej, center=T, scale=T)) %>%
-  pivot_longer(cols=c("Like_Acc","Dislike_Acc","Like_Rej","Dislike_Rej"), names_to=c("Voting","Feedback"), names_sep="_", values_to="ERP")
-}
-
-df_275425_cz <- merge_self_report_with_erp(data=df_275425, electrode=c("Cz","CPz","Pz"), 
-                                           self_report_data=BUDS_cleaning05, demo_data=BUDS_cleaning05_demo, idas_data=BUDS_cleaning05_idas_num)
-df_275425_cz_long <- merge_self_report_with_erp_long(df_275425_cz)
+df_275425_cz <- merge_self_report_with_erp(data=df_275425, electrode=c("Cz"), 
+                                           self_report_data=BUDS_cleaning05, 
+                                           demo_data=BUDS_cleaning05_demo, 
+                                           idas_data=BUDS_cleaning05_idas_num)
 
 df_150275_cz <- merge_self_report_with_erp(data=df_150275, electrode=c("Cz"), 
-                                           self_report_data=BUDS_cleaning05, demo_data=BUDS_cleaning05_demo, idas_data=BUDS_cleaning05_idas_num)
-df_150275_cz_long <- merge_self_report_with_erp_long(df_150275_cz)
+                                           self_report_data=BUDS_cleaning05,
+                                           demo_data=BUDS_cleaning05_demo,
+                                           idas_data=BUDS_cleaning05_idas_num) %>%
+  group_by(ID) %>%
+  arrange(ID) %>%
+  filter(row_number()==1)
 
 df_50150_cz <- merge_self_report_with_erp(data=df_50150, electrode=c("Cz"), 
-                                           self_report_data=BUDS_cleaning05, demo_data=BUDS_cleaning05_demo, idas_data=BUDS_cleaning05_idas_num)
-df_50150_cz_long <- merge_self_report_with_erp_long(df_50150_cz)
+                                           self_report_data=BUDS_cleaning05,
+                                          demo_data=BUDS_cleaning05_demo,
+                                          idas_data=BUDS_cleaning05_idas_num) %>%
+  group_by(ID) %>%
+  arrange(ID) %>%
+  filter(row_number()==1)
 ```
 
 ## Split-half
@@ -652,7 +659,7 @@ df_odd_275425_cz <- df_odd_275425_cz[,1:7] %>%
 # Import Area Deprivation Index data
 ```{r, include=F}
 # Import address info and sort by row number, to tie to subject number
-geocode_data <- read.csv(here("../_rawdata/GeocodeResults.csv"), header=F, colClasses='character') %>%
+geocode_data <- read.csv(here::here("../_rawdata/GeocodeResults.csv"), header=F, colClasses='character') %>%
   mutate(V1=as.integer(as.character(V1))) %>%
   arrange(V1)
   # dplyr::slice(length(V1), 1:length(V1))
@@ -661,9 +668,9 @@ geocode_data <- read.csv(here("../_rawdata/GeocodeResults.csv"), header=F, colCl
 geocode_data$FIPS <- as.numeric(as.character((paste0(geocode_data$V9,geocode_data$V10,geocode_data$V11,substr(geocode_data$V12,1,1)))))
 
 # Import subject ID 
-subj_rownumber <- openxlsx::read.xlsx(here("../_rawdata/Address/PREDICT_ids.xlsx"))
+subj_rownumber <- openxlsx::read.xlsx(here::here("../_rawdata/Address/PREDICT_ids.xlsx"))
 geocode_data2 <- full_join(subj_rownumber,geocode_data, by="V1")
-adi_codes <- read.csv(here("./data/ADI/national/US_2021_ADI_Census_Block_Group_v4_0_1.csv"))
+adi_codes <- read.csv(here::here("./data/ADI/national/US_2021_ADI_Census_Block_Group_v4_0_1.csv"))
 
 geocode_data_with_adi <- left_join(geocode_data2, adi_codes, by="FIPS")
 geocode_data_with_adi$ADI_NATRANK <- as.numeric(as.character(geocode_data_with_adi$ADI_NATRANK))
@@ -688,7 +695,6 @@ geocode_data_with_adi[geocode_data_with_adi$ID==1122,"ADI_NATRANK"] <- 23
 geocode_data_with_adi[geocode_data_with_adi$ID==9005,"ADI_NATRANK"] <- 13
 geocode_data_with_adi[geocode_data_with_adi$ID==9006,"ADI_NATRANK"] <- 22
 geocode_data_with_adi[geocode_data_with_adi$ID==9010,"ADI_NATRANK"] <- 46
-# geocode_data_with_adi[geocode_data_with_adi$ID==9027,"ADI_NATRANK"] MISSING ADDRESS, but sibling of 9026 so see below
 geocode_data_with_adi[geocode_data_with_adi$ID==9039,"ADI_NATRANK"] <- 44 # previously 28 but on college campus
 geocode_data_with_adi[geocode_data_with_adi$ID==9044,"ADI_NATRANK"] <- (21+29)/2 # but on college campus
 geocode_data_with_adi[geocode_data_with_adi$ID==9052,"ADI_NATRANK"] <- 29
@@ -703,7 +709,10 @@ geocode_data_with_adi[geocode_data_with_adi$ID==9128,"ADI_NATRANK"] <- 73 # curr
 
 # 9027 and 9026 are siblings, so we are assuming that they live in the same address and thus have the same ADI
 geocode_data_with_adi[geocode_data_with_adi$ID==9027,"ADI_NATRANK"] <- geocode_data_with_adi[geocode_data_with_adi$ID==9026,"ADI_NATRANK"]
+```
 
+## REVERSE SCORE ADI
+```{r}
 geocode_data_with_adi$ADI_NATRANK <- 100-geocode_data_with_adi$ADI_NATRANK
 ```
 
@@ -716,11 +725,12 @@ sum(is.na(df_150275_cz$ADI_NATRANK))
 sum(!is.na(df_150275_cz$ADI_NATRANK))
 
 address <- left_join(geocode_data2, adi_codes, by="FIPS")
-address[address$ID==9059,"V2"]
+address[address$ID==1062,c("V2","ADI_NATRANK")]
+address[address$ID==9009,c("V2","ADI_NATRANK")]
 
 # Subjects over 18
-load(file=here("./data/over_18_150275.RData"))
-load(file=here("./data/over_18_275425.RData"))
+load(file=here::here("./data/over_18_150275.RData"))
+load(file=here::here("./data/over_18_275425.RData"))
 over_18 <- address %>%
   filter(ID %in% over_18_150275$ID) %>%
   select(ID, V2)
@@ -736,77 +746,54 @@ df_275425_cz <- left_join(df_275425_cz, geocode_data_with_adi_log, by="ID") %>%
   filter(complete.cases(AA_AR))
 df_275425_cz$ADI_NATRANK_c = scale(center=TRUE, scale=FALSE, df_275425_cz$ADI_NATRANK)
 df_275425_cz$ADI_NATRANK_z = scale(center=TRUE, scale=TRUE, df_275425_cz$ADI_NATRANK)
-df_275425_cz$ADI_NATRANK_log_c = scale(center=TRUE, scale=FALSE, df_275425_cz$ADI_NATRANK_log)
-df_275425_cz$ADI_NATRANK_log_z = scale(center=TRUE, scale=TRUE, df_275425_cz$ADI_NATRANK_log)
 
 df_150275_cz <- left_join(df_150275_cz, geocode_data_with_adi_log, by="ID") %>%
   filter(complete.cases(AA_AR))
 df_150275_cz$ADI_NATRANK_c = scale(center=TRUE, scale=FALSE, df_150275_cz$ADI_NATRANK)
 df_150275_cz$ADI_NATRANK_z = scale(center=TRUE, scale=TRUE, df_150275_cz$ADI_NATRANK)
-df_150275_cz$ADI_NATRANK_log_c = scale(center=TRUE, scale=FALSE, df_150275_cz$ADI_NATRANK_log)
-df_150275_cz$ADI_NATRANK_log_z = scale(center=TRUE, scale=TRUE, df_150275_cz$ADI_NATRANK_log)
 
 df_50150_cz <- left_join(df_50150_cz, geocode_data_with_adi_log, by="ID") %>%
   filter(complete.cases(AA_AR))
 df_50150_cz$ADI_NATRANK_c = scale(center=TRUE, scale=FALSE, df_50150_cz$ADI_NATRANK)
 df_50150_cz$ADI_NATRANK_z = scale(center=TRUE, scale=TRUE, df_50150_cz$ADI_NATRANK)
-df_50150_cz$ADI_NATRANK_log_c = scale(center=TRUE, scale=FALSE, df_50150_cz$ADI_NATRANK_log)
-df_50150_cz$ADI_NATRANK_log_z = scale(center=TRUE, scale=TRUE, df_50150_cz$ADI_NATRANK_log)
-
-corr.test(df_150275_cz$AA_AR, df_275425_cz$AA_AR)
-corr.test(df_150275_cz$Acc_Acc, df_275425_cz$Acc_Rej)
-
-df_275425_cz_long <- left_join(df_275425_cz_long, geocode_data_with_adi_log, by="ID") %>%
-        mutate(site = case_match(as.character(id_2_i), "CUMC" ~ "Columbia",
-                                   "2" ~ "Northwestern",
-                                   NA ~ NA)) %>%
-  group_by(Voting, Feedback) %>%
-  mutate(ADI_NATRANK_c = scale(center=TRUE, scale=FALSE, ADI_NATRANK),
-         ADI_NATRANK_z = scale(center=TRUE, scale=TRUE, ADI_NATRANK),
-         ADI_NATRANK_log_c = scale(center=TRUE, scale=FALSE, ADI_NATRANK_log),
-         ADI_NATRANK_log_z = scale(center=TRUE, scale=TRUE, ADI_NATRANK_log))
-df_150275_cz_long <- left_join(df_150275_cz_long, geocode_data_with_adi_log, by="ID") %>%
-        mutate(site = case_match(as.character(id_2_i), "CUMC" ~ "Columbia",
-                                   "2" ~ "Northwestern",
-                                   NA ~ NA)) %>%
-  group_by(Voting, Feedback) %>%
-  mutate(ADI_NATRANK_c = scale(center=TRUE, scale=FALSE, ADI_NATRANK),
-         ADI_NATRANK_z = scale(center=TRUE, scale=TRUE, ADI_NATRANK),
-         ADI_NATRANK_log_c = scale(center=TRUE, scale=FALSE, ADI_NATRANK_log),
-         ADI_NATRANK_log_z = scale(center=TRUE, scale=TRUE, ADI_NATRANK_log))
-df_50150_cz_long <- left_join(df_50150_cz_long, geocode_data_with_adi_log, by="ID") %>%
-        mutate(site = case_match(as.character(id_2_i), "CUMC" ~ "Columbia",
-                                   "2" ~ "Northwestern",
-                                   NA ~ NA)) %>%
-  group_by(Voting, Feedback) %>%
-  mutate(ADI_NATRANK_c = scale(center=TRUE, scale=FALSE, ADI_NATRANK),
-         ADI_NATRANK_z = scale(center=TRUE, scale=TRUE, ADI_NATRANK),
-         ADI_NATRANK_log_c = scale(center=TRUE, scale=FALSE, ADI_NATRANK_log),
-         ADI_NATRANK_log_z = scale(center=TRUE, scale=TRUE, ADI_NATRANK_log))
 ```
 
 # STRAIN
 ```{r}
-load(here("data/BUDS_cleaning02_with_strain.RData"))
+load(here::here("data/BUDS_cleaning02_with_strain.RData"))
 BUDS_cleaning02_with_strain$ID <- as.integer(as.character(BUDS_cleaning02_with_strain$id_1_i))
 
 df_275425_cz_strain <- df_275425_cz %>%
-  full_join(BUDS_cleaning02_with_strain, by="ID")
+  full_join(BUDS_cleaning02_with_strain, by="ID") %>%
+  filter(complete.cases(Acc_Acc)) %>%
+  mutate(Age_c = scale(Age, center=T, scale=F),
+         StressCT_c = scale(StressCT, center=T, scale=F),
+         StressTH_c = scale(StressTH, center=T, scale=F)) %>%
+  group_by(ID) %>%
+  arrange(ID) %>%
+  filter(row_number()==1) %>%
+  ungroup()
 
 df_150275_cz_strain <- df_150275_cz %>%
-  full_join(BUDS_cleaning02_with_strain, by="ID")
+  full_join(BUDS_cleaning02_with_strain, by="ID") %>%
+    filter(complete.cases(Acc_Acc)) %>%
+  group_by(ID) %>%
+  arrange(ID) %>%
+  filter(row_number()==1) %>%
+  ungroup() %>%
+  mutate(Age_c = scale(Age, center=T, scale=F),
+         StressCT_c = scale(StressCT, center=T, scale=F),
+         StressTH_c = scale(StressTH, center=T, scale=F))
 
 df_50150_cz_strain <- df_50150_cz %>%
-  full_join(BUDS_cleaning02_with_strain, by="ID")
-
-df_275425_cz_long_strain <- df_275425_cz_long %>%
-  full_join(BUDS_cleaning02_with_strain, by="ID", relationship = "many-to-many")
-
-df_150275_cz_long_strain <- df_150275_cz_long %>%
-  full_join(BUDS_cleaning02_with_strain, by="ID", relationship = "many-to-many")
-
-df_50150_cz_long_strain <- df_50150_cz_long %>%
-  full_join(BUDS_cleaning02_with_strain, by="ID", relationship = "many-to-many")
+  full_join(BUDS_cleaning02_with_strain, by="ID") %>%
+  group_by(ID) %>%
+  arrange(ID) %>%
+  filter(row_number()==1) %>%
+  ungroup() %>%
+  mutate(Age_c = scale(Age, center=T, scale=F),
+         StressCT_c = scale(StressCT, center=T, scale=F),
+         StressTH_c = scale(StressTH, center=T, scale=F))
 ```
 
 # Split-half
@@ -838,18 +825,18 @@ spearman_brown[,2:5] <- round(spearman_brown[,2:5],2)
 
 # Save files
 ```{r}
-save(df_150275_cz, df_150275_cz_long,
-     df_50150_cz, df_50150_cz_long,
-     df_275425_cz, df_275425_cz_long,
-     df_150275_cz_strain, df_150275_cz_long_strain,
-     df_50150_cz_strain, df_50150_cz_long_strain,
-     df_275425_cz_strain, df_275425_cz_long_strain,
-     file=here("./data/BUDS_df_ERP.RData"))
+save(df_150275_cz, #df_150275_cz_long,
+     df_50150_cz,# df_50150_cz_long,
+     df_275425_cz, #df_275425_cz_long,
+     df_150275_cz_strain, #df_150275_cz_long_strain,
+     df_50150_cz_strain, #df_50150_cz_long_strain,
+     df_275425_cz_strain, #df_275425_cz_long_strain,
+     file=here::here("./data/BUDS_df_ERP.RData"))
 
-save(geocode_data_with_adi, file=here("./data/geocode_data_with_adi.RData"))
+save(geocode_data_with_adi, file=here::here("./data/geocode_data_with_adi.RData"))
 
-save(df_even_50150_cz, df_even_150275_cz, df_even_275425_cz, file=here("./data/BUDS_split_half_even.RData"))
-save(df_odd_50150_cz, df_odd_150275_cz, df_odd_275425_cz, file=here("./data/BUDS_split_half_odd.RData"))
+save(df_even_50150_cz, df_even_150275_cz, df_even_275425_cz, file=here::here("./data/BUDS_split_half_even.RData"))
+save(df_odd_50150_cz, df_odd_150275_cz, df_odd_275425_cz, file=here::here("./data/BUDS_split_half_odd.RData"))
 
-# write.csv(spearman_brown, here("tables/spearman_brown.csv"))
+write.csv(spearman_brown, here::here("tables/spearman_brown.csv"))
 ```

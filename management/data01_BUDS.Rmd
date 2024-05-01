@@ -90,6 +90,7 @@ BUDS_cleaning02_with_strain <- merge(BUDS_cleaning02, strain_data, by="ID")
 sort(table(BUDS_cleaning02_with_strain$ID))
 ```
 
+
 ```{r}
 save(BUDS_cleaning02, file=here("data/BUDS_cleaning02.RData"))
 save(BUDS_cleaning02_with_strain, file=here("data/BUDS_cleaning02_with_strain.RData"))

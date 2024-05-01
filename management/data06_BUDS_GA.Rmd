@@ -45,6 +45,8 @@ here <- here::here
 ## Get the Working Directory
 ```{r}
   here::i_am("./management/data06_BUDS_GA.Rmd")
+# Set import directory
+erp_data_dir <- here::here("data/eeg_processing/")
 ```
 
 ```{r}
@@ -57,10 +59,13 @@ Remember to immediately rename and remove. Avoid overwriting old data.
 ```{r, eval=F, include=F}
 subjects <- c(1000,
 1001,
+1002,
 1004,
 1006,
-# 1010,
-# 1012,
+1008,
+1009,
+1010,
+1012,
 1014,
 1017,
 1021,
@@ -79,6 +84,7 @@ subjects <- c(1000,
 1037,
 1039,
 1040,
+1041,
 1043,
 1044,
 1046,
@@ -104,7 +110,8 @@ subjects <- c(1000,
 1069,
 1070,
 1071,
-# 1072,
+1072,
+1073,
 1074,
 1075,
 1077,
@@ -124,6 +131,7 @@ subjects <- c(1000,
 1094,
 1095,
 1096,
+1097,
 1098,
 1099,
 1100,
@@ -139,8 +147,10 @@ subjects <- c(1000,
 1110,
 1111,
 1112,
+1113,
 1114,
 1115,
+1116,
 1117,
 1118,
 1119,
@@ -153,13 +163,14 @@ subjects <- c(1000,
 1126,
 9001,
 9003,
-# 9004,
+9004,
+9005,
 9006,
 9007,
 9008,
 9010,
 9013,
-# 9014,
+9014,
 9015,
 9017,
 9018,
@@ -187,10 +198,12 @@ subjects <- c(1000,
 9046,
 9048,
 9049,
+9050,
 9051,
 9052,
 9053,
 9055,
+9056,
 9057,
 9059,
 9060,
@@ -224,47 +237,33 @@ subjects <- c(1000,
 9097,
 9098,
 9099,
-9100)
+9100
+)
 
-# channels <- c("AFz","C3","C4","CP1","CP2","CP5","CP6","CPz","Cz",
-#               "F3","F4","F7","F8","FC1","FC2","FC5","FC6","FCz","FT10","FT9","Fp1","Fp2","Fz",
-#               "Oz","P4","P7","P8","PO7","PO8","POz","Pz","TP10","TP9")
+segments <- read.csv(paste0(erp_data_dir, "SegmentCount/summary_erp_bin_RewP.csv"))
 
-bad_150275 <- c(1025,
-1055,
-1084,
-1090,
-1101,
-1122,
-1124,
-9015,
-9017,
-9019,
-9035,
-9051,
-9057,
-9081,
-9082)
+subjects_150275 <- segments %>%
+  dplyr::filter(Acc_Acc < 13 | Acc_Rej < 11) %>%
+  select(subject)
 
-bad_275425 <- c(1055,
-1084,
-1090,
-1101,
-1124,
-9015,
-9017,
-9019,
-9035,
-9051,
-9081,
-9082)
+subjects_275425 <- segments %>%
+  dplyr::filter(Acc_Acc < 12 | Acc_Rej < 11) %>%
+  select(subject)
 
-subjects <- setdiff(subjects, c(bad_150275,bad_275425))
+channels <- c("AFz","C3","C4","CP1","CP2","CP5","CP6","CPz","Cz",
+              "F3","F4","F7","F8","FC1","FC2","FC5","FC6","FCz","FT10","FT9","Fp1","Fp2","Fz",
+              "Oz","P4","P7","P8","PO7","PO8","POz","Pz","TP10","TP9")
+
+subjects <- setdiff(subjects, c(subjects_150275,subjects_275425))
 
 library(eegUtils)
-EEG <- import_set('./data/eeg_processing_fully_auto/DataPreprocessed/1000_continuous_icaed.set')
-chanlocs <- EEG$chan_info
-channels <- EEG$chan_info$electrode
+# To run on quest: module load hdf5/1.10.8-openmpi-3.1.3-gcc-8.4.0
+# module load R/4.2.0
+# R
+# install.packages("hdf5r")
+# EEG <- import_set(paste0(erp_data_dir, "1000_continuous_icaed.set"))
+# chanlocs <- EEG$chan_info
+# channels <- EEG$chan_info$electrode
 
 df_ga <- as.data.frame(NA)
 for (c in channels[-1]) {
@@ -273,7 +272,7 @@ for (c in channels[-1]) {
    skip_to_next <- FALSE
    tryCatch({
     eval(parse(text=paste0(
-     'df_',s,'_',c,' <- read.csv(here("./data/eeg_processing_fully_auto/Scripts/Results/cleaned_data/',s,'_',c,'_raw_erp.csv"), header=FALSE)
+     'df_',s,'_',c,' <- read.csv(paste0(erp_data_dir,"Results/cleaned_data/',s,'_',c,'_raw_erp.csv"), header=FALSE)
      colnames(df_',s,'_',c,') <- c("Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All")
      df_',s,'_',c,'$ID <- rep(',s,', 1100)
      df_',s,'_',c,'$electrode <- rep("',c,'", 1100)
@@ -293,20 +292,24 @@ eeg.map_for_plotting <- df_ga %>%
   pivot_longer(cols=c(Acc_Acc, Acc_Rej, Rej_Acc, Rej_Rej, Acc_All, Rej_All), 
                values_to ="ERP", names_to="Condition") %>%
   arrange(ID,Condition,Time) %>% #sort by Subid, Condition, and then Time
-  dplyr::filter(Time>150 & Time<350) %>%
+  # dplyr::filter(Time>150 & Time<350) %>%
   group_by(Condition, electrode) %>% #grouping required for summarise in the next step
   dplyr::summarise(amplitude = mean(ERP)) #calculate mean across subjects
 
 topoplot(eeg.map_for_plotting, palette="RdBu", chanLocs=chanlocs, contour=FALSE, interp_limit="head", chan_marker="name")
 
-save(EEG, df_ga, eeg.map_for_plotting, file=here("./data/eeg_map_for_plotting.RData"))
+save(df_ga, eeg.map_for_plotting, file=here("./data/eeg_map_for_plotting_without_locs.RData"))
+# save(EEG, df_ga, eeg.map_for_plotting, file=here("./data/eeg_map_for_plotting.RData"))
 ## ADD FC5
 ```
 
 # Make grand averages
 ## Entire sample
 ```{r Make and plot grand averages, warning=FALSE, include=F}
-df_ga_Cz_long <- df_ga_Cz %>%
+load(here("./data/eeg_map_for_plotting_without_locs.RData"))
+
+df_ga_Cz_long <- df_ga %>%
+  filter(electrode=="Cz") %>%
   dplyr::select(-c("NA")) %>%
   filter(complete.cases(Acc_All)) %>%
   mutate(AA_AR = Acc_Acc - Acc_Rej, # Create difference scores
@@ -320,10 +323,11 @@ df_ga_Cz_long <- df_ga_Cz %>%
   group_by(Condition,Time) %>% #grouping required for summarise in the next step
   dplyr::summarise(grand_average = mean(ERP)) #calculate mean across subjects
 
-df_ga_FCz_long <- df_ga_FCz %>%
+df_ga_FCz_long <- df_ga %>%
+  filter(electrode=="FCz") %>%
   dplyr::select(-c("NA")) %>%
   filter(complete.cases(Acc_All)) %>%
-  mutate(AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, data=., na.action=na.exclude)), # Create residualized differences
+  mutate(AA_AR = Acc_Acc - Acc_Rej, # Create difference scores
          AR_AA = stdres(lm(Acc_Rej ~ Acc_Acc, data=., na.action=na.exclude)),
          RA_RR = stdres(lm(Rej_Acc ~ Rej_Rej, data=., na.action=na.exclude)),
          RR_RA = stdres(lm(Rej_Rej ~ Rej_Acc, data=., na.action=na.exclude)),
@@ -334,10 +338,11 @@ df_ga_FCz_long <- df_ga_FCz %>%
   group_by(Condition,Time) %>% #grouping required for summarise in the next step
   dplyr::summarise(grand_average = mean(ERP)) #calculate mean across subjects
 
-df_ga_Fz_long <- df_ga_Fz %>%
+df_ga_Fz_long <- df_ga %>%
+  filter(electrode=="Fz") %>%
   dplyr::select(-c("NA")) %>%
   filter(complete.cases(Acc_All)) %>%
-  mutate(AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, data=., na.action=na.exclude)), # Create residualized differences
+  mutate(AA_AR = Acc_Acc - Acc_Rej, # Create difference scores
          AR_AA = stdres(lm(Acc_Rej ~ Acc_Acc, data=., na.action=na.exclude)),
          RA_RR = stdres(lm(Rej_Acc ~ Rej_Rej, data=., na.action=na.exclude)),
          RR_RA = stdres(lm(Rej_Rej ~ Rej_Acc, data=., na.action=na.exclude)),
@@ -348,10 +353,11 @@ df_ga_Fz_long <- df_ga_Fz %>%
   group_by(Condition,Time) %>% #grouping required for summarise in the next step
   dplyr::summarise(grand_average = mean(ERP)) #calculate mean across subjects
 
-df_ga_Pz_long <- df_ga_Pz %>%
+df_ga_Pz_long <- df_ga %>%
+  filter(electrode=="Pz") %>%
   dplyr::select(-c("NA")) %>%
   filter(complete.cases(Acc_All)) %>%
-  mutate(AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, data=., na.action=na.exclude)), # Create residualized differences
+  mutate(AA_AR = Acc_Acc - Acc_Rej, # Create difference scores
          AR_AA = stdres(lm(Acc_Rej ~ Acc_Acc, data=., na.action=na.exclude)),
          RA_RR = stdres(lm(Rej_Acc ~ Rej_Rej, data=., na.action=na.exclude)),
          RR_RA = stdres(lm(Rej_Rej ~ Rej_Acc, data=., na.action=na.exclude)),
@@ -364,8 +370,7 @@ df_ga_Pz_long <- df_ga_Pz %>%
 ```
 
 ### By ADI median split
-
-```{r, include=F}
+```{r, include=F, eval=F}
 load(file=here("data/BUDS_cleaning04_ga.RData"))
 load(file=here("data/geocode_data_with_adi.RData"))
 
@@ -491,10 +496,68 @@ df_ga_Pz_adi_wide <- df_ga_Pz_adi_long %>%
                       AA_AR, RA_RR, RR_RA, A_R, R_A), values_to ="ERP", names_to="Condition") %>%
   group_by(adi_median_split,Condition,Time) %>% #grouping required for summarise in the next step
   dplyr::summarise(grand_average = mean(ERP)) #calculate mean across subjects
+
+df_ga_Pz_adi_long <- df_ga_Pz %>%
+  dplyr::select(-c("NA")) %>%
+  filter(complete.cases(Acc_All)) %>%
+  mutate(AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, data=., na.action=na.exclude)), # Create residualized differences
+         AR_AA = stdres(lm(Acc_Rej ~ Acc_Acc, data=., na.action=na.exclude)),
+         RA_RR = stdres(lm(Rej_Acc ~ Rej_Rej, data=., na.action=na.exclude)),
+         RR_RA = stdres(lm(Rej_Rej ~ Rej_Acc, data=., na.action=na.exclude)),
+         A_R = stdres(lm(Acc_All ~ Rej_All, data=., na.action=na.exclude)),
+         R_A = stdres(lm(Rej_All ~ Acc_All, data=., na.action=na.exclude))) %>%
+  pivot_longer(cols=c(Acc_Acc, Acc_Rej, Rej_Acc, Rej_Rej, Acc_All, Rej_All, 
+                      AA_AR, RA_RR, RR_RA, A_R, R_A), values_to ="ERP", names_to="Condition") %>%
+  arrange(ID,Condition,Time) %>% #sort by Subid, Condition, and then Time
+  right_join(geocode_data_with_adi, by="ID", relationship="many-to-many") %>%
+  mutate(adi_median_split = case_when(ADI_NATRANK_log < median(ADI_NATRANK_log, na.rm=T) ~ "low_ADI",
+                                       ADI_NATRANK_log > median(ADI_NATRANK_log, na.rm=T) ~ "high_ADI")) %>%
+  filter(complete.cases(ERP) & complete.cases(adi_median_split))
+
+df_ga_FCz_adi_long <- df_ga_FCz %>%
+  dplyr::select(-c("NA")) %>%
+  filter(complete.cases(Acc_All)) %>%
+  mutate(AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, data=., na.action=na.exclude)), # Create residualized differences
+         AR_AA = stdres(lm(Acc_Rej ~ Acc_Acc, data=., na.action=na.exclude)),
+         RA_RR = stdres(lm(Rej_Acc ~ Rej_Rej, data=., na.action=na.exclude)),
+         RR_RA = stdres(lm(Rej_Rej ~ Rej_Acc, data=., na.action=na.exclude)),
+         A_R = stdres(lm(Acc_All ~ Rej_All, data=., na.action=na.exclude)),
+         R_A = stdres(lm(Rej_All ~ Acc_All, data=., na.action=na.exclude))) %>%
+  pivot_longer(cols=c(Acc_Acc, Acc_Rej, Rej_Acc, Rej_Rej, Acc_All, Rej_All, 
+                      AA_AR, RA_RR, RR_RA, A_R, R_A), values_to ="ERP", names_to="Condition") %>%
+  arrange(ID,Condition,Time) %>% #sort by Subid, Condition, and then Time
+  right_join(geocode_data_with_adi, by="ID", relationship="many-to-many") %>%
+  mutate(adi_median_split = case_when(ADI_NATRANK_log < median(ADI_NATRANK_log, na.rm=T) ~ "low_ADI",
+                                       ADI_NATRANK_log > median(ADI_NATRANK_log, na.rm=T) ~ "high_ADI")) %>%
+  filter(complete.cases(ERP) & complete.cases(adi_median_split))
+
+df_ga_FCz_adi_summarised <- df_ga_FCz_adi_long %>%
+  group_by(adi_median_split,Condition,Time) %>% #grouping required for summarise in the next step
+  dplyr::summarise(grand_average = mean(ERP)) #calculate mean across subjects
+
+df_ga_FCz_adi_wide <- df_ga_FCz_adi_long %>%
+  pivot_wider(names_from=Condition, values_from=ERP) %>%
+  group_by(adi_median_split,Time) %>%
+  reframe(Acc_Acc=mean(Acc_Acc),
+          Acc_Rej=mean(Acc_Rej),
+          Rej_Acc=mean(Rej_Acc),
+          Rej_Rej=mean(Rej_Rej),
+          Acc_All=mean(Acc_All),
+          Rej_All=mean(Rej_All),
+         AA_AR = Acc_Acc - Acc_Rej, # Create subtraction based difference scores
+         AR_AA = Acc_Rej - Acc_Acc,
+         RA_RR = Rej_Acc - Rej_Rej,
+         RR_RA = Rej_Rej - Rej_Acc,
+         A_R = Acc_All - Rej_All,
+         R_A = Rej_All - Acc_All) %>%
+  pivot_longer(cols=c(Acc_Acc, Acc_Rej, Rej_Acc, Rej_Rej, Acc_All, Rej_All, 
+                      AA_AR, RA_RR, RR_RA, A_R, R_A), values_to ="ERP", names_to="Condition") %>%
+  group_by(adi_median_split,Condition,Time) %>% #grouping required for summarise in the next step
+  dplyr::summarise(grand_average = mean(ERP)) #calculate mean across subjects
 ```
 
 ### Scalp topography by ADI median split
-```{r, eval=T, include=F}
+```{r, eval=F, include=F}
 load(file=here("./data/eeg_map_for_plotting.RData"))
 EEG <- import_set(here('./data/eeg_processing_fully_auto/DataPreprocessed/1000_continuous_icaed.set'))
 chanlocs <- EEG$chan_info
@@ -556,8 +619,11 @@ FCz_ga_aa_ar_plot <- ggplot(data=filter(df_ga_FCz_long, Condition=="Acc_Acc" | C
   scale_color_manual(breaks=c("Acc_Acc","Acc_Rej","AA_AR"),
                      values=c("Acc_Acc"="green", "AA_AR"="black", "Acc_Rej"="red"), 
                      labels=c("Acceptance","Rejection","Difference"), name=NULL) +
-  labs(x="Time (ms)", y="FCz") +
+  labs(x="Time (ms)", y="FCz mean activity (µV)") +
   theme_apa(base_size = 12) + theme(legend.position="top")
+
+# ggsave(filename="figures/FCz_ga_aa_ar_plot.png", plot=FCz_ga_aa_ar_plot,
+#        width=9, height = 7)
 
 Fz_ga_aa_ar_plot <- ggplot(data=filter(df_ga_Fz_long, Condition=="Acc_Acc" | Condition=="Acc_Rej" | Condition=="AA_AR"), aes(x=Time, y=grand_average, color=Condition)) +
   geom_line(linewidth=1) +
@@ -586,14 +652,21 @@ Pz_ga_aa_ar_plot <- ggplot(data=filter(df_ga_Pz_long, Condition=="Acc_Acc" | Con
                      labels=c("Acceptance","Rejection","Difference"), name=NULL) +
   labs(x="Time (ms)", y="Pz") +
   theme_apa(base_size = 12) + theme(legend.position="top")
+
+ggsave(here("figures/Cz_ga_aa_ar_plot.png"), Cz_ga_aa_ar_plot,
+       height=6, width=10)
+ggsave(here("figures/FCz_ga_aa_ar_plot.png"), FCz_ga_aa_ar_plot,
+       height=6, width=10)
+ggsave(here("figures/Pz_ga_aa_ar_plot.png"), Pz_ga_aa_ar_plot,
+       height=6, width=10)
 ```
 
 ```{r}
 load(file=here("./data/eeg_map_for_plotting.RData"))
 library(eegUtils)
-EEG <- import_set(here('./data/eeg_processing_fully_auto/DataPreprocessed/1000_continuous_icaed.set'))
-chanlocs <- EEG$chan_info
-channels <- EEG$chan_info$electrode
+# EEG <- import_set(here('./data/eeg_processing_fully_auto/DataPreprocessed/1000_continuous_icaed.set'))
+# chanlocs <- EEG$chan_info
+# channels <- EEG$chan_info$electrode
 
 select_topo_time_window <- function(data, start, end) {
   data %>%

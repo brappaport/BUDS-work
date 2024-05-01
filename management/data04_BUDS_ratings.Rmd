@@ -229,6 +229,10 @@ subjects <- c(1000,
 9099,
 9100)
 
+too_few_segments <- c(1025, 1053, 1055, 1084, 1087, 9051, 9081, 9082, 9093)
+
+subjects <- setdiff(subjects, c(too_few_segments))
+
 read_utf16_table <- function(path, ...) {
   stringi::stri_read_lines(
     con = path,
@@ -345,7 +349,8 @@ df_BUDS_rating_pt <- df_BUDS_rating_pt_nw %>%
 
 ## In-task ratings related to post-task ratings
 ```{r}
-df_BUDS_rating_it_pt <- full_join(df_BUDS_rating_it, df_BUDS_rating_pt, by="ID", relationship = "many-to-many")
+df_BUDS_rating_it_pt <- full_join(df_BUDS_rating_it, df_BUDS_rating_pt, by="ID", relationship = "many-to-many") %>%
+  select(-site)
 
 # How happy were you when someone expressed interest in chatting with you?
 summary(lm(SP_debriefing_2 ~ rating, filter(df_BUDS_rating_it_pt, Condition=="Acc_Acc")))
@@ -387,38 +392,35 @@ load(file=here("./data/BUDS_df_ERP.RData"))
 df_50150_cz_rating <- df_50150_cz %>%
   dplyr::select(ID,AA_AR) %>%
   full_join(df_BUDS_rating_it_pt, by="ID", relationship = "many-to-many") %>%
-  dplyr::select(ID,site,Condition,rating,AA_AR,SP_debriefing_deceived) %>%
-  group_by(ID,site,Condition,AA_AR,SP_debriefing_deceived) %>%
+  dplyr::select(ID,Condition,rating,AA_AR,SP_debriefing_deceived) %>%
+  group_by(ID,Condition,AA_AR,SP_debriefing_deceived) %>%
   filter(complete.cases(rating)) %>%
   reframe(rating=mean(rating)) %>%
   pivot_wider(names_from="Condition", values_from="rating") %>%
-  mutate(rating_r = rstandard(lm(Acc_Acc ~ Acc_Rej, .)))
-  
-# summary(lm(AA_AR ~ rating_r, data = df_50150_cz_rating))
+  mutate(rating_r = rstandard(lm(Acc_Acc ~ Acc_Rej, .)),
+         SP_debriefing_deceived_f = as.factor(SP_debriefing_deceived))
 
 df_150275_cz_rating <- df_150275_cz %>%
   dplyr::select(ID,AA_AR) %>%
   full_join(df_BUDS_rating_it_pt, by="ID", relationship = "many-to-many") %>%
-  dplyr::select(ID,site,Condition,rating,AA_AR,SP_debriefing_deceived) %>%
-  group_by(ID,site,Condition,AA_AR,SP_debriefing_deceived) %>%
+  dplyr::select(ID,Condition,rating,AA_AR,SP_debriefing_deceived) %>%
+  group_by(ID,Condition,AA_AR,SP_debriefing_deceived) %>%
   filter(complete.cases(rating)) %>%
   reframe(rating=mean(rating)) %>%
   pivot_wider(names_from="Condition", values_from="rating") %>%
-  mutate(rating_r = rstandard(lm(Acc_Acc ~ Acc_Rej, .)))
-  
-# summary(lm(AA_AR ~ rating_r, data = df_150275_cz_rating))
+  mutate(rating_r = rstandard(lm(Acc_Acc ~ Acc_Rej, .)),
+         SP_debriefing_deceived_f = as.factor(SP_debriefing_deceived))
 
 df_275425_cz_rating <- df_275425_cz %>%
   dplyr::select(ID,AA_AR) %>%
   full_join(df_BUDS_rating_it_pt, by="ID", relationship = "many-to-many") %>%
-  dplyr::select(ID,site,Condition,rating,AA_AR,SP_debriefing_deceived) %>%
-  group_by(ID,site,Condition,AA_AR,SP_debriefing_deceived) %>%
+  dplyr::select(ID,Condition,rating,AA_AR,SP_debriefing_deceived) %>%
+  group_by(ID,Condition,AA_AR,SP_debriefing_deceived) %>%
   filter(complete.cases(rating)) %>%
   reframe(rating=mean(rating)) %>%
   pivot_wider(names_from="Condition", values_from="rating") %>%
-  mutate(rating_r = rstandard(lm(Acc_Acc ~ Acc_Rej, .)))
-  
-# summary(lm(AA_AR ~ rating_r, data = df_275425_cz_rating))
+  mutate(rating_r = rstandard(lm(Acc_Acc ~ Acc_Rej, .)),
+         SP_debriefing_deceived_f = as.factor(SP_debriefing_deceived))
 ```
 
 # Save files
