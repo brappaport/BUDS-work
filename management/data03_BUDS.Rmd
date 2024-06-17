@@ -556,7 +556,9 @@ merge_self_report_with_erp <- function(data, electrode, self_report_data, demo_d
          AA_AR_c = scale(AA_AR, center=T, scale=F),
          AA_AR_z = scale(AA_AR, center=T, scale=T),
          AR_AA_c = scale(AR_AA, center=T, scale=F),
-         AR_AA_z = scale(AR_AA, center=T, scale=T)) %>%
+         AR_AA_z = scale(AR_AA, center=T, scale=T),
+         RA_RR_z = scale(RA_RR, center=T, scale=T),
+         RR_RA_z = scale(RR_RA, center=T, scale=T)) %>%
   # remove duplicated ID values, just select the first row
   group_by(ID) %>%
   arrange(ID) %>%
