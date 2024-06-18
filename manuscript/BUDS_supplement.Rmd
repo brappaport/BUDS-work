@@ -79,7 +79,7 @@ header-includes:
 ---
 
 ```{r analysis-preferences}
-knitr::opts_chunk$set(set.seed(312), warning=FALSE, message=FALSE, include=FALSE)
+knitr::opts_chunk$set(set.seed(312), warning=FALSE, message=FALSE, include=FALSE, cache=TRUE)
     options(width=80, Ncpus = 6, mc.cores=6, max.print=1000000, scipen = 999) #Set width, multiple cores, and not to use scientific notation
     # rm(list=ls())     #Remove everything from environment
     cat("\014")       #Clear Console
@@ -270,6 +270,10 @@ plot_stats <- function(model, var) {
 }
 ```
 
+# Methods
+## Participants
+Informed assent and consent were obtained from the adolescent and parent, respectively, and adolescents 18 years or older provided consent. General inclusion criteria included: (a) Tanner Stage $\ge$ 3 (Tanner & Davies, 1985), (b) parental and child fluency in English, (c) Wechsler Abbreviated Scale of Intelligence-II (WASI-II) > 85 (Wechsler, 2011), (d) ownership of a personal smartphone (android or iOS), and (e) right-handedness. General exclusion criteria included: (a) history of head injury or neurological disorders, (b) current moderate or severe substance use disorder, and (c) lifetime history of bipolar or psychotic disorders, oppositional defiant disorder, conduct disorder, organic mental disorder, or developmental disorder. 
+
 # Results
 ## Behavioral ratings
 ### Post-task ratings
@@ -285,6 +289,13 @@ apa_table(post_task_table)
 ```
 
 Of note, for low-value peers, participants rated being rejected as feeling *happier* than being accepted. Although seemingly counter-intuitive, previous work suggests that this is likely reflects participants feeling good that they were "right"---that they rejected the person who rejected them---and feeling guilty when they were "wrong"---rejected someone who accepted them [@distefanoComparisonElectrocorticalResponse2018].
+
+# Internal consistency
+```{r}
+spearman_brown <- spearman_brown[,-1]
+spearman_brown[,1] <- c("N1", "RewP", "P300")
+```
+
 
 ## Feedback x Value x ADI interaction
 ### N1
@@ -342,7 +353,32 @@ plot_50150_adi <- ggplot(filter(model_50150_adi, ADI_NATRANK_z!="Mean"), aes(x=A
 #   labs(x="Area Deprivation", y="N1") +
 #   theme(strip.background = element_blank(),strip.text.x = element_blank())
 ```
+### Covaring for belief in deception
+```{r}
+load(file=here("../data/df_BUDS_rating_it_pt_demo.RData"))
 
+df_150275_cz_rating2 <- df_150275_cz_rating %>%
+  select(ID, SP_debriefing_deceived) %>%
+  full_join(df_BUDS_rating_it_pt_demo, by="ID") %>%
+  select(ID, Age, StressCT, StressTH, SP_debriefing_deceived) %>%
+  full_join(df_150275_cz, by="ID")
+
+df_275425_cz_rating2 <- df_275425_cz_rating %>%
+  select(ID, SP_debriefing_deceived) %>%
+  full_join(df_BUDS_rating_it_pt_demo, by="ID") %>%
+  select(ID, Age, StressCT, StressTH, SP_debriefing_deceived) %>%
+  full_join(df_275425_cz, by="ID")
+
+ses_lm_dec <- function(data, y) {
+  y <- enquo(y)
+
+  model_formula <- formula(paste0(quo_name(y), "~ ADI_NATRANK_z + site + Age + demo_child_sex + StressCT + StressTH + IDAS_depression + IDAS_anxiety + SP_debriefing_deceived"))
+  lm(model_formula, data = data)
+}
+
+rewp_aaar_model <- ses_lm_dec(df_150275_cz_rating2, AA_AR_z)
+p3_aaar_model <- ses_lm_dec(df_275425_cz_rating2, AA_AR_z)
+```
 
 ### Outliers removed
 ```{r}
@@ -374,15 +410,6 @@ scatterplot_275425_adi_no_outliers <- ggplot(df_275425_cz_model_no_outliers, aes
 ```
 The interactions between ADI and Feedback condition predicting mean RewP and P3 amplitude remain significant after removing outliers ___.
 
-
-## Covaring for belief in deception
-```{r}
-df_150275_cz_rating <- full_join(df_150275_cz, df_150275_cz_rating, by="ID")
-df_275425_cz_rating <- full_join(df_275425_cz, df_275425_cz_rating, by="ID")
-
-summary(lm(formula = AA_AR_z ~ ADI_NATRANK_z + SP_debriefing_deceived + site.x, data = df_150275_cz_rating))
-summary(lm(formula = AA_AR_z ~ ADI_NATRANK_z + SP_debriefing_deceived + site.x, data = df_275425_cz_rating))
-```
 
 
 ## EMA

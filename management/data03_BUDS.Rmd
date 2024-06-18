@@ -45,6 +45,7 @@ knitr::opts_chunk$set(set.seed(312), echo=FALSE, results='hide', message=FALSE, 
   library(lmerTest)
   library(bbmle)
   library(marginaleffects)
+  library(confintr)
   library(bestNormalize) # for normalizing data
   library(tidyverse)  #plotting/cleaning, etc.
   library(workflowr)  #helps with workflow
@@ -607,7 +608,8 @@ df_even_50150_cz <- df_even_50150_cz[,1:7] %>%
   full_join(BUDS_cleaning05, by="ID") %>%
   filter(!is.na(Acc_All)) %>%
   mutate(A_all = stdres(lm(Acc_All ~ Rej_All, .)),
-         AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, .)))
+         AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, .)),
+         AR_AA = stdres(lm(Acc_Rej ~ Acc_Acc, .)))
 
 df_even_150275_cz <- df_even_150275 %>%
   dplyr::select(ID, contains("_Cz"))
@@ -616,7 +618,8 @@ df_even_150275_cz <- df_even_150275_cz[,1:7] %>%
   full_join(BUDS_cleaning05, by="ID") %>%
   filter(!is.na(Acc_All)) %>%
   mutate(A_all = stdres(lm(Acc_All ~ Rej_All, .)),
-         AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, .)))
+         AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, .)),
+         AR_AA = stdres(lm(Acc_Rej ~ Acc_Acc, .)))
 
 df_even_275425_cz <- df_even_275425 %>%
   dplyr::select(ID, contains("_Cz"))
@@ -625,7 +628,8 @@ df_even_275425_cz <- df_even_275425_cz[,1:7] %>%
   full_join(BUDS_cleaning05, by="ID") %>%
   filter(!is.na(Acc_All)) %>%
   mutate(A_all = stdres(lm(Acc_All ~ Rej_All, .)),
-         AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, .)))
+         AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, .)),
+         AR_AA = stdres(lm(Acc_Rej ~ Acc_Acc, .)))
 ```
 
 ### Odd
@@ -637,7 +641,8 @@ df_odd_50150_cz <- df_odd_50150_cz[,1:7] %>%
   full_join(BUDS_cleaning05, by="ID") %>%
   filter(!is.na(Acc_All)) %>%
   mutate(A_all = stdres(lm(Acc_All ~ Rej_All, .)),
-         AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, .)))
+         AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, .)),
+         AR_AA = stdres(lm(Acc_Rej ~ Acc_Acc, .)))
 
 df_odd_150275_cz <- df_odd_150275 %>%
   dplyr::select(ID, contains("_Cz"))
@@ -646,7 +651,8 @@ df_odd_150275_cz <- df_odd_150275_cz[,1:7] %>%
   full_join(BUDS_cleaning05, by="ID") %>%
   filter(!is.na(Acc_All)) %>%
   mutate(A_all = stdres(lm(Acc_All ~ Rej_All, .)),
-         AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, .)))
+         AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, .)),
+         AR_AA = stdres(lm(Acc_Rej ~ Acc_Acc, .)))
 
 df_odd_275425_cz <- df_odd_275425 %>%
   dplyr::select(ID, contains("_Cz"))
@@ -655,7 +661,8 @@ df_odd_275425_cz <- df_odd_275425_cz[,1:7] %>%
   full_join(BUDS_cleaning05, by="ID") %>%
   filter(!is.na(Acc_All)) %>%
   mutate(A_all = stdres(lm(Acc_All ~ Rej_All, .)),
-         AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, .)))
+         AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, .)),
+         AR_AA = stdres(lm(Acc_Rej ~ Acc_Acc, .)))
 ```
 
 # Import Area Deprivation Index data
@@ -800,9 +807,8 @@ df_50150_cz_strain <- df_50150_cz %>%
 
 # Split-half
 ```{r}
-library(confintr)
 compute_split_half <- function(time_window) {
-  for (contrast in c("Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All","A_all","AA_AR")){
+  for (contrast in c("Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All","A_all","AA_AR","AR_AA")){
     eval(parse(text=paste0('
     r_half_',time_window,'',contrast,' <- cor(df_even_',time_window,'_cz$',contrast,', df_odd_',time_window,'_cz$',contrast,', method="spearman", use="pairwise")
     r_half_',time_window,'ci_',contrast,' <- ci_cor(df_even_',time_window,'_cz$',contrast,', df_odd_',time_window,'_cz$',contrast,', method="spearman", type = "bootstrap", R=1000)
@@ -822,7 +828,9 @@ spearman_brown$Acc_Acc <- c(r_sb_50150_Acc_Acc,r_sb_150275_Acc_Acc,r_sb_275425_A
 spearman_brown$Acc_Rej <- c(r_sb_50150_Acc_Rej,r_sb_150275_Acc_Rej,r_sb_275425_Acc_Rej)
 spearman_brown$Rej_Acc <- c(r_sb_50150_Rej_Acc,r_sb_150275_Rej_Acc,r_sb_275425_Rej_Acc)
 spearman_brown$Rej_Rej <- c(r_sb_50150_Rej_Rej,r_sb_150275_Rej_Rej,r_sb_275425_Rej_Rej)
-spearman_brown[,2:5] <- round(spearman_brown[,2:5],2)
+spearman_brown$AA_AR <- c(r_sb_50150_AA_AR,r_sb_150275_AA_AR,r_sb_275425_AA_AR)
+spearman_brown$AR_AA <- c(r_sb_50150_AR_AA,r_sb_150275_AR_AA,r_sb_275425_AR_AA)
+spearman_brown[,2:ncol(spearman_brown)] <- round(spearman_brown[,2:ncol(spearman_brown)],2)
 ```
 
 # Save files
