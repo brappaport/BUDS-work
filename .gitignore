@@ -43,8 +43,7 @@ vignettes/*.pdf
 .DS_Store
 
 # Too large
-data/eeg_map_for_plotting.RData
-data/eeg_map_for_plotting_without_locs.RData
+./data/topo_plots/
 
 # Specific folders and files that are too large/do not need to be send to git
 ./_outdated/
