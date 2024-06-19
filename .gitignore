@@ -31,16 +31,16 @@ vignettes/*.pdf
 # Mac specific files
 .DS_Store
 # Too large
-./data/topo_plots/
+data/topo_plots/
 
 # Specific folders and files that are too large/do not need to be send to git
-./_outdated/
-./manuscript/_outdated/
-./manuscript/BUDS_tables_and_figures_working_files/
-./manuscript/BUDS_tables_and_figures_working_cache/
-./manuscript/BUDS_manuscript_working_files/
-./manuscript/BUDS_manuscript_working_cache/
-./data/eeg_processing/
-./data/EMA/
-./data/outdated/
-./James_eeg_processing_scripts/
+_outdated/
+manuscript/_outdated/
+manuscript/BUDS_tables_and_figures_working_files/
+manuscript/BUDS_tables_and_figures_working_cache/
+manuscript/BUDS_manuscript_working_files/
+manuscript/BUDS_manuscript_working_cache/
+data/eeg_processing/
+data/EMA/
+data/outdated/
+James_eeg_processing_scripts/
