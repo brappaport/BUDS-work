@@ -404,7 +404,7 @@ The expanded Inventory of Depression and Anxiety Symptoms [IDAS-II, @watsonDevel
 
 #### Stressful life events and severity of stressful life events: Stress and adversity inventory (STRAIN)
 
-The Stress and Adversity Inventory for Adolescents [STRAIN, @slavichStressAdversityInventory2019] was administered to measure participants' exposure to acute and lifetime stressors. This interview assesses exposures to 75 different stressors across 12 primary life domains (i.e. Housing, Education, Work, Treatment/Health, Marital/Partner, Reproduction, Financial, Legal/Crime, Other Relationships, Parent/Guardian, Death, Life-Threatening Situations) and five social-psychological characteristics (i.e. Interpersonal Loss, Physical Danger, Humiliation, Entrapment, Role Change/Disruption). If a participant endorses a stressor, they are then asked additional questions about its severity, frequency, timing, and duration. Based on these answers, the STRAIN produces a summary score that notes participants\' total lifetime stressor count and severity for all the acute life events and chronic difficulties experienced, with higher scores indicating more frequent stress exposure. Prior studies support the psychometric properties of the STRAIN, including excellent test-retest reliability [$r$ = 0.90---0.95, @cazassaStressAdversityInventory2020; @slavichAssessingLifetimeStress2018]. Given the format of the STRAIN, which requires participants to endorse whether a stressor occurred in order to report its severity, Cronbach's alpha could not be measured. Although the STRAIN and other commonly used measures of stress life events account for some stressful life experiences, recent work suggests that they do not capture the effects of racism [@bernardMakingCACECulturallyInformed2021], making the STRAIN a useful measure to compare against the ADDI.
+The Stress and Adversity Inventory for Adolescents [STRAIN, @slavichStressAdversityInventory2019] was administered to measure participants' exposure to acute and lifetime stressors. This interview assesses exposures to 75 different stressors across 12 primary life domains (i.e. Housing, Education, Work, Treatment/Health, Marital/Partner, Reproduction, Financial, Legal/Crime, Other Relationships, Parent/Guardian, Death, Life-Threatening Situations) and five social-psychological characteristics (i.e. Interpersonal Loss, Physical Danger, Humiliation, Entrapment, Role Change/Disruption). If a participant endorses a stressor, they are then asked additional questions about its severity, frequency, timing, and duration. Based on these answers, the STRAIN produces a summary score that notes participants' total lifetime stressor count and severity for all the acute life events and chronic difficulties experienced, with higher scores indicating more frequent stress exposure. Prior studies support the psychometric properties of the STRAIN, including excellent test-retest reliability [$r$ = 0.90---0.95, @cazassaStressAdversityInventory2020; @slavichAssessingLifetimeStress2018]. Given the format of the STRAIN, which requires participants to endorse whether a stressor occurred in order to report its severity, Cronbach's alpha could not be measured. Although the STRAIN and other commonly used measures of stress life events account for some stressful life experiences, recent work suggests that they do not capture the effects of racism [@bernardMakingCACECulturallyInformed2021], making the STRAIN a useful measure to compare against the ADDI.
 
 ## Data analysis
 
@@ -424,11 +424,9 @@ For aim 1, we tested whether SES was associated with residualized scores to acce
 
 #### SES moderating association between ERP and EMA measures of affect
 
-For aim 2, multilevel multiple regression models (MLMs) tested whether SES moderated associations between ERP amplitudes and negative affect. These models included random intercept effects of subject and study site. In some models, the random effect of site accounted for so little variance (due to the fact that there were only two sites) that the model was singular (i.e., variance of the random effect was essentially zero); in these cases, site was instead included as a fixed effect (i.e., covariate). Given a positive skew and large number of zeros in the measure of negative affect, negative affect was cube-root transformed and zero-inflated Gaussian multilevel models were used. All predictors were included in both the conditional and zero-inflation portions of the model. Similar models were used to assess whether SES moderated associations between in-task behavioral ratings and negative affect.
+For aim 2, multilevel multiple regression models (MLMs) tested whether SES moderated associations between ERP amplitudes and negative/positive affect. These models included random intercept effects of subject and study site. In some models, the random effect of site accounted for so little variance (due to the fact that there were only two sites) that the model was singular (i.e., variance of the random effect was essentially zero); in these cases, site was instead included as a fixed effect (i.e., covariate). Given a positive skew and large number of zeros in the measure of negative affect, negative affect was cube-root transformed and zero-inflated Gaussian multilevel models were used. All predictors were included in both the conditional and zero-inflation portions of the model. Similar models were used to assess whether SES moderated associations between in-task behavioral ratings and negative affect.
 
 Visual diagnostic checks for model assumptions were conducted to assure that models were accurately specified (e.g., posterior predictive checks, homogeneity of variance, normality of residuals, colinearity, and normality of random effects).
-
-#### ***SES moderating association between in-task emotional response rating and EMA measures of affect.*** 
 
 We used an identical approach to test whether SES moderated associations between mean in-task emotional response rating and negative affect.
 
@@ -484,11 +482,11 @@ model_behavioral_rating_ses_ema_na_ra_p <- tidy(model_behavioral_rating_ses_ema_
 # save(df_BUDS_rating_it_pt_demo, file=here("../data/df_BUDS_rating_it_pt_demo.RData"))
 ```
 
-Omnibus MLMs showed a significant Peer value x Feedback type interaction (`r apa_print(ratings_model)$full_result$FeedbackReject_VotingLike`, see Figure 1C), such that participants rated acceptance from high-value peers (i.e., peers that they were interested in) as feeling significantly better than rejection from high-value peers (`r apa_print(t.test(rating ~ Feedback, filter(df_BUDS_rating_it_pt, Voting=="Like"), paired=TRUE))$full_result`). However, participants rated feeling more angry in response to acceptance than rejection from low-value peers (`r apa_print(t.test(rating ~ Feedback, filter(df_BUDS_rating_it_pt, Voting=="Dislike"), paired=TRUE))$full_result`).[^2]
+Omnibus MLMs showed a significant Peer value x Feedback type interaction (`r apa_printlm(ratings_model)$full_result$FeedbackReject_VotingLike`, see Figure 1C), such that participants rated acceptance from high-value peers (i.e., peers that they were interested in) as feeling significantly better than rejection from high-value peers (`r apa_print(t.test(rating ~ Feedback, filter(df_BUDS_rating_it_pt, Voting=="Like"), paired=TRUE))$full_result`). However, participants rated feeling more angry in response to acceptance than rejection from low-value peers (`r apa_print(t.test(rating ~ Feedback, filter(df_BUDS_rating_it_pt, Voting=="Dislike"), paired=TRUE))$full_result`).[^2]
 
 [^2]: This somewhat surprising/counter intuitive finding is discussed further in the Supplement.
 
-Residualized scores assessing ratings to acceptance relative to ratings to rejection were not significantly associated with SES (`r apa_print(ratings_ses_model_AA_AR)$full_result$ADI_NATRANK_z`), nor ratings to rejection relative to ratings to acceptance (`r apa_print(ratings_ses_model_AR_AA)$full_result$ADI_NATRANK_z`). SES did not moderate a relationship between such scores and EMA neegative affect (Rating to acceptance~resid~: $p$ = `r round(model_behavioral_rating_ses_ema_na_ar_p$p.value,2)`, Rating to rejection~resid~: $p$ = `r round(model_behavioral_rating_ses_ema_na_ra_p$p.value,2)`).
+Residualized scores assessing ratings to acceptance relative to ratings to rejection were not significantly associated with SES (`r apa_printlm(ratings_ses_model_AA_AR)$full_result$ADI_NATRANK_z`), nor ratings to rejection relative to ratings to acceptance (`r apa_printlm(ratings_ses_model_AR_AA)$full_result$ADI_NATRANK_z`). SES did not moderate a relationship between such scores and EMA neegative affect (Rating to acceptance~resid~: $p$=`r round(model_behavioral_rating_ses_ema_na_ar_p$p.value,2)`, Rating to rejection~resid~: $p$=`r round(model_behavioral_rating_ses_ema_na_ra_p$p.value,2)`).
 
 ### Post-task ratings
 
@@ -519,7 +517,7 @@ rewp_fv_mlm <- lmer(formula = ERP ~ Feedback*Voting + site + (1 | ID), REML=TRUE
 p300_fv_mlm <- lmer(formula = ERP ~ Feedback*Voting + (1 | site) + (1 | ID), REML=TRUE, data = df_275425_cz_long)
 ```
 
-Omnibus MLMs showed that Peer value interacted with Feedback type to predict ERP mean amplitude for ERP components consistent with an N1 (`r apa_print(n1_fv_mlm)$full_result$FeedbackRej_VotingRej`), RewP (`r apa_print(rewp_fv_mlm)$full_result$FeedbackRej_VotingRej`) and P300 (`r apa_print(p300_fv_mlm)$full_result$FeedbackRej_VotingRej`). These ERP components had time courses and scalp topographies (central around Cz electrode) consistent with an N1 (50-150ms), reward positivity (RewP; 150-275ms) and P300 (275-425ms). Follow-up analyses showed that the N1 (`r apa_print(t.test(df_50150_cz$Rej_Acc, df_50150_cz$Rej_Rej, paired=TRUE))$full_result`), RewP (`r apa_print(t.test(df_150275_cz$Rej_Acc, df_150275_cz$Rej_Rej, paired=TRUE))$full_result`), and P300 (`r apa_print(t.test(df_275425_cz$Rej_Acc, df_275425_cz$Rej_Rej, paired=TRUE))$full_result`) differentiated between acceptance and rejection for low-value peers. Only the RewP (`r apa_print(t.test(df_150275_cz$Acc_Acc, df_150275_cz$Acc_Rej, paired=TRUE))$full_result`) differentiated between acceptance and rejection for high-value peers, but not the N1 (`r apa_print(t.test(df_275425_cz$Acc_Acc, df_275425_cz$Acc_Rej, paired=TRUE))$full_result`), nor P300 (`r apa_print(t.test(df_275425_cz$Acc_Acc, df_275425_cz$Acc_Rej, paired=TRUE))$full_result`).
+Omnibus MLMs showed that Peer value interacted with Feedback type to predict ERP mean amplitude for ERP components consistent with an N1 (`r apa_printlm(n1_fv_mlm)$full_result$FeedbackRej_VotingRej`), RewP (`r apa_printlm(rewp_fv_mlm)$full_result$FeedbackRej_VotingRej`) and P300 (`r apa_printlm(p300_fv_mlm)$full_result$FeedbackRej_VotingRej`). These ERP components had time courses and scalp topographies (central around Cz electrode) consistent with an N1 (50-150ms), reward positivity (RewP; 150-275ms) and P300 (275-425ms). Follow-up analyses showed that the N1 (`r apa_print(t.test(df_50150_cz$Rej_Acc, df_50150_cz$Rej_Rej, paired=TRUE))$full_result`), RewP (`r apa_print(t.test(df_150275_cz$Rej_Acc, df_150275_cz$Rej_Rej, paired=TRUE))$full_result`), and P300 (`r apa_print(t.test(df_275425_cz$Rej_Acc, df_275425_cz$Rej_Rej, paired=TRUE))$full_result`) differentiated between acceptance and rejection for low-value peers. Only the RewP (`r apa_print(t.test(df_150275_cz$Acc_Acc, df_150275_cz$Acc_Rej, paired=TRUE))$full_result`) differentiated between acceptance and rejection for high-value peers, but not the N1 (`r apa_print(t.test(df_275425_cz$Acc_Acc, df_275425_cz$Acc_Rej, paired=TRUE))$full_result`), nor P300 (`r apa_print(t.test(df_275425_cz$Acc_Acc, df_275425_cz$Acc_Rej, paired=TRUE))$full_result`).
 
 ### Internal consistency
 
@@ -563,16 +561,16 @@ rewp_low_value_ses_pvalues <- c(as.numeric(apa_print(rewp_rarr_model)$table$p.va
 ```
 
 ```{r}
-p3_aaar_model <- lm(formula = AA_AR_z ~ ADI_NATRANK_z + site + Age + demo_child_sex + StressCT + StressTH + IDAS_depression + IDAS_anxiety, data = df_275425_cz_strain)
-p3_araa_model <- lm(formula = AR_AA_z ~ ADI_NATRANK_z + site + Age + demo_child_sex + StressCT + StressTH + IDAS_depression + IDAS_anxiety, data = df_275425_cz_strain)
+p300_aaar_model <- lm(formula = AA_AR_z ~ ADI_NATRANK_z + site + Age + demo_child_sex + StressCT + StressTH + IDAS_depression + IDAS_anxiety, data = df_275425_cz_strain)
+p300_araa_model <- lm(formula = AR_AA_z ~ ADI_NATRANK_z + site + Age + demo_child_sex + StressCT + StressTH + IDAS_depression + IDAS_anxiety, data = df_275425_cz_strain)
 
-p3_rarr_model <- lm(formula = RA_RR ~ ADI_NATRANK_z + site + Age + demo_child_sex + StressCT + StressTH + IDAS_depression + IDAS_anxiety, data = df_275425_cz_strain)
-p3_rrra_model <- lm(formula = RR_RA ~ ADI_NATRANK_z + site + Age + demo_child_sex + StressCT + StressTH + IDAS_depression + IDAS_anxiety, data = df_275425_cz_strain)
-p3_low_value_ses_pvalues <- c(as.numeric(apa_print(p3_rarr_model)$table$p.value[2]),as.numeric(apa_print(p3_rrra_model)$table$p.value[2]),
-  as.numeric(apa_print(p3_rarr_model)$table$p.value[2]),as.numeric(apa_print(p3_rrra_model)$table$p.value[2]))
+p300_rarr_model <- lm(formula = RA_RR ~ ADI_NATRANK_z + site + Age + demo_child_sex + StressCT + StressTH + IDAS_depression + IDAS_anxiety, data = df_275425_cz_strain)
+p300_rrra_model <- lm(formula = RR_RA ~ ADI_NATRANK_z + site + Age + demo_child_sex + StressCT + StressTH + IDAS_depression + IDAS_anxiety, data = df_275425_cz_strain)
+p300_low_value_ses_pvalues <- c(as.numeric(apa_print(p300_rarr_model)$table$p.value[2]),as.numeric(apa_print(p300_rrra_model)$table$p.value[2]),
+  as.numeric(apa_print(p300_rarr_model)$table$p.value[2]),as.numeric(apa_print(p300_rrra_model)$table$p.value[2]))
 ```
 
-We found support for aim 1: SES was significantly related to brain responses to different kinds of peer feedback (see Figure 2). Specifically, lower SES was significantly related to a more blunted RewP~resid~ (`r apa_print(rewp_aaar_model)$full_result$ADI_NATRANK_z`) and P300~resid~ to acceptance from high-value peers (i.e., that the participant was interested in, `r apa_print(p3_aaar_model)$full_result$ADI_NATRANK_z`). This is over-and-above site, demographic factors (e.g., age, sex assigned at birth), lifetime stressors (total stressful life events, severity of stressful life events), and self-reported psychopathology (self-reported depression, self-reported anxiety). SES was not related to RewP~resid~ and P300~resid~ to rejection (`r apa_print(rewp_araa_model)$full_result$ADI_NATRANKz_z`; `r apa_print(p3_araa_model)$full_result$ADI_NATRANK_z`, respectively). Additionally, SES was not related to RewP~resid~ or P300~resid~ to acceptance or rejection from *low-value* peers (i.e., that the participant was not interested in, $p \ge$ `r round(min(rewp_low_value_ses_pvalues,p3_low_value_ses_pvalues),2)`). Results are consistent when also covarying for self-reported deception (see Supplement).
+We found support for aim 1: SES was significantly related to brain responses to different kinds of peer feedback (see Figure 2). Specifically, lower SES was significantly related to a more blunted RewP~resid~ (`r apa_printlm(rewp_aaar_model)$full_result$ADI_NATRANK_z`) and P300~resid~ to acceptance from high-value peers (i.e., that the participant was interested in, `r apa_printlm(p300_aaar_model)$full_result$ADI_NATRANK_z`). This is over-and-above site, demographic factors (e.g., age, sex assigned at birth), lifetime stressors (total stressful life events, severity of stressful life events), and self-reported psychopathology (self-reported depression, self-reported anxiety). SES was not related to RewP~resid~ and P300~resid~ to rejection (`r apa_printlm(rewp_araa_model)$full_result$ADI_NATRANKz_z`; `r apa_printlm(p300_araa_model)$full_result$ADI_NATRANK_z`, respectively). Additionally, SES was not related to RewP~resid~ or P300~resid~ to acceptance or rejection from *low-value* peers (i.e., that the participant was not interested in, $p \ge$ `r round(min(rewp_low_value_ses_pvalues,p300_low_value_ses_pvalues),2)`). Results are consistent when also covarying for self-reported deception (see Supplement).
 
 #### SES moderates association between RewP~resid~/P300~resid~ and negative affect
 
@@ -600,6 +598,15 @@ model_275425_ema_na_AR <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AR_AA_z + Age_c + de
 
 model_275425_ema_na_AR_pa <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AR_AA_z + Age_c + demo_child_sex + pa + (1 | ID) + (1 | site),
                                    zi = ~ .,
+  data = df_275425_cz_ema,
+  family=gaussian, REML=TRUE)
+
+# Positive affect
+model_150275_ema_pa <- glmmTMB(pa ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + (1 | site) + (1 | ID),
+  data = df_150275_cz_ema,
+  family=gaussian, REML=TRUE)
+
+model_275425_ema_pa <- glmmTMB(pa ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + (1 | site) + (1 | ID),
   data = df_275425_cz_ema,
   family=gaussian, REML=TRUE)
 
@@ -662,13 +669,29 @@ p300_na_ar_pa_stat <- c(tidy(model_275425_ema_na_AR_pa) %>%
                        filter(row_name == "cond.ADI_NATRANK_z:AR_AA_z") %>% 
                        mutate(lower = round(`2.5 %`,2), upper=round(`97.5 %`,2)) %>% 
                        select(lower,upper))
+
+rewp_pa_stat <- c(tidy(model_150275_ema_pa) %>% 
+                    filter(effect == "fixed", component == "cond", term == "ADI_NATRANK_z:AA_AR_z"),
+                  as.data.frame(confint(model_150275_ema_pa)) %>% 
+                    rownames_to_column("row_name") %>% 
+                    filter(row_name == "ADI_NATRANK_z:AA_AR_z") %>%
+                       mutate(lower = round(`2.5 %`,2), upper=round(`97.5 %`,2)) %>% 
+                       select(lower,upper))
+
+p300_pa_stat <- c(tidy(model_275425_ema_pa) %>%
+                    filter(effect == "fixed", component == "cond", term == "ADI_NATRANK_z:AA_AR_z"),
+                  as.data.frame(confint(model_275425_ema_pa)) %>%
+                    rownames_to_column("row_name") %>%
+                    filter(row_name == "ADI_NATRANK_z:AA_AR_z") %>%
+                       mutate(lower = round(`2.5 %`,2), upper=round(`97.5 %`,2)) %>%
+                       select(lower,upper))
 ```
 
-We also found support for aim 2: SES significantly moderated the relationship between RewP~resid~ to acceptance and negative affect ($\hat{\beta}$ = `r rewp_na_stat$estimate`, 95% CI = [`r paste0(rewp_na_stat$lower,", ", rewp_na_stat$upper)`], $p$ = `r rewp_na_stat$p.value`), as well as P300~resid~ to rejection and negative affect ($\hat{\beta}$ = `r p300_na_ar_stat$estimate`, 95% CI = [`r paste0(p300_na_ar_stat$lower,", ",p300_na_ar_stat$upper)`], $p$ = `r p300_na_ar_stat$p.value`, see Figure 3). The SES x P300~resid~ rejection interaction remained significant even when accounting for positive affect as a fixed effect covariate ($\hat{\beta}$ = `r p300_na_ar_pa_stat$estimate`, 95% CI = [`r paste0(p300_na_ar_pa_stat$lower,", ", p300_na_ar_pa_stat$upper)`], $p$ = `r p300_na_ar_pa_stat$p.value`).
+We also found support for aim 2: SES significantly moderated the relationship between RewP~resid~ to acceptance and negative affect ($\hat{\beta}$=`r rewp_na_stat$estimate`, 95% CI=[`r paste0(rewp_na_stat$lower,", ", rewp_na_stat$upper)`], $p$=`r rewp_na_stat$p.value`), as well as P300~resid~ to rejection and negative affect ($\hat{\beta}$=`r p300_na_ar_stat$estimate`, 95% CI=[`r paste0(p300_na_ar_stat$lower,", ",p300_na_ar_stat$upper)`], $p$=`r p300_na_ar_stat$p.value`, see Figure 3). The SES x P300~resid~ rejection interaction remained significant even when accounting for positive affect as a fixed effect covariate ($\hat{\beta}$=`r p300_na_ar_pa_stat$estimate`, 95% CI=[`r paste0(p300_na_ar_pa_stat$lower,", ", p300_na_ar_pa_stat$upper)`], $p$=`r p300_na_ar_pa_stat$p.value`). These effects were consistent when covarying for deception (see Supplement).
 
-SES did *not* moderate the relationship between RewP~resid~ to rejection ($\hat{\beta}$ = `r rewp_na_ar_stat$estimate`, 95% CI = [`r paste0(rewp_na_ar_stat$lower,", ", rewp_na_ar_stat$upper)`], $p$ = `r rewp_na_ar_stat$p.value`) nor P300~resid~ to acceptance ($\hat{\beta}$ = `r p300_na_stat$estimate`, 95% CI = [`r paste0(p300_na_stat$lower,", ", p300_na_stat$upper)`], $p$ = `r p300_na_stat$p.value`). These effects were consistent when covarying for deception (see Supplement).
+SES did *not* moderate the relationship between RewP~resid~ to rejection and negative affect ($\hat{\beta}$=`r rewp_na_ar_stat$estimate`, 95% CI=[`r paste0(rewp_na_ar_stat$lower,", ", rewp_na_ar_stat$upper)`], $p$=`r rewp_na_ar_stat$p.value`) nor P300~resid~ to acceptance and negative affect ($\hat{\beta}$=`r p300_na_stat$estimate`, 95% CI=[`r paste0(p300_na_stat$lower,", ", p300_na_stat$upper)`], $p$=`r p300_na_stat$p.value`).
 
-SES also did not moderate the relationship between RewP~resid~ to acceptance () and positive affect, nor between P300~resid~ to rejection and positive affect ().
+SES also did not moderate the relationship between RewP~resid~ to acceptance and positive affect ($\hat{\beta}$=`r rewp_pa_stat$estimate`, 95% CI=[`r paste0(rewp_pa_stat$lower,", ", rewp_pa_stat$upper)`], $p$=`r rewp_pa_stat$p.value`) , nor between P300~resid~ to rejection and positive affect ($\hat{\beta}$=`r p300_pa_stat$estimate`, 95% CI=[`r paste0(p300_pa_stat$lower,", ", p300_pa_stat$upper)`], $p$=`r p300_pa_stat$p.value`).
 
 ```{r}
 ## REWP
@@ -750,10 +773,10 @@ scatterplot_150275_disc_no_outliers <- ggplot(df_150275_cz_model, aes(x=predicte
 model_275425_addi <- lm(AA_AR_z ~ addi_total_z + site, df_275425_cz)
 
 # Scatter plot
-p3_aaar_model_disc <- lm(formula = AA_AR_z ~ addi_total_z + Age_c + demo_child_sex + site + IDAS_depression, data = df_275425_cz_strain)
+p300_aaar_model_disc <- lm(formula = AA_AR_z ~ addi_total_z + Age_c + demo_child_sex + site + IDAS_depression, data = df_275425_cz_strain)
 df_275425_cz_model <- df_275425_cz %>%
   filter(complete.cases(addi_total_z), complete.cases(site))
-# df_275425_cz_model$predicted = predict(p3_aaar_model_disc)
+# df_275425_cz_model$predicted = predict(p300_aaar_model_disc)
 
 scatterplot_275425_disc <- ggplot(df_275425_cz_model, aes(x=addi_total, y=AA_AR_z)) +
   geom_point(colour="black") +
@@ -762,10 +785,10 @@ scatterplot_275425_disc <- ggplot(df_275425_cz_model, aes(x=addi_total, y=AA_AR_
   labs(x="Discrimination", y="P300") +
   theme()
 
-p3_aaar_model_disc_no_outliers <- lm(formula = AA_AR_z ~ addi_total_z + site, data = df_275425_cz_no_outliers)
+p300_aaar_model_disc_no_outliers <- lm(formula = AA_AR_z ~ addi_total_z + site, data = df_275425_cz_no_outliers)
 df_275425_cz_model <- df_275425_cz_no_outliers %>%
   filter(complete.cases(addi_total_z), complete.cases(site))
-df_275425_cz_model$predicted = predict(p3_aaar_model_disc_no_outliers)
+df_275425_cz_model$predicted = predict(p300_aaar_model_disc_no_outliers)
 
 scatterplot_275425_disc_no_outliers <- ggplot(df_275425_cz_model, aes(x=predicted, y=AA_AR_z)) +
   geom_point(colour="black") +
@@ -780,13 +803,13 @@ addi_plots_nocov <- ggarrange(scatterplot_150275_disc +
                                 ylab("RewP") +
                                 coord_cartesian(xlim = c(-0.5, 31), ylim=c(-3,4)) +
                                 rremove("xlab") + 
-                                annotate("text", x=15, y=3, label = TeX(apa_print(rewp_aaar_model_disc)$full_result$addi_total_z), color = "black", rot = 0, size=6)+
+                                annotate("text", x=15, y=3, label = TeX(apa_printlm(rewp_aaar_model_disc)$full_result$addi_total_z), color = "black", rot = 0, size=6)+
                                 theme(axis.text.x = element_blank()),
                               scatterplot_275425_disc + 
                                 ylab("P300") +
                                 coord_cartesian(xlim = c(-0.5, 31), ylim=c(-3,4)) +
                                 rremove("xlab") +
-                                annotate("text", x=15, y=3, label = TeX(apa_print(p3_aaar_model_disc)$full_result$addi_total_z), color = "black", rot = 0, size=6),
+                                annotate("text", x=15, y=3, label = TeX(apa_printlm(p300_aaar_model_disc)$full_result$addi_total_z), color = "black", rot = 0, size=6),
     labels = c("A","B"),
     label.x = c(rep(.03,4)),
     label.y = c(rep(0.9,4)),
@@ -801,7 +824,7 @@ ggsave(filename="../figures/addi_plots_nocov.png", plot=addi_plots_nocov,
        width=9, height = 7)
 ```
 
-Greater self-reported discrimination distress was also related to a more blunted RewP~resid~ (`r apa_print(model_150275_addi)$full_result$addi_total_z`) and P300~resid~ (`r apa_print(model_275425_addi)$full_result$addi_total_z`) to acceptance. However, these results are considered preliminary since only `r sum(df_275425_cz$addi_total>0, na.rm=TRUE)` (`r round(sum(df_275425_cz$addi_total>0, na.rm=TRUE)/sum(complete.cases(df_275425_cz$addi_total))*100,2)`%) participants reported having experienced *any* form of discrimination.
+Greater self-reported discrimination distress was also related to a more blunted RewP~resid~ (`r apa_printlm(model_150275_addi)$full_result$addi_total_z`) and P300~resid~ (`r apa_printlm(model_275425_addi)$full_result$addi_total_z`) to acceptance. However, these results are considered preliminary since only `r sum(df_275425_cz$addi_total>0, na.rm=TRUE)` (`r round(sum(df_275425_cz$addi_total>0, na.rm=TRUE)/sum(complete.cases(df_275425_cz$addi_total))*100,2)`%) participants reported having experienced *any* form of discrimination.
 
 ### Race/Ethnicity
 
@@ -830,7 +853,7 @@ model_150275_race <- lm(AA_AR_z ~ demo_child_minority + site, df_150275_cz_race)
 model_275425_race <- lm(AA_AR_z ~ demo_child_minority + site, df_275425_cz_race)
 ```
 
-Finally, we examined whether RewP~resid~ or P300~resid~ differed by Hispanic ethnicity or participant reported race, given that racial/ethnic minority youth are at greater likelihood of being discriminated against. We did not find significant differences for Hispanic ethnicity (`r apa_print(model_150275_hisp)$full_result$demo_child_hispanicYes`, `r apa_print(model_150275_hisp)$full_result$demo_child_hispanicYes`, respectively), nor minority race (`r apa_print(model_150275_race)$full_result$demo_child_minority`, `r apa_print(model_275425_race)$full_result$demo_child_minority`, respectively).
+Finally, we examined whether RewP~resid~ or P300~resid~ differed by Hispanic ethnicity or participant reported race, given that racial/ethnic minority youth are at greater likelihood of being discriminated against. We did not find significant differences for Hispanic ethnicity (`r apa_printlm(model_150275_hisp)$full_result$demo_child_hispanicYes`, `r apa_printlm(model_150275_hisp)$full_result$demo_child_hispanicYes`, respectively), nor minority race (`r apa_printlm(model_150275_race)$full_result$demo_child_minority`, `r apa_printlm(model_275425_race)$full_result$demo_child_minority`, respectively).
 
 ```{r, eval=FALSE}
 performance::check_model(model_275425_ema_na_AR, data=df_275425_cz_ema, plot = TRUE)
