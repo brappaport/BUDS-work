@@ -93,13 +93,18 @@ header-includes:
   - \captionsetup[table]{font={stretch=1.5}}
   - \captionsetup[figure]{font={stretch=1.5}}
   
+  - \usepackage{mathastext}
+  - \renewcommand{\rmdefault}{phv} % Arial font
+  - \renewcommand{\sfdefault}{phv} % Arial font
+  - \renewcommand{\ttdefault}{pcr} % Courier font for monospace
+  
   - \raggedbottom
   # - \usepackage{helvet}
   # - \renewcommand{\familydefault}{\sfdefault}
 ---
 
 ```{r analysis-preferences}
-knitr::opts_chunk$set(set.seed(312), warning=FALSE, message=FALSE, include=FALSE, results='hide', cache=TRUE)
+knitr::opts_chunk$set(set.seed(312), warning=FALSE, message=FALSE, include=FALSE, results='hide')
   options(width=80, Ncpus = 6, mc.cores=6, max.print=1000000, scipen = 999) #Set width, multiple cores, and not to use scientific notation
   rm(list=ls())   #Remove everything from environment
   cat("\014")   #Clear Console
@@ -226,10 +231,9 @@ add_equals2 <- function(p_value) {
 
 apa_printlm <- function(model) {
   glue_apa_results(broom::tidy(model, conf.int = TRUE)
-    , est_glue = "$\\hat{\\beta}=<<estimate>>, 95% CI=$[<<conf.low>>,~<<conf.high>>]$"
+    , est_glue = "$\\hat{\\beta}=<<estimate>>$, 95% CI [<<conf.low>>,<<conf.high>>]"
     , stat_glue = "$p<<add_equals2(p.value)>>$"
-    , term_names = make.names(names(coef(model)))
-    , simplify=TRUE
+    , term_names = sanitize_terms(make.names(names(coef(model))))
 )
 }
 
@@ -382,7 +386,7 @@ The area deprivation index [2021 version 4.0.1, @kindMakingNeighborhoodDisadvant
 
 ### Discrimination distress: Adolescent Discrimination Distress Index (ADDI)
 
-Discrimination-related distress was measured using the Adolescent Discrimination Distress Index [ADDI, @fisherDiscriminationDistressAdolescence2000]. The ADDI is a 15-item self-report measure that assesses the distress experienced in response to perceived racial-ethnic discrimination across institutional, educational, and peer contexts. Each item includes a statement outlining a common example of discrimination (i.e. "You were called racially insulting names"; "You were wrongly disciplined or given after-school detention"). If a participant endorses that they experienced a given type of discrimination, they are then asked to rate how much the experience upset them on a five-point Likert scale from "not at all" to "extremely". In the current study, total scores were used, where higher scores indicate greater discrimination-related distress across contexts. Given the format of ADDI, which requires participants to endorse whether an experience occurred in order to report its severity, Cronbach's alpha could not be measured. However, studies support its psychometric properties [\@fisherDiscriminationDistressAdolescence2000].
+Discrimination-related distress was measured using the Adolescent Discrimination Distress Index [ADDI, @fisherDiscriminationDistressAdolescence2000]. The ADDI is a 15-item self-report measure that assesses the distress experienced in response to perceived racial-ethnic discrimination across institutional, educational, and peer contexts. Each item includes a statement outlining a common example of discrimination (i.e. "You were called racially insulting names"; "You were wrongly disciplined or given after-school detention"). If a participant endorses that they experienced a given type of discrimination, they are then asked to rate how much the experience upset them on a five-point Likert scale from "not at all" to "extremely". In the current study, total scores were used, where higher scores indicate greater discrimination-related distress across contexts. Given the format of ADDI, which requires participants to endorse whether an experience occurred in order to report its severity, Cronbach's alpha could not be measured. However, studies support its psychometric properties [@fisherDiscriminationDistressAdolescence2000].
 
 ```{r, eval=FALSE}
 addi_vars <- c("addi_1b_i","addi_2b_i","addi_3b_i","addi_4b_i","addi_5b_i","addi_6b_i","addi_7b_i","addi_8b_i","addi_9b_i","addi_10b_i","addi_11b_i","addi_12b_i","addi_13b_i","addi_14b_i","addi_15b_i")
@@ -482,7 +486,7 @@ model_behavioral_rating_ses_ema_na_ra_p <- tidy(model_behavioral_rating_ses_ema_
 # save(df_BUDS_rating_it_pt_demo, file=here("../data/df_BUDS_rating_it_pt_demo.RData"))
 ```
 
-Omnibus MLMs showed a significant Peer value x Feedback type interaction (`r apa_printlm(ratings_model)$full_result$FeedbackReject_VotingLike`, see Figure 1C), such that participants rated acceptance from high-value peers (i.e., peers that they were interested in) as feeling significantly better than rejection from high-value peers (`r apa_print(t.test(rating ~ Feedback, filter(df_BUDS_rating_it_pt, Voting=="Like"), paired=TRUE))$full_result`). However, participants rated feeling more angry in response to acceptance than rejection from low-value peers (`r apa_print(t.test(rating ~ Feedback, filter(df_BUDS_rating_it_pt, Voting=="Dislike"), paired=TRUE))$full_result`).[^2]
+Omnibus MLMs showed a significant Peer value x Feedback type interaction (`r apa_print(ratings_model)$full_result$FeedbackReject_VotingLike`, see Figure 1C), such that participants rated acceptance from high-value peers (i.e., peers that they were interested in) as feeling significantly better than rejection from high-value peers (`r apa_print(t.test(rating ~ Feedback, filter(df_BUDS_rating_it_pt, Voting=="Like"), paired=TRUE))$full_result`). However, participants rated feeling more angry in response to acceptance than rejection from low-value peers (`r apa_print(t.test(rating ~ Feedback, filter(df_BUDS_rating_it_pt, Voting=="Dislike"), paired=TRUE))$full_result`).[^2]
 
 [^2]: This somewhat surprising/counter intuitive finding is discussed further in the Supplement.
 
@@ -517,11 +521,11 @@ rewp_fv_mlm <- lmer(formula = ERP ~ Feedback*Voting + site + (1 | ID), REML=TRUE
 p300_fv_mlm <- lmer(formula = ERP ~ Feedback*Voting + (1 | site) + (1 | ID), REML=TRUE, data = df_275425_cz_long)
 ```
 
-Omnibus MLMs showed that Peer value interacted with Feedback type to predict ERP mean amplitude for ERP components consistent with an N1 (`r apa_printlm(n1_fv_mlm)$full_result$FeedbackRej_VotingRej`), RewP (`r apa_printlm(rewp_fv_mlm)$full_result$FeedbackRej_VotingRej`) and P300 (`r apa_printlm(p300_fv_mlm)$full_result$FeedbackRej_VotingRej`). These ERP components had time courses and scalp topographies (central around Cz electrode) consistent with an N1 (50-150ms), reward positivity (RewP; 150-275ms) and P300 (275-425ms). Follow-up analyses showed that the N1 (`r apa_print(t.test(df_50150_cz$Rej_Acc, df_50150_cz$Rej_Rej, paired=TRUE))$full_result`), RewP (`r apa_print(t.test(df_150275_cz$Rej_Acc, df_150275_cz$Rej_Rej, paired=TRUE))$full_result`), and P300 (`r apa_print(t.test(df_275425_cz$Rej_Acc, df_275425_cz$Rej_Rej, paired=TRUE))$full_result`) differentiated between acceptance and rejection for low-value peers. Only the RewP (`r apa_print(t.test(df_150275_cz$Acc_Acc, df_150275_cz$Acc_Rej, paired=TRUE))$full_result`) differentiated between acceptance and rejection for high-value peers, but not the N1 (`r apa_print(t.test(df_275425_cz$Acc_Acc, df_275425_cz$Acc_Rej, paired=TRUE))$full_result`), nor P300 (`r apa_print(t.test(df_275425_cz$Acc_Acc, df_275425_cz$Acc_Rej, paired=TRUE))$full_result`).
+Omnibus MLMs showed that Peer value interacted with Feedback type to predict ERP mean amplitude for ERP components consistent with an N1 (`r apa_print(n1_fv_mlm)$full_result$FeedbackRej_VotingRej`), RewP (`r apa_print(rewp_fv_mlm)$full_result$FeedbackRej_VotingRej`) and P300 (`r apa_print(p300_fv_mlm)$full_result$FeedbackRej_VotingRej`). These ERP components had time courses and scalp topographies (central around Cz electrode) consistent with an N1 (50-150ms), reward positivity (RewP; 150-275ms) and P300 (275-425ms). Follow-up analyses showed that the N1 (`r apa_print(t.test(df_50150_cz$Rej_Acc, df_50150_cz$Rej_Rej, paired=TRUE))$full_result`), RewP (`r apa_print(t.test(df_150275_cz$Rej_Acc, df_150275_cz$Rej_Rej, paired=TRUE))$full_result`), and P300 (`r apa_print(t.test(df_275425_cz$Rej_Acc, df_275425_cz$Rej_Rej, paired=TRUE))$full_result`) differentiated between acceptance and rejection for low-value peers. Only the RewP (`r apa_print(t.test(df_150275_cz$Acc_Acc, df_150275_cz$Acc_Rej, paired=TRUE))$full_result`) differentiated between acceptance and rejection for high-value peers, but not the N1 (`r apa_print(t.test(df_50150_cz$Acc_Acc, df_50150_cz$Acc_Rej, paired=TRUE))$full_result`), nor P300 (`r apa_print(t.test(df_275425_cz$Acc_Acc, df_275425_cz$Acc_Rej, paired=TRUE))$full_result`).
 
 ### Internal consistency
 
-The RewP and P300 demonstrated acceptable levels of internal consistency across peer-value (high, low) and feedback conditions (acceptance, rejection), with split-half reliability \> `r min(spearman_brown[2:3,3:6])`, with particularly high reliability for the high-value peers conditions (acceptance and rejection r = `r spearman_brown[2:3,3]` and `r spearman_brown[2:3,4]`; see Supplement). The N1 did not achieve acceptable internal consistency (r = `r min(spearman_brown[1,3:6])`-`r max(spearman_brown[1,3:6])`). Split-half reliability was considerably lower for the residualized scores, but remained comparable to other studies [RewP~resid~ r \> `r min(spearman_brown[2,7:8),` P300~resid~ r \> `r min(spearman_brown[3,7:8)`], @rappaportBehavioralPsychiatricCorrelates2024a; @ethridgePsychometricPropertiesNeural2018; @levinsonReliabilityElectrocorticalResponse2017]. See Supplement for full results.
+The RewP and P300 demonstrated acceptable levels of internal consistency across peer-value (high, low) and feedback conditions (acceptance, rejection), with split-half reliability ($r$) \> `r min(spearman_brown[2:3,3:6])`, with particularly high reliability for the high-value peers conditions (acceptance and rejection $r$ = `r spearman_brown[2:3,3]` and `r spearman_brown[2:3,4]`; see Supplement). The N1 did not achieve acceptable internal consistency ($r$=`r min(spearman_brown[1,3:6])`-`r max(spearman_brown[1,3:6])`). Split-half reliability was considerably lower for the residualized scores, but remained comparable to other studies (RewP~resid~ $r$ \> `r min(spearman_brown[2,7:8])`, P300~resid~ $r$ \> `r min(spearman_brown[3,7:8])`) [@rappaportBehavioralPsychiatricCorrelates2024a; @ethridgePsychometricPropertiesNeural2018; @levinsonReliabilityElectrocorticalResponse2017]. See Supplement for full results.
 
 ### Dependability
 
@@ -728,7 +732,7 @@ m_p300_rej <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AR_AA_z + Age_c + demo_child_sex
 m_p300_rej_ss <- emtrends(m_p300_rej, pairwise ~ADI_NATRANK_z, var="AR_AA_z",at=SES_list, adjust="none")|> test()
 ```
 
-Follow-up simple slope analyses shed additional light on this relationship. While no simple slopes were significant for the SES x RewP~resid~ interaction (p $\ge$ `r round(min(m_rewp_acc_ss$emtrends[,6]),2)`), there was a significant simple slope for the SES x P300~resid~ such that lower SES adolescents showed a positive relationship between P300~resid~ to rejection and subsequent negative affect (slope = `r round(m_p300_rej_ss$emtrends[2,2],2)`, p = `r round(m_p300_rej_ss$emtrends[2,6],2)`). That is, youth with lower SES show a potential, specific vulnerability to heightened rejection sensitivity leading to greater negative affect.
+Follow-up simple slope analyses shed additional light on this relationship. While no simple slopes were significant for the SES x RewP~resid~ interaction ($p\ge$ `r round(min(m_rewp_acc_ss$emtrends[,6]),2)`), there was a significant simple slope for the SES x P300~resid~ such that lower SES adolescents showed a positive relationship between P300~resid~ to rejection and subsequent negative affect (slope = `r round(m_p300_rej_ss$emtrends[2,2],2)`, $p$=`r round(m_p300_rej_ss$emtrends[2,6],2)`). That is, youth with lower SES show a potential, specific vulnerability to heightened rejection sensitivity leading to greater negative affect.
 
 ### Discrimination distress
 
@@ -749,24 +753,10 @@ df_150275_cz_model <- df_150275_cz %>%
   filter(complete.cases(addi_total_z), complete.cases(site))
 df_150275_cz_model$predicted = predict(rewp_aaar_model_disc)
 
-scatterplot_150275_disc <- ggplot(df_150275_cz_model, aes(x=addi_total, y=AA_AR_z)) +
-  geom_point(colour="black") +
-  stat_smooth(method="lm", se=TRUE) +
-  theme_apa() +
-  labs(x="Discrimination (covarying for site)", y="RewP") +
-  theme()
-
 rewp_aaar_model_disc_nooutliers <- lm(formula = AA_AR_z ~ addi_total_z + site, data = df_150275_cz_no_outliers)
 df_150275_cz_model <- df_150275_cz_no_outliers %>%
   filter(complete.cases(addi_total_z), complete.cases(site))
 df_150275_cz_model$predicted = predict(rewp_aaar_model_disc_nooutliers)
-
-scatterplot_150275_disc_no_outliers <- ggplot(df_150275_cz_model, aes(x=predicted, y=AA_AR_z)) +
-  geom_point(colour="black") +
-  stat_smooth(method="lm", se=TRUE) +
-  theme_apa() +
-  labs(x="Discrimination (covarying for site)", y="RewP") +
-  theme()
 ```
 
 ```{r}
@@ -778,53 +768,13 @@ df_275425_cz_model <- df_275425_cz %>%
   filter(complete.cases(addi_total_z), complete.cases(site))
 # df_275425_cz_model$predicted = predict(p300_aaar_model_disc)
 
-scatterplot_275425_disc <- ggplot(df_275425_cz_model, aes(x=addi_total, y=AA_AR_z)) +
-  geom_point(colour="black") +
-  stat_smooth(method="lm", se=TRUE) +
-  theme_apa() +
-  labs(x="Discrimination", y="P300") +
-  theme()
-
 p300_aaar_model_disc_no_outliers <- lm(formula = AA_AR_z ~ addi_total_z + site, data = df_275425_cz_no_outliers)
 df_275425_cz_model <- df_275425_cz_no_outliers %>%
   filter(complete.cases(addi_total_z), complete.cases(site))
 df_275425_cz_model$predicted = predict(p300_aaar_model_disc_no_outliers)
-
-scatterplot_275425_disc_no_outliers <- ggplot(df_275425_cz_model, aes(x=predicted, y=AA_AR_z)) +
-  geom_point(colour="black") +
-  stat_smooth(method="lm", se=TRUE) +
-  theme_apa() +
-  labs(x="Discrimination (covarying for site)", y="P300") +
-  theme()
 ```
 
-```{r}
-addi_plots_nocov <- ggarrange(scatterplot_150275_disc + 
-                                ylab("RewP") +
-                                coord_cartesian(xlim = c(-0.5, 31), ylim=c(-3,4)) +
-                                rremove("xlab") + 
-                                annotate("text", x=15, y=3, label = TeX(apa_printlm(rewp_aaar_model_disc)$full_result$addi_total_z), color = "black", rot = 0, size=6)+
-                                theme(axis.text.x = element_blank()),
-                              scatterplot_275425_disc + 
-                                ylab("P300") +
-                                coord_cartesian(xlim = c(-0.5, 31), ylim=c(-3,4)) +
-                                rremove("xlab") +
-                                annotate("text", x=15, y=3, label = TeX(apa_printlm(p300_aaar_model_disc)$full_result$addi_total_z), color = "black", rot = 0, size=6),
-    labels = c("A","B"),
-    label.x = c(rep(.03,4)),
-    label.y = c(rep(0.9,4)),
-    common.legend = TRUE, legend = "bottom",
-    ncol = 1, nrow = 2,
-    align="v")
-addi_plots_nocov <- annotate_figure(addi_plots_nocov, 
-                                    left=text_grob("Mean amplitude (µV) to acceptance\n(relative to rejection)", color = "black", rot = 90, size=14),
-                                    bottom=text_grob("Self-reported discrimination", color = "black", rot = 0, size=14))
-
-ggsave(filename="../figures/addi_plots_nocov.png", plot=addi_plots_nocov,
-       width=9, height = 7)
-```
-
-Greater self-reported discrimination distress was also related to a more blunted RewP~resid~ (`r apa_printlm(model_150275_addi)$full_result$addi_total_z`) and P300~resid~ (`r apa_printlm(model_275425_addi)$full_result$addi_total_z`) to acceptance. However, these results are considered preliminary since only `r sum(df_275425_cz$addi_total>0, na.rm=TRUE)` (`r round(sum(df_275425_cz$addi_total>0, na.rm=TRUE)/sum(complete.cases(df_275425_cz$addi_total))*100,2)`%) participants reported having experienced *any* form of discrimination.
+Greater self-reported discrimination distress was also related to a more blunted RewP~resid~ (`r apa_print(model_150275_addi)$full_result$addi_total_z`) and P300~resid~ (`r apa_print(model_275425_addi)$full_result$addi_total_z`) to acceptance. However, these results are considered preliminary since only `r sum(df_275425_cz$addi_total>0, na.rm=TRUE)` (`r round(sum(df_275425_cz$addi_total>0, na.rm=TRUE)/sum(complete.cases(df_275425_cz$addi_total))*100,2)`%) participants reported having experienced *any* form of discrimination.
 
 ### Race/Ethnicity
 
