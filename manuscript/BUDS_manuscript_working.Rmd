@@ -93,11 +93,6 @@ header-includes:
   - \captionsetup[table]{font={stretch=1.5}}
   - \captionsetup[figure]{font={stretch=1.5}}
   
-  - \usepackage{mathastext}
-  - \renewcommand{\rmdefault}{phv} % Arial font
-  - \renewcommand{\sfdefault}{phv} % Arial font
-  - \renewcommand{\ttdefault}{pcr} % Courier font for monospace
-  
   - \raggedbottom
   # - \usepackage{helvet}
   # - \renewcommand{\familydefault}{\sfdefault}
