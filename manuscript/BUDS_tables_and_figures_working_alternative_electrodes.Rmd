@@ -1,0 +1,802 @@
+---
+title     : "Socioeconomic status and adolescent brain responses to peer feedback: Testing the impact on negative affect"
+shorttitle    : "SES & brain responses to peer feedback"
+
+author: 
+  - name    : "Brent I. Rappaport"
+    affiliation : "1"
+    corresponding : yes  # Define only one corresponding author
+    address   : "680 N. Lakeshore Drive, Suite 1520, Chicago, IL 60611"
+    email   : "brent.rappaport@northwestern.edu"
+    role:   # Contributorship roles (e.g., CRediT, https://casrai.org/credit/)
+      - "Conceptualization"
+      - "Formal analysis"
+      - "Writing - Original Draft Preparation"
+      - "Writing - Review & Editing"
+  - name    : "James E. Glazer"
+    affiliation : "1"
+    role:
+      - "Methodology"
+      - "Writing - Review & Editing"
+  - name    : "Lilian Y. Li"
+    affiliation : "1"
+    role:
+      - "Methodology"
+      - "Writing - Review & Editing"
+  - name    : "Madeline M. McGregor"
+    affiliation : "1"
+    role:
+      - "Writing - Review & Editing"
+  - name    : "Lili A. Massac"
+    affiliation : "2"
+    role:
+    - "Writing - Review & Editing"
+  - name    : "Katherine Durham"
+    affiliation : "2"
+    role:
+    - "Writing - Review & Editing"
+  - name    : "Randy P. Auerbach"
+    affiliation : "2"
+    role:
+    - "Conceptualization"
+    - "Fundind acquisition"
+    - "Investigation"
+    - "Methodology"
+    - "Resources"
+    - "Supervision"
+    - "Writing - Review & Editing"
+  - name    : "Stewart A. Shankman"
+    affiliation : "1"
+    role:
+    - "Conceptualization"
+    - "Fundind acquisition"
+    - "Investigation"
+    - "Methodology"
+    - "Resources"
+    - "Supervision"
+    - "Writing - Review & Editing"
+
+affiliation:
+  - id          : "1"
+    institution : "Department of Psychiatry, Feinberg School of Medicine, Northwestern University"
+  - id          : "2"
+    institution : "Columbia University"
+
+bibliography  : "BUDS.bib"
+floatsintext  : yes
+linenumbers   : no
+draft         : no
+mask          : no
+figurelist    : no
+tablelist     : no
+footnotelist  : no
+csl           : 'biological-psychiatry.csl'
+documentclass : "apa7"
+output        : papaja::apa6_pdf
+  
+editor_options: 
+  markdown: 
+  wrap: sentence
+  
+header-includes:
+  - \usepackage{setspace}
+  - \AtBeginEnvironment{tabular}{\singlespacing}
+  - \AtBeginEnvironment{lltable}{\singlespacing}
+  - \AtBeginEnvironment{tablenotes}{\doublespacing}
+  - \captionsetup[table]{font={stretch=1.5}}
+  - \captionsetup[figure]{font={stretch=1.5}}
+ # - \usepackage{lscape}
+#  - \newcommand{\blandscape}{\begin{landscape}}
+  # - \newcommand{\elandscape}{\end{landscape}}
+  
+  - \AtBeginDocument{\let\maketitle\relax} # no title page
+  
+  - \raggedbottom
+  # - \usepackage{helvet}
+  # - \renewcommand{\familydefault}{\sfdefault}
+---
+
+```{r analysis-preferences}
+knitr::opts_chunk$set(set.seed(312), warning=FALSE, message=FALSE, include=FALSE, results='hide', cache=TRUE)
+  options(width=80, Ncpus = 6, mc.cores=6, max.print=1000000, scipen = 999, papaja.na_string = "") #Set width, multiple cores, and not to use scientific notation
+  rm(list=ls())   #Remove everything from environment
+  cat("\014")   #Clear Console
+
+  # library(knitr)  #allows rmarkdown files
+  library(haven)  #helps import stata
+  library(expss)  #labeling variables/values
+  library(broom.mixed)  #nice statistical output
+  library(here)   #nice file paths
+  library(psych)  #used for statistical analyses
+  library(Hmisc)
+  library(questionr) # odds ratio
+  library(purrr)
+  library(haven)  #to import SPSS files
+  library(MASS)   #to create residualized scores
+# Models
+  library(lmerTest)
+  library(glmmTMB)
+# Plotting
+  library(ggplot2)  #creates plots
+  library(ggpubr)
+  library(ggeffects)
+  library(cowplot)
+  library(ggtext)
+  library(sjPlot)
+  library(png)
+  library(grid)
+# Interactions
+  library(marginaleffects)
+  library(interactions)
+  library(latex2exp)
+  library(emmeans) # testing simple slopes
+# Misc data formatting
+  library(datawizard)
+  library(performance)
+  library(Rmisc)
+  library(vtable)
+# General tools
+  library(english)
+  library(tidyverse)  #plotting/cleaning, etc.
+  library(scipub) #demo table
+  library(papaja)
+  library(workflowr)  #helps with workflow
+
+here <- here::here
+r_refs("BUDS.bib")
+```
+
+```{r Load data}
+here::i_am("BUDS_manuscript_working.Rmd")
+
+for (d in c(50150, 150275, 275425)) {
+  print(eval(parse(text=paste0('load(file=here("../data/df_',d,'.RData"))'))))
+}
+
+load(file=here("../data/BUDS_behavior.RData"))
+
+load(file=here("../data/BUDS_cleaning04_ga.RData"))
+load(file=here("../data/BUDS_cleaning04_gaplots.RData"))
+
+spearman_brown <- read.csv(file=here("../tables/spearman_brown.csv"))
+
+df_150275_cz_no_outliers <- df_150275_cz %>%
+  filter(ADI_NATRANK_z > -3 & ADI_NATRANK_z < 3 & AA_AR_z > -3 & AA_AR_z < 3)
+
+df_275425_pz_no_outliers <- df_275425_pz %>%
+  filter(ADI_NATRANK_z > -3 & ADI_NATRANK_z < 3 & AA_AR_z > -3 & AA_AR_z < 3)
+```
+
+```{r}
+# Rename site variables
+df_50150_fz_long <- df_50150_fz %>%
+  mutate(site = case_match(as.character(id_2_i), "CUMC" ~ "Columbia",
+                                   "2" ~ "Northwestern",
+                                   NA ~ NA)) %>%
+    pivot_longer(cols=c("Acc_Acc","Rej_Acc","Acc_Rej","Rej_Rej"), names_to=c("Voting","Feedback"), names_sep="_", values_to="ERP")
+df_150275_cz_long <- df_150275_cz %>%
+  mutate(site = case_match(as.character(id_2_i), "CUMC" ~ "Columbia",
+                                   "2" ~ "Northwestern",
+                                   NA ~ NA)) %>%
+    pivot_longer(cols=c("Acc_Acc","Rej_Acc","Acc_Rej","Rej_Rej"), names_to=c("Voting","Feedback"), names_sep="_", values_to="ERP")
+df_275425_pz_long <- df_275425_pz %>%
+  mutate(site = case_match(as.character(id_2_i), "CUMC" ~ "Columbia",
+                                   "2" ~ "Northwestern",
+                                   NA ~ NA)) %>%
+    pivot_longer(cols=c("Acc_Acc","Rej_Acc","Acc_Rej","Rej_Rej"), names_to=c("Voting","Feedback"), names_sep="_", values_to="ERP")
+
+# Make outliers datasets
+df_150275_cz_long_no_outliers <- df_150275_cz_long %>%
+  filter(ADI_NATRANK_z > -3 & ADI_NATRANK_z < 3 & AA_AR_z > -3 & AA_AR_z < 3)
+df_275425_pz_long_no_outliers <- df_275425_pz_long %>%
+  filter(ADI_NATRANK_z > -3 & ADI_NATRANK_z < 3 & AA_AR_z > -3 & AA_AR_z < 3)
+
+# Clean ema datasets
+df_150275_cz_ema <- df_150275_cz_ema %>%
+  group_by(ID,daysFrom,slot) %>%
+  arrange(tm_start) %>%
+  filter(row_number()==1) %>%
+  arrange(ID,daysFrom,tm_start) %>%
+  mutate(na_cubert = na^(1/3),
+         na_cubert_z = scale(na_cubert, center=T, scale=T))
+
+df_275425_pz_ema <- df_275425_pz_ema %>%
+  group_by(ID,daysFrom,slot) %>%
+  arrange(tm_start) %>%
+  filter(row_number()==1) %>%
+  arrange(ID,daysFrom,tm_start) %>%
+  mutate(na_cubert = na^(1/3),
+         na_cubert_z = scale(na_cubert, center=T, scale=T))
+
+# df_150275_cz_ema$na_cubert <- df_150275_cz_ema$na^(1/3)
+# df_275425_pz_ema$na_cubert <- df_275425_pz_ema$na^(1/3)
+
+df_150275_cz_ema_no_outliers <- df_150275_cz_ema[df_150275_cz_ema$ID %in% df_150275_cz_no_outliers$ID,]
+df_275425_pz_ema_no_outliers <- df_275425_pz_ema[df_275425_pz_ema$ID %in% df_275425_pz_no_outliers$ID,]
+```
+
+```{r Functions}
+# from https://www.r-bloggers.com/2020/07/create-a-publication-ready-correlation-matrix-with-significance-levels-in-r/
+
+correlation_matrix <- function(df,
+           type = "pearson",
+           digits = 3,
+           decimal.mark = ".",
+           use = "all",
+           show_significance = TRUE,
+           replace_diagonal = FALSE,
+           replacement = ""){
+  
+  # check arguments
+  stopifnot({
+  is.numeric(digits)
+  digits >= 0
+  use %in% c("all", "upper", "lower")
+  is.logical(replace_diagonal)
+  is.logical(show_significance)
+  is.character(replacement)
+  })
+  # we need the Hmisc package for this
+  require(Hmisc)
+  
+  # retain only numeric and boolean columns
+  isNumericOrBoolean = vapply(df, function(x) is.numeric(x) | is.logical(x), logical(1))
+  if (sum(!isNumericOrBoolean) > 0) {
+  cat('Dropping non-numeric/-boolean column(s):', paste(names(isNumericOrBoolean)[!isNumericOrBoolean], collapse = ', '), '\n\n')
+  }
+  df = df[isNumericOrBoolean]
+  
+  # transform input data frame to matrix
+  x <- as.matrix(df)
+  
+  # run correlation analysis using Hmisc package
+  correlation_matrix <- Hmisc::rcorr(x, type = )
+  R <- correlation_matrix$r # Matrix of correlation coeficients
+  p <- correlation_matrix$P # Matrix of p-value
+  
+  # transform correlations to specific character format
+  Rformatted = formatC(R, format = 'f', digits = digits, decimal.mark = decimal.mark)
+  
+  # if there are any negative numbers, we want to put a space before the positives to align all
+  if (sum(R < 0) > 0) {
+  Rformatted = ifelse(R > 0, paste0(' ', Rformatted), Rformatted)
+  }
+  
+  # add significance levels if desired
+  if (show_significance) {
+  # define notions for significance levels; spacing is important.
+  stars <- ifelse(is.na(p), " ", ifelse(p < .001, "***", ifelse(p < .01, "** ", ifelse(p < .05, "*  ", " "))))
+  Rformatted = paste0(Rformatted, stars)
+  }
+  # build a new matrix that includes the formatted correlations and their significance stars
+  Rnew <- matrix(Rformatted, ncol = ncol(x))
+  rownames(Rnew) <- colnames(x)
+  colnames(Rnew) <- paste(colnames(x), "", sep =" ")
+  
+  # replace undesired values
+  if (use == 'upper') {
+  Rnew[lower.tri(Rnew, diag = replace_diagonal)] <- replacement
+  } else if (use == 'lower') {
+  Rnew[upper.tri(Rnew, diag = replace_diagonal)] <- replacement
+  } else if (replace_diagonal) {
+  diag(Rnew) <- replacement
+  }
+  
+  return(Rnew)
+}
+
+lmer_adi_interaction_table <- function(data) {
+  new_model <- data.frame(model = c("Both","Acc","Rej"),
+          beta = NA, 
+          p = NA)
+new_model$beta <- c(broom.mixed::tidy(lmer(formula = ERP ~ Feedback*Voting*ADI_NATRANK_c + (1 | ID), REML=TRUE, data = data))[8,4], broom.mixed::tidy(lmer(formula = ERP ~ Feedback*ADI_NATRANK_c + (1 | ID), REML=TRUE, data = filter(data, Voting=="Acc")))[4,4],
+        broom.mixed::tidy(lmer(formula = ERP ~ Feedback*ADI_NATRANK_c + (1 | ID), REML=TRUE, data = filter(data, Voting=="Rej")))[4,4])
+
+new_model$p <- c(broom.mixed::tidy(lmer(formula = ERP ~ Feedback*Voting*ADI_NATRANK_c + (1 | ID), REML=TRUE, data = data))[8,8], broom.mixed::tidy(lmer(formula = ERP ~ Feedback*ADI_NATRANK_c + (1 | ID), REML=TRUE, data = filter(data, Voting=="Acc")))[4,8],
+        broom.mixed::tidy(lmer(formula = ERP ~ Feedback*ADI_NATRANK_c + (1 | ID), REML=TRUE, data = filter(data, Voting=="Rej")))[4,8])
+new_model
+}
+
+plot_stats <- function(model, var) {
+  temp_stats <- tidy(model) %>% 
+  dplyr::filter(term==var) %>%
+  dplyr::select(estimate,p.value) %>%
+  round(., 3)
+  paste0("b = ", temp_stats[1], ", p = ", temp_stats[2])
+}
+
+make_long_format <- function(data, site_variable) {
+  data %>%
+    pivot_longer(cols=c("Acc_Acc","Rej_Acc","Acc_Rej","Rej_Rej"), names_to=c("Voting","Feedback"), names_sep="_", values_to="ERP")
+}
+```
+
+```{r demoTable, include=TRUE, results="asis"}
+demo_table <- FullTable1(df_275425_pz_strain, strata="site",
+           vars=c("Age","ADI_NATRANK","demo_child_sex","demo_child_hispanic","demo_child_race",
+                  "IDAS_depression","IDAS_anxiety","StressCT","StressTH"),
+           factor_vars=c("demo_child_sex","demo_child_hispanic","demo_child_race"),
+           var_names=c("Age","SES (percentile)","Sex","Hispanic ethnicity","Race",
+                       "IDAS depression","IDAS anxiety","Lifetime number of stressors","Lifetime stressor severity"),
+           round_n=2)
+
+# Remove race heading variable
+demo_table$table[6,4:7] <- demo_table$table[5,4:7]
+demo_table$table <- demo_table$table[-5,]
+
+# Concatenate stat and significance stars into one variable
+demo_table$table$Stat <- paste0(demo_table$table$Stat,demo_table$table$sig)
+demo_table$table <- demo_table$table[,-c(5,6)]
+
+# Compute crosstrabs for sex by site to get number of participants male and female SAAB by site
+sex_by_site <- table(df_275425_pz_strain$demo_child_sex, df_275425_pz_strain$site)
+# Make a new row
+new_row <- data.frame(Variable = "Female", 
+          "Columbia (N=90)" = paste0(sex_by_site[1,1], " (",round(sex_by_site[1,1]/sum(sex_by_site[,1]),4)*100,"%)"),
+          "Northwestern (N=70)" = paste0(sex_by_site[1,2], " (",round(sex_by_site[1,2]/sum(sex_by_site[,2]),4)*100,"%)"),
+          Stat = "",
+          es = "")
+colnames(new_row) <- colnames(demo_table$table)
+# Place new row in correct position
+df_top <- demo_table$table[1:3, ]
+df_bottom <- demo_table$table[(3 + 1):nrow(demo_table$table), ]
+demo_table2 <- rbind(df_top, new_row, df_bottom)
+rownames(demo_table2) <- NULL
+demo_table2[3,1] <- "Male"
+
+demo_table2$Stat <- c(demo_table2$Stat[1:2],"$\\chi^2 = 0.58$","--","$\\chi^2 = 0.43$","$\\chi^2 = 10.57$",demo_table2$Stat[7:length(demo_table2$Stat)])
+
+demo_table2$Stat <- ifelse(demo_table2$Stat=="--", NA, ifelse(demo_table2$Stat=="-", NA, demo_table2$Stat))
+demo_table2$es <- ifelse(demo_table2$es=="--", NA, ifelse(demo_table2$es=="-", NA, demo_table2$es))
+demo_table2$`Northwestern (N=70)` <- ifelse(demo_table2$`Northwestern (N=70)`=="-", "0 (0.00%)", demo_table2$`Northwestern (N=70)`)
+  
+apa_table(demo_table2,
+          caption="Demographics of samples and covariates",
+          note=demo_table$caption,
+          align = c("p{8cm}", "p{2.5cm}", "p{2.5cm}","p{2cm}","p{1.5cm}"),
+          stub_indents=list(`Sex-assigned-at-birth`=c(3:4), `Self-identified race`=c(6:12)),
+          font_size="small",
+          col.names = c(colnames(demo_table2)[1:3],"Statistic","Effect size"),
+          landscape=TRUE,
+          escape=FALSE)
+```
+
+```{r}
+Cz_ga_aa_ar_plot <- ggplot(data=filter(df_ga_Cz_long, Condition=="Acc_Acc" | Condition=="Acc_Rej" | Condition=="AA_AR"), aes(x=Time, y=grand_average, color=Condition)) +
+  geom_line(linewidth=1) +
+  scale_x_continuous(breaks = seq(-200, 1000, by = 200)) +
+  scale_y_continuous(breaks = seq(-5, 10, by = 2.5)) +
+  coord_cartesian(xlim=c(-200,1000), ylim=c(-5,10)) +
+  annotate("rect", xmin=50, xmax=150, ymin=-5, ymax=Inf, alpha=0.2, fill="purple") +
+  annotate("rect", xmin=150, xmax=275, ymin=-5, ymax=Inf, alpha=0.2, fill="orange") +
+  annotate("rect", xmin=275, xmax=425, ymin=-5, ymax=Inf, alpha=0.2, fill="blue") +
+  geom_rect(aes(xmin=0, xmax=0, ymin=-5, ymax=12), color="black") +
+  geom_rect(aes(xmin=-200, xmax=1000, ymin=0, ymax=0), color="black") +
+  scale_color_manual(breaks=c("Acc_Acc","Acc_Rej","AA_AR"),
+       values=c("Acc_Acc"="green", "AA_AR"="black", "Acc_Rej"="red"), 
+       labels=c("Acceptance","Rejection","Difference"), name=NULL) +
+  labs(x="Time (ms)", y="Cz (µV)") +
+  theme_apa() + theme(legend.position="top")+ 
+  theme(legend.position="right", text=element_text(size=18))
+```
+
+```{r, include=FALSE, results="asis", fig.cap = "Grand average ERP for acceptance and rejection feedback from high-value peers. Colored sections of the graph represent time windows where ERP components were extracted at Cz electrode: N1 = purple, RewP = orange, P300 = blue."}
+Cz_ga_aa_ar_plot
+```
+
+```{r}
+ratings_model <- lm(rating ~ Feedback*Voting + site, df_BUDS_rating_it_pt)
+
+in_task_rating_summary_stats <- summarySE(df_BUDS_rating_it_pt, measurevar="rating", groupvars=c("Feedback","Voting")) %>%
+  filter(complete.cases(rating))
+in_task_rating_summary_stats$Voting <- c("Low-value", "High-value", "Low-value", "High-value")
+rating_plot <- ggplot(in_task_rating_summary_stats, aes(y=rating, x=Voting, fill=Feedback)) +
+  geom_bar(position = "dodge", stat = "identity", colour="black") +
+  geom_errorbar(aes(ymin=rating-ci, ymax=rating+ci), width=.2, position=position_dodge(.9)) +
+  scale_fill_manual(values = c("green", "red"), name = "Feedback") +
+  theme_apa() +
+  theme(legend.position = "none") +
+  labs(x="Peer value", y="In task rating")
+```
+
+```{r, include=FALSE, results="asis", fig.cap = "Mean ratings across all participants by Feedback and Value."}
+rating_plot
+```
+
+```{r Load task image}
+img_plot <- ggplot() +
+  annotation_custom(rasterGrob(png::readPNG(here("figures/chatroom_figure.png")), interpolate = TRUE), 
+                    xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf) +
+  theme_void() + # Remove axes and background
+  theme(plot.margin = margin(t=0, l=0, r=0, b=0, unit = "cm"))
+```
+
+```{r, include=TRUE, results="asis", fig.cap = "A) Example of trial from chatroom task. B) Grand average ERP for acceptance and rejection feedback from high-value peers. Colored sections of the graph represent time windows where ERP components were extracted at Cz electrode: N1 = purple, RewP = orange, P300 = blue. C) Mean in-task, post-feedback emotional ratings across all trials and participants by Feedback (acceptance, rejection) and Value (high, low).", fig.height=8.5, fig.width=7}
+# Combine image of task, grand average waveform, and behavioral ratings into one plot
+figure_1 <- cowplot::plot_grid(img_plot, Cz_ga_aa_ar_plot, rating_plot,
+          labels = c("A","B","C"),
+          ncol = 1, nrow = 3,
+          rel_heights = c(2, 2, 2),
+          rel_widths = c(2, 1, 1))
+figure_1
+```
+
+```{r}
+n1_fv_mlm <- lmer(formula = ERP ~ Feedback*Voting + (1 | site) + (1 | ID), REML=TRUE, data = df_50150_fz_long)
+rewp_fv_mlm <- lmer(formula = ERP ~ Feedback*Voting + site + (1 | ID), REML=TRUE, data = df_150275_cz_long)
+p300_fv_mlm <- lmer(formula = ERP ~ Feedback*Voting + (1 | site) + (1 | ID), REML=TRUE, data = df_275425_pz_long)
+```
+
+```{r set-model-predictors}
+ses_lm <- function(data, y) {
+  y <- enquo(y)
+
+  model_formula <- formula(paste0(quo_name(y), "~ ADI_NATRANK_z + site + Age + demo_child_sex + StressCT + StressTH + IDAS_depression + IDAS_anxiety"))
+  lm(model_formula, data = data)
+}
+```
+
+```{r}
+n1_aaar_model <- ses_lm(df_50150_fz_strain,AA_AR_z)
+n1_araa_model <- ses_lm(df_50150_fz_strain,AR_AA_z)
+n1_rarr_model <- ses_lm(df_50150_fz_strain,RA_RR_z)
+n1_rrra_model <- ses_lm(df_50150_fz_strain,RR_RA_z)
+
+n1_low_value_ses_pvalues <- c(as.numeric(apa_print(n1_rarr_model)$table$p.value[2]),as.numeric(apa_print(n1_rrra_model)$table$p.value[2]),
+  as.numeric(apa_print(n1_rarr_model)$table$p.value[2]),as.numeric(apa_print(n1_rrra_model)$table$p.value[2]))
+```
+
+```{r}
+rewp_aaar_model <- ses_lm(df_150275_cz_strain,AA_AR_z)
+rewp_araa_model <- ses_lm(df_150275_cz_strain,AR_AA_z)
+rewp_rarr_model <- ses_lm(df_150275_cz_strain,RA_RR_z)
+rewp_rrra_model <- ses_lm(df_150275_cz_strain,RR_RA_z)
+
+rewp_low_value_ses_pvalues <- c(as.numeric(apa_print(rewp_rarr_model)$table$p.value[2]),as.numeric(apa_print(rewp_rrra_model)$table$p.value[2]),
+  as.numeric(apa_print(rewp_rarr_model)$table$p.value[2]),as.numeric(apa_print(rewp_rrra_model)$table$p.value[2]))
+
+# Scatter plot
+scatterplot_150275_adi <- ggplot(df_150275_cz, aes(x=ADI_NATRANK, y=AA_AR_z)) +
+  geom_point(colour="black") +
+  stat_smooth(method="lm", se=TRUE) +
+  ylim(-3,5) +
+  theme_apa() +
+  labs(x="SES (percentile)", y=expression("RewP"[resid])) +
+  theme()
+```
+
+```{r}
+p3_aaar_model <- ses_lm(df_275425_pz_strain, AA_AR_z)
+p3_araa_model <- ses_lm(df_275425_pz_strain, AR_AA_z)
+p3_rarr_model <- ses_lm(df_275425_pz_strain, RA_RR)
+p3_rrra_model <- ses_lm(df_275425_pz_strain, RR_RA)
+
+p3_low_value_ses_pvalues <- c(as.numeric(apa_print(p3_rarr_model)$table$p.value[2]),as.numeric(apa_print(p3_rrra_model)$table$p.value[2]),
+  as.numeric(apa_print(p3_rarr_model)$table$p.value[2]),as.numeric(apa_print(p3_rrra_model)$table$p.value[2]))
+
+# Scatter plot
+scatterplot_275425_adi <- ggplot(df_275425_pz, aes(x=ADI_NATRANK, y=AA_AR_z)) +
+  geom_point(colour="black") +
+  stat_smooth(method="lm", se=TRUE) +
+  theme_apa() +
+  labs(x="SES (percentile)", y=expression("Acceptance P300"[resid])) +
+  theme()
+```
+
+```{r}
+model_150275_ema_na <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + (1 | site) + (1 | ID),
+                zi = ~ .,
+  data = df_150275_cz_ema,
+  family=gaussian, REML=TRUE)
+
+model_150275_ema_na_ar <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AR_AA_z + Age_c + demo_child_sex + (1 | site) + (1 | ID),
+                zi = ~ .,
+  data = df_150275_cz_ema,
+  family=gaussian, REML=TRUE)
+# glmmTMB:::Anova.glmmTMB(model_150275_ema_na)
+
+model_275425_ema_na <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + (1 | ID) + site,
+                                   zi = ~ .,
+  data = df_275425_pz_ema,
+  family=gaussian, REML=TRUE)
+
+
+model_275425_ema_na_AR <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AR_AA_z + Age_c + demo_child_sex + (1 | ID) + (1 | site),
+                                   zi = ~ .,
+  data = df_275425_pz_ema,
+  family=gaussian, REML=TRUE)
+
+model_275425_ema_na_AR_pa <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AR_AA_z + Age_c + demo_child_sex + pa + (1 | ID) + (1 | site),
+                                   zi = ~ .,
+  data = df_275425_pz_ema,
+  family=gaussian, REML=TRUE)
+
+# PLOTS
+plot_150275_adi_na <- ggpredict(model_150275_ema_na, terms = c("AA_AR_z","ADI_NATRANK_z"))%>% 
+  plot() + 
+  theme_apa() +
+  labs(x=expression("Acceptance RewP"[resid]), y="Mean negative affect (cubed root)", color="SES", linetype="SES", title="") +
+  scale_color_manual(values=c('orange','white','darkblue'), labels=c('-SD', 'Mean','+SD')) + 
+  scale_fill_manual(values=c('orange','white','darkblue')) +
+  theme(legend.position = "none")
+
+plot_275425_adi_na_rej <- ggpredict(model_275425_ema_na_AR, terms = c("AR_AA_z","ADI_NATRANK_z")) %>%
+  plot() + 
+  theme_apa() +
+  labs(x=expression("Rejection P300"[resid]), y="Mean negative affect (cubed root)", color="SES", linetype="SES", title="") +
+  scale_color_manual(values=c('orange','white','darkblue'), labels=c('-SD', '+SD')) + 
+  scale_fill_manual(values=c('orange','white','darkblue')) +
+  theme(legend.position = "none", element_text())
+
+```
+
+```{r}
+rewp_na_stat <- c(tidy(model_150275_ema_na) %>% 
+                    filter(effect == "fixed", component == "cond", term == "ADI_NATRANK_z:AA_AR_z"),
+                  as.data.frame(confint(model_150275_ema_na)) %>% 
+                    rownames_to_column("row_name") %>% 
+                    filter(row_name == "cond.ADI_NATRANK_z:AA_AR_z") %>% 
+                       mutate(lower = round(`2.5 %`,2), upper=round(`97.5 %`,2)) %>% 
+                       select(lower,upper))
+
+rewp_na_ar_stat <- c(tidy(model_150275_ema_na_ar) %>% 
+                    filter(effect == "fixed", component == "cond", term == "ADI_NATRANK_z:AR_AA_z"),
+                  as.data.frame(confint(model_150275_ema_na_ar)) %>% 
+                    rownames_to_column("row_name") %>% 
+                    filter(row_name == "cond.ADI_NATRANK_z:AR_AA_z") %>% 
+                       mutate(lower = round(`2.5 %`,2), upper=round(`97.5 %`,2)) %>% 
+                       select(lower,upper))
+
+p300_na_stat <- c(tidy(model_275425_ema_na) %>%
+                    filter(effect == "fixed", component == "cond", term == "ADI_NATRANK_z:AA_AR_z"),
+                  as.data.frame(confint(model_275425_ema_na)) %>%
+                    rownames_to_column("row_name") %>%
+                    filter(row_name == "cond.ADI_NATRANK_z:AA_AR_z") %>%
+                       mutate(lower = round(`2.5 %`,2), upper=round(`97.5 %`,2)) %>%
+                       select(lower,upper))
+
+p300_na_ar_stat <- c(tidy(model_275425_ema_na_AR) %>% 
+                       filter(effect == "fixed", component == "cond", term == "ADI_NATRANK_z:AR_AA_z"),
+                     as.data.frame(confint(model_275425_ema_na_AR)) %>% 
+                       rownames_to_column("row_name") %>% 
+                       filter(row_name == "cond.ADI_NATRANK_z:AR_AA_z") %>% 
+                       mutate(lower = round(`2.5 %`,2), upper=round(`97.5 %`,2)) %>% 
+                       select(lower,upper))
+
+p300_na_ar_pa_stat <- c(tidy(model_275425_ema_na_AR_pa) %>% 
+                       filter(effect == "fixed", component == "cond", term == "ADI_NATRANK_z:AR_AA_z"),
+                     as.data.frame(confint(model_275425_ema_na_AR_pa)) %>% 
+                       rownames_to_column("row_name") %>% 
+                       filter(row_name == "cond.ADI_NATRANK_z:AR_AA_z") %>% 
+                       mutate(lower = round(`2.5 %`,2), upper=round(`97.5 %`,2)) %>% 
+                       select(lower,upper))
+```
+
+```{r}
+## REWP
+mean_ses <- mean(df_150275_cz_ema$ADI_NATRANK_z, na.rm=TRUE)
+sd_ses <- sd(df_150275_cz_ema$ADI_NATRANK_z, na.rm=TRUE)
+SESa <- mean_ses + sd_ses
+SESb <- mean_ses - sd_ses
+SES_list <- list(ADI_NATRANK_z=round(c(SESa,SESb),2)) 
+######## ACC > REJ ######## 
+m_rewp_acc <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + (1 | ID) + (1 | site),
+        zi = ~ .,
+  data = df_150275_cz_ema,
+  family=gaussian, REML=TRUE)
+
+m_rewp_acc_ss <- emtrends(m_rewp_acc, pairwise ~ADI_NATRANK_z, var="AA_AR_z",at=SES_list, adjust="none")|> test()
+# With covariates
+# m_rewp_acc_cov_ss <- emtrends(model_150275_ema_na_cov, pairwise ~ADI_NATRANK_c, var="AA_AR_c",at=SES_list, adjust="none")|> test()
+
+## P300
+mean_ses <- mean(df_275425_pz_ema$ADI_NATRANK_z, na.rm=TRUE)
+sd_ses <- sd(df_275425_pz_ema$ADI_NATRANK_z, na.rm=TRUE)
+SESa <- mean_ses + sd_ses
+SESb <- mean_ses - sd_ses
+SES_list <- list(ADI_NATRANK_z=round(c(SESa,SESb),2)) 
+
+######## ACC > REJ ######## 
+#m_p300_acc <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + pa + (1 | ID) + site,
+#        zi = ~ .,
+#  data = df_275425_pz_ema,
+#  family=gaussian, REML=TRUE)
+#
+#m_p300_acc_ss <- emtrends(m_p300_acc, pairwise ~ADI_NATRANK_z, var="AA_AR_z",at=SES_list, adjust="none")|> test()
+#m_p300_acc_cov_ss <- emtrends(model_275425_ema_na_cov, pairwise ~ADI_NATRANK_c, var="AA_AR_c",at=SES_list, adjust="none")|> test()
+
+######## REJ > ACC ######## 
+mean_ses <- mean(df_275425_pz_ema$ADI_NATRANK_z, na.rm=TRUE)
+sd_ses <- sd(df_275425_pz_ema$ADI_NATRANK_z, na.rm=TRUE)
+SESa <- mean_ses + sd_ses
+SESb <- mean_ses - sd_ses
+SES_list <- list(ADI_NATRANK_z=round(c(SESa,SESb),2)) 
+
+m_p300_rej <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AR_AA_z + Age_c + demo_child_sex + pa + (1 | ID) + (1 | site),
+        zi = ~ .,
+  data = df_275425_pz_ema,
+  family=gaussian, REML=TRUE)
+# glmmTMB:::Anova.glmmTMB(m_p300_rej)
+
+m_p300_rej_ss <- emtrends(m_p300_rej, pairwise ~ADI_NATRANK_z, var="AR_AA_z",at=SES_list, adjust="none")|> test()
+# m_p300_rej_cov_ss <- emtrends(model_275425_ema_na_AR_cov, pairwise ~ADI_NATRANK_c, var="AR_AA_c",at=SES_list, adjust="none")|> test()
+```
+
+```{r, include=TRUE, results='asis', fig.cap = 'A) Relationship between SES and brain responses to acceptance (relative to rejection) for RewP~resid~ and P300~resid~ ERP components. B) Interactions for which SES significantly moderated association between brain responses to acceptance or rejection and negative affect. RewP: no simple slopes significant. P300: simple slope significant for SES -1 standard deviation below the mean. Note: All plots use residualized scores, such that "Acceptance RewP" indicates responses to acceptance residualized for rejection, and vice versa.', fig.height=7, fig.width=9}
+
+adi_plots_scatter <- ggarrange(scatterplot_150275_adi + 
+                                       rremove("xlab") + rremove("x.text") + 
+                                       coord_cartesian(xlim=c(0,100), ylim=c(-3,4)) +
+                                       theme(text = element_text(size=14)) + 
+                                       annotate("text", x=50, y=3.4, 
+    label = TeX(paste0(str_sub(apa_print(rewp_aaar_model)$full_result$ADI_NATRANK_z, 1, 36),str_sub(apa_print(rewp_aaar_model)$full_result$ADI_NATRANK_z, 54, 63))), 
+                                                color = "black", rot = 0, size=4),
+                                     scatterplot_275425_adi + 
+                                       coord_cartesian(xlim=c(0,100), ylim=c(-3,4)) +
+                                       theme(text = element_text(size=14)) + 
+                                       annotate("text", x=50, y=3.4, 
+     label = TeX(paste0(str_sub(apa_print(p3_aaar_model)$full_result$ADI_NATRANK_z, 1, 36),str_sub(apa_print(p3_aaar_model)$full_result$ADI_NATRANK_z, 54, 63))), 
+                                                color = "black", rot = 0, size=4),
+    common.legend = TRUE, legend = "bottom",
+    ncol = 1, nrow = 2,
+    align="v")
+adi_plots_scatter <- annotate_figure(adi_plots_scatter, 
+                                   left=text_grob("Mean amplitude (µV) to acceptance", color = "black", rot = 90, size=12))
+
+model_150275_ema_na_stats <- filter(tidy(model_150275_ema_na),term=="ADI_NATRANK_z:AA_AR_z" & component=="cond")
+model_275425_ema_na_AR_pa_stats <- filter(tidy(model_275425_ema_na_AR_pa),term=="ADI_NATRANK_z:AR_AA_z" & component=="cond")
+
+adi_plots_na <- ggarrange(plot_150275_adi_na + coord_cartesian(xlim=c(-4,3), ylim=c(1.5,3.5)) + rremove("ylab") + annotate("text", x=0, y=3.5, 
+                                                label = paste0("b= ",round(model_150275_ema_na_stats$estimate,3), 
+                                                               ", p= ",round(model_150275_ema_na_stats$p.value,3)),
+                                                color = "black", rot = 0, size=4)  
+                                  + annotate("text", x=-2, y=1.75, 
+                                                label = paste0("b = ",round(m_rewp_acc_ss$emtrends[1,2],2), 
+                                                               " p = ",round(m_rewp_acc_ss$emtrends[1,6],2)),
+                                                color = "darkblue", rot = 0, size=4)
+                                  + annotate("text", x=-2, y=3.25, 
+                                                label = paste0("b = ",round(m_rewp_acc_ss$emtrends[2,2],2), 
+                                                               " p = ",round(m_rewp_acc_ss$emtrends[2,6],2)),
+                                                color = "orange", rot = 0, size=4),
+                          plot_275425_adi_na_rej + coord_cartesian(xlim=c(-3,3), ylim=c(1.5,3.5)) + rremove("ylab") + annotate("text", x=0, y=3.5, 
+                                                label = paste0("b= ",round(model_275425_ema_na_AR_pa_stats$estimate,3), 
+                                                               ", p= ",round(model_275425_ema_na_AR_pa_stats$p.value,3)),
+                                                color = "black", rot = 0, size=4)  
+                                 + annotate("text", x=-1, y=3.25, 
+                                                label = paste0("b = ",round(m_p300_rej_ss$emtrends[1,2],2), 
+                                                               " p = ",round(m_p300_rej_ss$emtrends[1,6],2)),
+                                                color = "darkblue", rot = 0, size=4)
+                                  + annotate("text", x=-1, y=1.75, 
+                                                label = paste0("b = ",round(m_p300_rej_ss$emtrends[2,2],2), 
+                                                               " p = ",round(m_p300_rej_ss$emtrends[2,6],2)),
+                                                color = "orange", rot = 0, size=4),
+    # labels = c("A","B"),
+    # label.x = c(rep(.04,4)),
+    # label.y = c(rep(1,4)),
+    heights = c(2, 2),
+    common.legend = TRUE, legend = "right",
+    ncol = 1, nrow = 2,
+    align="v")
+adi_plots_na <- annotate_figure(adi_plots_na, left=text_grob("Mean negative affect (cubed root)", rot=90, color = "black", size=14))
+
+adi_plots <- cowplot::plot_grid(adi_plots_scatter, adi_plots_na,
+          labels = c("A","B"),
+          ncol = 2, nrow = 1,
+          rel_heights = c(1,1),
+          rel_width=c(2.5,3),
+          align="v")
+adi_plots
+# ggsave("../figures/adi_plots_na.png", adi_plots_na, width=11, height=7)
+```
+
+```{r}
+paste0("N = ",sum(complete.cases(df_150275_cz$AA_AR) & complete.cases(df_150275_cz$addi_total_z)))
+paste0("r RewP and ADDI: ", round(corr.test(df_150275_cz$AA_AR, df_150275_cz$addi_total_z)$r,2))
+paste0("r P300 and ADDI: ", round(corr.test(df_275425_pz$AA_AR, df_275425_pz$addi_total_z)$r,2))
+paste0("r P300 (AR_AA) and ADDI: ", round(corr.test(df_275425_pz$AR_AA, df_275425_pz$addi_total_z)$r,2))
+paste0("r SES and ADDI: ", round(corr.test(df_150275_cz$ADI_NATRANK, df_150275_cz$addi_total)$r,2))
+```
+
+```{r}
+model_150275_addi <- lmer(AA_AR_z ~ addi_total_z + (1 | site), df_150275_cz)
+
+# Scatter plot
+rewp_aaar_model_disc <- lm(formula = AA_AR_z ~ addi_total_z + site, data = df_150275_cz)
+df_150275_cz_model <- df_150275_cz %>%
+  filter(complete.cases(addi_total_z), complete.cases(site))
+df_150275_cz_model$predicted = predict(rewp_aaar_model_disc)
+
+scatterplot_150275_disc <- ggplot(df_150275_cz_model, aes(x=addi_total, y=AA_AR_z)) +
+  geom_point(colour="black") +
+  stat_smooth(method="lm", se=TRUE) +
+  theme_apa() +
+  labs(x="Discrimination (covarying for site)", y=expression("RewP"[resid])) +
+  theme()
+
+rewp_aaar_model_disc_nooutliers <- lm(formula = AA_AR_z ~ addi_total_z + site, data = df_150275_cz_no_outliers)
+df_150275_cz_model <- df_150275_cz_no_outliers %>%
+  filter(complete.cases(addi_total_z), complete.cases(site))
+df_150275_cz_model$predicted = predict(rewp_aaar_model_disc_nooutliers)
+
+scatterplot_150275_disc_no_outliers <- ggplot(df_150275_cz_model, aes(x=predicted, y=AA_AR_z)) +
+  geom_point(colour="black") +
+  stat_smooth(method="lm", se=TRUE) +
+  theme_apa() +
+  labs(x="Discrimination (covarying for site)", y=expression("RewP"[resid])) +
+  theme()
+```
+
+```{r}
+model_275425_addi <- lm(AA_AR_z ~ addi_total_z + site, df_275425_pz)
+
+# Scatter plot
+p3_aaar_model_disc <- lm(formula = AA_AR_z ~ addi_total_z + Age_c + demo_child_sex + site + IDAS_depression, data = df_275425_pz_strain)
+df_275425_pz_model <- df_275425_pz %>%
+  filter(complete.cases(addi_total_z), complete.cases(site))
+# df_275425_pz_model$predicted = predict(p3_aaar_model_disc)
+
+scatterplot_275425_disc <- ggplot(df_275425_pz_model, aes(x=addi_total, y=AA_AR_z)) +
+  geom_point(colour="black") +
+  stat_smooth(method="lm", se=TRUE) +
+  theme_apa() +
+  labs(x="Discrimination", y=expression("P300"[resid])) +
+  theme()
+
+p3_aaar_model_disc_no_outliers <- lm(formula = AA_AR_z ~ addi_total_z + site, data = df_275425_pz_no_outliers)
+df_275425_pz_model <- df_275425_pz_no_outliers %>%
+  filter(complete.cases(addi_total_z), complete.cases(site))
+df_275425_pz_model$predicted = predict(p3_aaar_model_disc_no_outliers)
+
+scatterplot_275425_disc_no_outliers <- ggplot(df_275425_pz_model, aes(x=predicted, y=AA_AR_z)) +
+  geom_point(colour="black") +
+  stat_smooth(method="lm", se=TRUE) +
+  theme_apa() +
+  labs(x="Discrimination (covarying for site)", y=expression("P300"[resid])) +
+  theme()
+```
+
+```{r, include=TRUE, results='asis', fig.cap="Relationship between self-reported discrimination distress and brain responses to acceptance (relative to rejection) for both the RewP and P300 ERP components.", fig.width=5, fig.height=5}
+addi_plots_nocov <- cowplot::plot_grid(scatterplot_150275_disc + 
+                                ylab(expression("RewP"[resid])) +
+                                coord_cartesian(xlim = c(-0.5, 31), ylim=c(-3,4)) +
+                                rremove("xlab") + 
+                                annotate("text", x=15, y=3.75, label = TeX(paste0(str_sub(apa_print(rewp_aaar_model_disc)$full_result$addi_total_z, 1, 36),str_sub(apa_print(rewp_aaar_model_disc)$full_result$addi_total_z, 56, 67))), color = "black", rot = 0, size=4)+
+                                theme(axis.text.x = element_blank()),
+                              scatterplot_275425_disc + 
+                                ylab(expression("P300"[resid])) +
+                                coord_cartesian(xlim = c(-0.5, 31), ylim=c(-3,4)) +
+                                rremove("xlab") +
+                                annotate("text", x=15, y=3.75, label = TeX(paste0(str_sub(apa_print(p3_aaar_model_disc)$full_result$addi_total_z, 1, 36),str_sub(apa_print(p3_aaar_model_disc)$full_result$addi_total_z, 56, 67))), color = "black", rot = 0, size=4),
+    labels = c("A","B"),
+    nrow = 2, ncol=1)
+addi_plots_nocov <- annotate_figure(addi_plots_nocov, 
+                                    left=text_grob("Mean amplitude (µV)\n to acceptance", color = "black", rot = 90, size=14),
+                                    bottom=text_grob("Self-reported discrimination", color = "black", rot = 0, size=14))
+
+addi_plots_nocov
+```
+
+```{r}
+model_150275_hisp <- lm(AA_AR_z ~ demo_child_hispanic + site, df_150275_cz)
+model_275425_hisp <- lm(AA_AR_z ~ demo_child_hispanic + site, df_275425_pz)
+
+df_150275_cz_race <- df_150275_cz %>%
+  mutate(demo_child_race = as.factor(demo_child_race)) %>%
+  # filter(demo_child_race == "White" | demo_child_race=="Black or African American" |
+  #        demo_child_race == "Asian" | demo_child_race=="More than one race") %>%
+  mutate(demo_child_race = relevel(demo_child_race, ref = "White"),
+         demo_child_minority = case_match(demo_child_race, "White" ~ "no",
+                                          NA ~ NA,
+                                          .default = "yes"))
+df_275425_pz_race <- df_275425_pz %>%
+  mutate(demo_child_race = as.factor(demo_child_race)) %>%
+  # filter(demo_child_race == "White" | demo_child_race=="Black or African American" |
+  #        demo_child_race == "Asian" | demo_child_race=="More than one race") %>%
+  mutate(demo_child_race = relevel(demo_child_race, ref = "White"),
+         demo_child_minority = case_match(demo_child_race, "White" ~ "no",
+                                          NA ~ NA,
+                                          .default = "yes"))
+
+model_150275_race <- lm(AA_AR_z ~ demo_child_minority + site, df_150275_cz_race)
+model_275425_race <- lm(AA_AR_z ~ demo_child_minority + site, df_275425_pz_race)
+```
