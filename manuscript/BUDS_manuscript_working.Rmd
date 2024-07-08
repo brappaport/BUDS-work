@@ -11,9 +11,15 @@ author:
     role:   # Contributorship roles (e.g., CRediT, https://casrai.org/credit/)
       - "Conceptualization"
       - "Formal analysis"
+      - "Methodology"
       - "Writing - Original Draft Preparation"
       - "Writing - Review & Editing"
   - name    : "James E. Glazer"
+    affiliation : "1"
+    role:
+      - "Methodology"
+      - "Writing - Review & Editing"
+  - name    : "Allison M. Letkiewicz"
     affiliation : "1"
     role:
       - "Methodology"
@@ -136,6 +142,7 @@ knitr::opts_chunk$set(set.seed(312), warning=FALSE, message=FALSE, include=FALSE
 # General tools
   library(tidyverse)  #plotting/cleaning, etc.
   library(scipub) #demo table
+  library(r2symbols) # symbols inline text
   library(papaja)
   library(workflowr)  #helps with workflow
 
@@ -361,7 +368,7 @@ Importantly, the structure of the task results in four within-subject conditions
 
 ### EEG recording and processing
 
-Continuous EEG data were recorded during the Chatroom task using the 32-channel ActiCHamp from Brain Products (Brain Products, Munich, Germany), digitized at a 500 Hz sampling rate, and referenced online to FCz. Vertical and horizontal EOG data were recorded, and electrode impedances were maintained below 20 K$\Omega$. EEG data were processed offline using EEGLAB version 2022.1 [@delormeEEGLABOpenSource2004] and ERPLAB version 9.00 [@lopez-calderonERPLABOpensourceToolbox2014] toolboxes in MATLAB version r2022b. Independent component analysis (ICA) and automated identification (ICLabel version 1.4) was used to identify and correct for ocular artifacts prior to artifact rejection. Data were re-referenced offline using an average mastoid reference. A notch filter (60 Hz) and a second-order digital Butterworth filter with a bandpass from 0.1 to 30 Hz were applied. Trials were epoched from -200 to 2000ms and baseline-adjusted by subtracting the average amplitude for 200 ms prior to the stimulus onset (-200 to 0ms).
+Continuous EEG data were recorded during the Chatroom task using the 32-channel ActiCHamp from Brain Products (Brain Products, Munich, Germany), digitized at a 500 Hz sampling rate, and referenced online to FCz. Vertical and horizontal EOG data were recorded, and electrode impedances were maintained below 20 K`r symbol("Omega")` EEG data were processed offline using EEGLAB version 2022.1 [@delormeEEGLABOpenSource2004] and ERPLAB version 9.00 [@lopez-calderonERPLABOpensourceToolbox2014] toolboxes in MATLAB version r2022b. Independent component analysis (ICA) and automated identification (ICLabel version 1.4) was used to identify and correct for ocular artifacts prior to artifact rejection. Data were re-referenced offline using an average mastoid reference. A notch filter (60 Hz) and a second-order digital Butterworth filter with a bandpass from 0.1 to 30 Hz were applied. Trials were epoched from -200 to 2000ms and baseline-adjusted by subtracting the average amplitude for 200 ms prior to the stimulus onset (-200 to 0ms).
 
 ```{r}
 segments <- read.csv(here::here("../data/eeg_processing/SegmentCount/summary_erp_bin_RewP.csv"))
