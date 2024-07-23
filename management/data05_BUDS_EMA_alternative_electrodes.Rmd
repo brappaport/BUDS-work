@@ -468,14 +468,14 @@ df_275425_pz_ema <- residualizing(df_275425_pz_strain)
 
 # Save files
 ```{r}
-for (d in c(50150, 150275, 275425)) {
-  print(eval(parse(text=paste0('
-  save(df_',d,'_cz,
-  df_',d,'_cz_strain, 
-  df_',d,'_cz_ema, 
-  file=here::here("./data/df_',d,'.RData"))
-  '))))
-}
+# for (d in c(50150, 150275, 275425)) {
+#   print(eval(parse(text=paste0('
+#   save(df_',d,'_cz,
+#   df_',d,'_cz_strain, 
+#   df_',d,'_cz_ema, 
+#   file=here::here("./data/df_',d,'.RData"))
+#   '))))
+# }
 
 save(df_50150_fz, df_50150_fz_strain, df_50150_fz_ema, file=here::here("./data/df_50150.RData"))
 save(df_150275_cz, df_150275_cz_strain, df_150275_cz_ema, file=here::here("./data/df_150275.RData"))

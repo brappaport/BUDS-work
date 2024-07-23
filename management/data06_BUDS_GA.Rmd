@@ -46,7 +46,7 @@ here <- here::here
 ```{r}
   here::i_am("./management/data06_BUDS_GA.Rmd")
 # Set import directory
-erp_data_dir <- here::here("data/eeg_processing/")
+erp_data_dir <- here::here("/projects/p31735/BUDS/eeg_processing/Scripts/")
 ```
 
 ```{r}
@@ -261,9 +261,9 @@ library(eegUtils)
 # module load R/4.2.0
 # R
 # install.packages("hdf5r")
-# EEG <- import_set(paste0(erp_data_dir, "1000_continuous_icaed.set"))
-# chanlocs <- EEG$chan_info
-# channels <- EEG$chan_info$electrode
+EEG <- import_set(paste0(erp_data_dir, "1000_continuous_icaed.set"))
+chanlocs <- EEG$chan_info
+channels <- EEG$chan_info$electrode
 
 df_ga <- as.data.frame(NA)
 for (c in channels[-1]) {
@@ -286,6 +286,8 @@ for (c in channels[-1]) {
   cat(paste0("Component ", c, " finished.\n"))
 }
 
+
+
 eeg.map_for_plotting <- df_ga %>%
   dplyr::select(-c("NA")) %>%
   filter(complete.cases(Acc_All)) %>%
@@ -296,7 +298,28 @@ eeg.map_for_plotting <- df_ga %>%
   group_by(Condition, electrode) %>% #grouping required for summarise in the next step
   dplyr::summarise(amplitude = mean(ERP)) #calculate mean across subjects
 
-topoplot(eeg.map_for_plotting, palette="RdBu", chanLocs=chanlocs, contour=FALSE, interp_limit="head", chan_marker="name")
+
+# erp_data_dir <- here::here("/projects/p31735/BUDS/eeg_processing/DataICA_cleaned/")
+# EEG <- import_set(paste0(erp_data_dir, "1114_continuous_icacleaned.set"))
+library(eegUtils)
+chanlocs <- electrode_locations(read.csv(here('data/topo_plots/chanlocs32.csv')), montage="biosemi64")
+ga_acc <- read.delim(here('data/topo_plots/ga_highvalue_acceptance_AA (Acc-Acc).txt'))%>%
+  pivot_longer(cols=c(-time),
+               values_to ="amplitude", names_to="electrode")
+ga_rej <- read.delim(here('data/topo_plots/ga_highvalue_rejection_AR (Acc-Rej).txt'))%>%
+  pivot_longer(cols=c(-time),
+               values_to ="amplitude", names_to="electrode")
+ga_diff <- read.delim(here('data/topo_plots/ga_highvalue_acc_rej_difference_BIN5=B1-B2.txt'))%>%
+  pivot_longer(cols=c(-time),
+               values_to ="amplitude", names_to="electrode")
+summarise_eeg_ga <- function(data, window) {
+data %>%
+  dplyr::filter(time>window[1] & time<window[2]) %>%
+  group_by(electrode) %>%
+  dplyr::summarise(amplitude = mean(amplitude)) #calculate mean across subjects
+}
+
+topoplot(summarise_eeg_ga(ga_acc,c(50,150)), chanLocs=chanlocs, contour=FALSE, interp_limit="head", chan_marker="name") 
 
 save(df_ga, eeg.map_for_plotting, file=here("./data/eeg_map_for_plotting_without_locs.RData"))
 # save(EEG, df_ga, eeg.map_for_plotting, file=here("./data/eeg_map_for_plotting.RData"))

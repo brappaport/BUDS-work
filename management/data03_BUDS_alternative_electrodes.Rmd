@@ -601,10 +601,10 @@ df_50150_fz <- merge_self_report_with_erp(data=df_50150, electrode=c("Fz"),
 ## Split-half
 ### Even
 ```{r}
-df_even_50150_cz <- df_even_50150 %>%
-  dplyr::select(ID, contains("_Cz"))
-colnames(df_even_50150_cz) <- c("ID","Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All")
-df_even_50150_cz <- df_even_50150_cz[,1:7] %>%
+df_even_50150_fz <- df_even_50150 %>%
+  dplyr::select(ID, contains("_Fz"))
+colnames(df_even_50150_fz) <- c("ID","Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All")
+df_even_50150_fz <- df_even_50150_fz[,1:7] %>%
   full_join(BUDS_cleaning05, by="ID") %>%
   filter(!is.na(Acc_All)) %>%
   mutate(A_all = stdres(lm(Acc_All ~ Rej_All, .)),
@@ -621,10 +621,10 @@ df_even_150275_cz <- df_even_150275_cz[,1:7] %>%
          AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, .)),
          AR_AA = stdres(lm(Acc_Rej ~ Acc_Acc, .)))
 
-df_even_275425_cz <- df_even_275425 %>%
-  dplyr::select(ID, contains("_Cz"))
-colnames(df_even_275425_cz) <- c("ID","Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All")
-df_even_275425_cz <- df_even_275425_cz[,1:7] %>%
+df_even_275425_pz <- df_even_275425 %>%
+  dplyr::select(ID, contains("_Pz"))
+colnames(df_even_275425_pz) <- c("ID","Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All")
+df_even_275425_pz <- df_even_275425_pz[,1:7] %>%
   full_join(BUDS_cleaning05, by="ID") %>%
   filter(!is.na(Acc_All)) %>%
   mutate(A_all = stdres(lm(Acc_All ~ Rej_All, .)),
@@ -634,10 +634,10 @@ df_even_275425_cz <- df_even_275425_cz[,1:7] %>%
 
 ### Odd
 ```{r}
-df_odd_50150_cz <- df_odd_50150 %>%
-  dplyr::select(ID, contains("_Cz"))
-colnames(df_odd_50150_cz) <- c("ID","Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All")
-df_odd_50150_cz <- df_odd_50150_cz[,1:7] %>%
+df_odd_50150_fz <- df_odd_50150 %>%
+  dplyr::select(ID, contains("_Fz"))
+colnames(df_odd_50150_fz) <- c("ID","Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All")
+df_odd_50150_fz <- df_odd_50150_fz[,1:7] %>%
   full_join(BUDS_cleaning05, by="ID") %>%
   filter(!is.na(Acc_All)) %>%
   mutate(A_all = stdres(lm(Acc_All ~ Rej_All, .)),
@@ -654,10 +654,10 @@ df_odd_150275_cz <- df_odd_150275_cz[,1:7] %>%
          AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, .)),
          AR_AA = stdres(lm(Acc_Rej ~ Acc_Acc, .)))
 
-df_odd_275425_cz <- df_odd_275425 %>%
-  dplyr::select(ID, contains("_Cz"))
-colnames(df_odd_275425_cz) <- c("ID","Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All")
-df_odd_275425_cz <- df_odd_275425_cz[,1:7] %>%
+df_odd_275425_pz <- df_odd_275425 %>%
+  dplyr::select(ID, contains("_Pz"))
+colnames(df_odd_275425_pz) <- c("ID","Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All")
+df_odd_275425_pz <- df_odd_275425_pz[,1:7] %>%
   full_join(BUDS_cleaning05, by="ID") %>%
   filter(!is.na(Acc_All)) %>%
   mutate(A_all = stdres(lm(Acc_All ~ Rej_All, .)),
@@ -687,8 +687,8 @@ geocode_data_with_adi$ADI_NATRANK <- as.numeric(as.character(geocode_data_with_a
 ### Manually enter ADI values for those missing it (based on surrounding neighborhoods)
 Drawn from https://www.neighborhoodatlas.medicine.wisc.edu/mapping
 ```{r}
-geocode_data_with_adi[geocode_data_with_adi$ID==1008,"ADI_NATRANK"] <- 1 # but on college campus
-geocode_data_with_adi[geocode_data_with_adi$ID==1009,"ADI_NATRANK"] <- 1 # but on college campus, though this address was their family address before college per Lili
+# geocode_data_with_adi[geocode_data_with_adi$ID==1008,"ADI_NATRANK"] <- 1 # but on college campus
+# geocode_data_with_adi[geocode_data_with_adi$ID==1009,"ADI_NATRANK"] <- 1 # but on college campus, though this address was their family address before college per Lili
 geocode_data_with_adi[geocode_data_with_adi$ID==1010,"ADI_NATRANK"] <- 24
 geocode_data_with_adi[geocode_data_with_adi$ID==1043,"ADI_NATRANK"] <- 6 # this is a very small side street that only exist in one tract
 geocode_data_with_adi[geocode_data_with_adi$ID==1060,"ADI_NATRANK"] <- 4
@@ -704,17 +704,17 @@ geocode_data_with_adi[geocode_data_with_adi$ID==1122,"ADI_NATRANK"] <- 23
 geocode_data_with_adi[geocode_data_with_adi$ID==9005,"ADI_NATRANK"] <- 13
 geocode_data_with_adi[geocode_data_with_adi$ID==9006,"ADI_NATRANK"] <- 22
 geocode_data_with_adi[geocode_data_with_adi$ID==9010,"ADI_NATRANK"] <- 46
-geocode_data_with_adi[geocode_data_with_adi$ID==9039,"ADI_NATRANK"] <- 44 # previously 28 but on college campus
+geocode_data_with_adi[geocode_data_with_adi$ID==9039,"ADI_NATRANK"] <- 44
 geocode_data_with_adi[geocode_data_with_adi$ID==9044,"ADI_NATRANK"] <- (21+29)/2 # but on college campus
 geocode_data_with_adi[geocode_data_with_adi$ID==9052,"ADI_NATRANK"] <- 29
-geocode_data_with_adi[geocode_data_with_adi$ID==9056,"ADI_NATRANK"] <- 7 # previously NA but on college campus
+geocode_data_with_adi[geocode_data_with_adi$ID==9056,"ADI_NATRANK"] <- 7 # previously NA
 geocode_data_with_adi[geocode_data_with_adi$ID==9059,"ADI_NATRANK"] <- (21+29)/2 # but on college campus
-geocode_data_with_adi[geocode_data_with_adi$ID==9060,"ADI_NATRANK"] <- 57 # but on on college campus but previous address was in Mexico
+geocode_data_with_adi[geocode_data_with_adi$ID==9060,"ADI_NATRANK"] <- 57 # on on college campus but previous address was in Mexico
 geocode_data_with_adi[geocode_data_with_adi$ID==9069,"ADI_NATRANK"] <- 3
 geocode_data_with_adi[geocode_data_with_adi$ID==9082,"ADI_NATRANK"] <- 54
-geocode_data_with_adi[geocode_data_with_adi$ID==9091,"ADI_NATRANK"] <- 21 # previously 28 but on college campus
-geocode_data_with_adi[geocode_data_with_adi$ID==9127,"ADI_NATRANK"] <- 63 # current address is on college campus, this reflects participant family's address before college
-geocode_data_with_adi[geocode_data_with_adi$ID==9128,"ADI_NATRANK"] <- 73 # current address is on college campus, this reflects participant family's address before college
+geocode_data_with_adi[geocode_data_with_adi$ID==9091,"ADI_NATRANK"] <- 21
+geocode_data_with_adi[geocode_data_with_adi$ID==9127,"ADI_NATRANK"] <- 63 # current address is on college campus, however this reflects participant family's address before college
+geocode_data_with_adi[geocode_data_with_adi$ID==9128,"ADI_NATRANK"] <- 73 # current address is on college campus, however this reflects participant family's address before college
 
 # 9027 and 9026 are siblings, so we are assuming that they live in the same address and thus have the same ADI
 geocode_data_with_adi[geocode_data_with_adi$ID==9027,"ADI_NATRANK"] <- geocode_data_with_adi[geocode_data_with_adi$ID==9026,"ADI_NATRANK"]
@@ -807,11 +807,11 @@ df_50150_fz_strain <- df_50150_fz %>%
 
 # Split-half
 ```{r}
-compute_split_half <- function(time_window) {
+compute_split_half <- function(time_window, component) {
   for (contrast in c("Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All","A_all","AA_AR","AR_AA")){
     eval(parse(text=paste0('
-    r_half_',time_window,'',contrast,' <- cor(df_even_',time_window,'_cz$',contrast,', df_odd_',time_window,'_cz$',contrast,', method="spearman", use="pairwise")
-    r_half_',time_window,'ci_',contrast,' <- ci_cor(df_even_',time_window,'_cz$',contrast,', df_odd_',time_window,'_cz$',contrast,', method="spearman", type = "bootstrap", R=1000)
+    r_half_',time_window,'',contrast,' <- cor(df_even_',time_window,'_',component,'$',contrast,', df_odd_',time_window,'_',component,'$',contrast,', method="spearman", use="pairwise")
+    r_half_',time_window,'ci_',contrast,' <- ci_cor(df_even_',time_window,'_',component,'$',contrast,', df_odd_',time_window,'_',component,'$',contrast,', method="spearman", type = "bootstrap", R=1000)
     r_sb_',time_window,'_cilower_',contrast,' <<- (2*r_half_',time_window,'ci_',contrast,'$interval[1])/(1+r_half_',time_window,'ci_',contrast,'$interval[1])
     r_sb_',time_window,'_ciupper_',contrast,' <<- (2*r_half_',time_window,'ci_',contrast,'$interval[2])/(1+r_half_',time_window,'ci_',contrast,'$interval[2])
     r_sb_',time_window,'_',contrast,' <<- (2*r_half_',time_window,'',contrast,')/(1+r_half_',time_window,'',contrast,')
@@ -819,9 +819,9 @@ compute_split_half <- function(time_window) {
 }
 }
 
-compute_split_half("50150")
-compute_split_half("150275")
-compute_split_half("275425")
+compute_split_half("50150","fz")
+compute_split_half("150275","cz")
+compute_split_half("275425","pz")
 
 spearman_brown <- data.frame(Time_windows=c("Cz 50-150ms","Cz 150-275ms","Cz 275-425ms"))
 spearman_brown$Acc_Acc <- c(r_sb_50150_Acc_Acc,r_sb_150275_Acc_Acc,r_sb_275425_Acc_Acc)
@@ -845,8 +845,8 @@ save(df_150275_cz, #df_150275_cz_long,
 
 save(geocode_data_with_adi, file=here::here("./data/geocode_data_with_adi.RData"))
 
-save(df_even_50150_cz, df_even_150275_cz, df_even_275425_cz, file=here::here("./data/BUDS_split_half_even.RData"))
-save(df_odd_50150_cz, df_odd_150275_cz, df_odd_275425_cz, file=here::here("./data/BUDS_split_half_odd.RData"))
+save(df_even_50150_fz, df_even_150275_cz, df_even_275425_pz, file=here::here("./data/BUDS_split_half_even.RData"))
+save(df_odd_50150_fz, df_odd_150275_cz, df_odd_275425_pz, file=here::here("./data/BUDS_split_half_odd.RData"))
 
 write.csv(spearman_brown, here::here("tables/spearman_brown.csv"))
 ```

@@ -332,10 +332,11 @@ demo_table$table <- demo_table$table[,-c(5,6)]
 sex_by_site <- table(df_275425_pz_strain$demo_child_sex, df_275425_pz_strain$site)
 # Make a new row
 new_row <- data.frame(Variable = "Female", 
-          "Columbia (N=90)" = paste0(sex_by_site[1,1], " (",round(sex_by_site[1,1]/sum(sex_by_site[,1]),4)*100,"%)"),
-          "Northwestern (N=70)" = paste0(sex_by_site[1,2], " (",round(sex_by_site[1,2]/sum(sex_by_site[,2]),4)*100,"%)"),
+          "New York, NY (N=90)" = paste0(sex_by_site[1,1], " (",round(sex_by_site[1,1]/sum(sex_by_site[,1]),4)*100,"%)"),
+          "Chicago, IL (N=70)" = paste0(sex_by_site[1,2], " (",round(sex_by_site[1,2]/sum(sex_by_site[,2]),4)*100,"%)"),
           Stat = "",
           es = "")
+colnames(demo_table$table) <- c("Variable", "NY (N=90)", "Chicago (N=70)", "Stat", "es")
 colnames(new_row) <- colnames(demo_table$table)
 # Place new row in correct position
 df_top <- demo_table$table[1:3, ]
@@ -346,13 +347,14 @@ demo_table2[3,1] <- "Male"
 
 demo_table2$Stat <- c(demo_table2$Stat[1:2],"$\\chi^2 = 0.58$","--","$\\chi^2 = 0.43$","$\\chi^2 = 10.57$",demo_table2$Stat[7:length(demo_table2$Stat)])
 
-demo_table2$Stat <- ifelse(demo_table2$Stat=="--", NA, ifelse(demo_table2$Stat=="-", NA, demo_table2$Stat))
-demo_table2$es <- ifelse(demo_table2$es=="--", NA, ifelse(demo_table2$es=="-", NA, demo_table2$es))
-demo_table2$`Northwestern (N=70)` <- ifelse(demo_table2$`Northwestern (N=70)`=="-", "0 (0.00%)", demo_table2$`Northwestern (N=70)`)
-  
+demo_table2$Statistic <- ifelse(demo_table2$Stat=="--", NA, ifelse(demo_table2$Stat=="-", NA, demo_table2$Stat))
+demo_table2$`Effect size` <- ifelse(demo_table2$es=="--", NA, ifelse(demo_table2$es=="-", NA, demo_table2$es))
+demo_table2$`Chicago (N=70)` <- ifelse(demo_table2$`Chicago (N=70)`=="-", "0 (0.00%)", demo_table2$`Chicago (N=70)`)
+demo_table2 <- demo_table2[,-c(4,5)]
+
 apa_table(demo_table2,
           caption="Demographics of samples and covariates",
-          note=demo_table$caption,
+          note=paste0("NY = New York, NY ,",demo_table$caption),
           align = c("p{8cm}", "p{2.5cm}", "p{2.5cm}","p{2cm}","p{1.5cm}"),
           stub_indents=list(`Sex-assigned-at-birth`=c(3:4), `Self-identified race`=c(6:12)),
           font_size="small",
@@ -416,8 +418,8 @@ img_plot <- ggplot() +
 figure_1 <- cowplot::plot_grid(img_plot, Cz_ga_aa_ar_plot, rating_plot,
           labels = c("A","B","C"),
           ncol = 1, nrow = 3,
-          rel_heights = c(2, 2, 2),
-          rel_widths = c(2, 1, 1))
+          rel_heights = c(2, 3, 2),
+          rel_widths = c(2, 2, 1))
 figure_1
 ```
 
@@ -479,12 +481,17 @@ scatterplot_275425_adi <- ggplot(df_275425_pz, aes(x=ADI_NATRANK, y=AA_AR_z)) +
   geom_point(colour="black") +
   stat_smooth(method="lm", se=TRUE) +
   theme_apa() +
-  labs(x="SES (percentile)", y=expression("Acceptance P300"[resid])) +
+  labs(x="SES (national percentile)", y=expression("P300"[resid])) +
   theme()
 ```
 
 ```{r}
 model_150275_ema_na <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + (1 | site) + (1 | ID),
+                zi = ~ .,
+  data = df_150275_cz_ema,
+  family=gaussian, REML=TRUE)
+
+model_150275_ema_na_pa <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + pa + site + (1 | ID),
                 zi = ~ .,
   data = df_150275_cz_ema,
   family=gaussian, REML=TRUE)
@@ -495,19 +502,32 @@ model_150275_ema_na_ar <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AR_AA_z + Age_c + de
   family=gaussian, REML=TRUE)
 # glmmTMB:::Anova.glmmTMB(model_150275_ema_na)
 
-model_275425_ema_na <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + (1 | ID) + site,
+model_275425_ema_na <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + (1 | site) + (1 | ID),
                                    zi = ~ .,
   data = df_275425_pz_ema,
   family=gaussian, REML=TRUE)
 
-
-model_275425_ema_na_AR <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AR_AA_z + Age_c + demo_child_sex + (1 | ID) + (1 | site),
+model_275425_ema_na_pa <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + pa + site + (1 | ID),
                                    zi = ~ .,
   data = df_275425_pz_ema,
   family=gaussian, REML=TRUE)
 
-model_275425_ema_na_AR_pa <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AR_AA_z + Age_c + demo_child_sex + pa + (1 | ID) + (1 | site),
+model_275425_ema_na_AR <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AR_AA_z + Age_c + demo_child_sex + (1 | site) + (1 | ID),
                                    zi = ~ .,
+  data = df_275425_pz_ema,
+  family=gaussian, REML=TRUE)
+
+model_275425_ema_na_AR_pa <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AR_AA_z + Age_c + demo_child_sex + pa + site + (1 | ID),
+                                   zi = ~ .,
+  data = df_275425_pz_ema,
+  family=gaussian, REML=TRUE)
+
+# Positive affect
+model_150275_ema_pa <- glmmTMB(pa ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + (1 | site) + (1 | ID),
+  data = df_150275_cz_ema,
+  family=gaussian, REML=TRUE)
+
+model_275425_ema_pa <- glmmTMB(pa ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + (1 | site) + (1 | ID),
   data = df_275425_pz_ema,
   family=gaussian, REML=TRUE)
 
@@ -518,7 +538,15 @@ plot_150275_adi_na <- ggpredict(model_150275_ema_na, terms = c("AA_AR_z","ADI_NA
   labs(x=expression("Acceptance RewP"[resid]), y="Mean negative affect (cubed root)", color="SES", linetype="SES", title="") +
   scale_color_manual(values=c('orange','white','darkblue'), labels=c('-SD', 'Mean','+SD')) + 
   scale_fill_manual(values=c('orange','white','darkblue')) +
-  theme(legend.position = "none")
+  theme(legend.position = "none", plot.title=element_blank())
+
+plot_275425_adi_na <- ggpredict(model_275425_ema_na, terms = c("AA_AR_z","ADI_NATRANK_z")) %>%
+  plot() + 
+  theme_apa() +
+  labs(x=expression("Acceptance P300"[resid]), y="Mean negative affect (cubed root)", color="SES", linetype="SES", title="") +
+  scale_color_manual(values=c('orange','white','darkblue'), labels=c('-SD', '+SD')) + 
+  scale_fill_manual(values=c('orange','white','darkblue')) +
+  theme(legend.position = "none", element_text(), plot.title=element_blank())
 
 plot_275425_adi_na_rej <- ggpredict(model_275425_ema_na_AR, terms = c("AR_AA_z","ADI_NATRANK_z")) %>%
   plot() + 
@@ -526,7 +554,7 @@ plot_275425_adi_na_rej <- ggpredict(model_275425_ema_na_AR, terms = c("AR_AA_z",
   labs(x=expression("Rejection P300"[resid]), y="Mean negative affect (cubed root)", color="SES", linetype="SES", title="") +
   scale_color_manual(values=c('orange','white','darkblue'), labels=c('-SD', '+SD')) + 
   scale_fill_manual(values=c('orange','white','darkblue')) +
-  theme(legend.position = "none", element_text())
+  theme(legend.position = "none", element_text(), plot.title=element_blank())
 
 ```
 
@@ -595,23 +623,15 @@ sd_ses <- sd(df_275425_pz_ema$ADI_NATRANK_z, na.rm=TRUE)
 SESa <- mean_ses + sd_ses
 SESb <- mean_ses - sd_ses
 SES_list <- list(ADI_NATRANK_z=round(c(SESa,SESb),2)) 
-
 ######## ACC > REJ ######## 
-#m_p300_acc <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + pa + (1 | ID) + site,
-#        zi = ~ .,
-#  data = df_275425_pz_ema,
-#  family=gaussian, REML=TRUE)
-#
-#m_p300_acc_ss <- emtrends(m_p300_acc, pairwise ~ADI_NATRANK_z, var="AA_AR_z",at=SES_list, adjust="none")|> test()
-#m_p300_acc_cov_ss <- emtrends(model_275425_ema_na_cov, pairwise ~ADI_NATRANK_c, var="AA_AR_c",at=SES_list, adjust="none")|> test()
+m_p300_acc <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + (1 | ID) + (1 | site),
+        zi = ~ .,
+  data = df_275425_pz_ema,
+  family=gaussian, REML=TRUE)
+# glmmTMB:::Anova.glmmTMB(m_p300_rej)
 
+m_p300_acc_ss <- emtrends(m_p300_acc, pairwise ~ADI_NATRANK_z, var="AA_AR_z",at=SES_list, adjust="none")|> test()
 ######## REJ > ACC ######## 
-mean_ses <- mean(df_275425_pz_ema$ADI_NATRANK_z, na.rm=TRUE)
-sd_ses <- sd(df_275425_pz_ema$ADI_NATRANK_z, na.rm=TRUE)
-SESa <- mean_ses + sd_ses
-SESb <- mean_ses - sd_ses
-SES_list <- list(ADI_NATRANK_z=round(c(SESa,SESb),2)) 
-
 m_p300_rej <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AR_AA_z + Age_c + demo_child_sex + pa + (1 | ID) + (1 | site),
         zi = ~ .,
   data = df_275425_pz_ema,
@@ -619,22 +639,21 @@ m_p300_rej <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AR_AA_z + Age_c + demo_child_sex
 # glmmTMB:::Anova.glmmTMB(m_p300_rej)
 
 m_p300_rej_ss <- emtrends(m_p300_rej, pairwise ~ADI_NATRANK_z, var="AR_AA_z",at=SES_list, adjust="none")|> test()
-# m_p300_rej_cov_ss <- emtrends(model_275425_ema_na_AR_cov, pairwise ~ADI_NATRANK_c, var="AR_AA_c",at=SES_list, adjust="none")|> test()
 ```
 
-```{r, include=TRUE, results='asis', fig.cap = 'A) Relationship between SES and brain responses to acceptance (relative to rejection) for RewP~resid~ and P300~resid~ ERP components. B) Interactions for which SES significantly moderated association between brain responses to acceptance or rejection and negative affect. RewP: no simple slopes significant. P300: simple slope significant for SES -1 standard deviation below the mean. Note: All plots use residualized scores, such that "Acceptance RewP" indicates responses to acceptance residualized for rejection, and vice versa.', fig.height=7, fig.width=9}
+```{r, include=TRUE, results='asis', fig.cap = 'Relationship between SES and brain responses to acceptance (relative to rejection) for RewP~resid~ and P300~resid~ ERP components.', fig.height=7, fig.width=5}
 
 adi_plots_scatter <- ggarrange(scatterplot_150275_adi + 
                                        rremove("xlab") + rremove("x.text") + 
                                        coord_cartesian(xlim=c(0,100), ylim=c(-3,4)) +
                                        theme(text = element_text(size=14)) + 
-                                       annotate("text", x=50, y=3.4, 
+                                       annotate("text", x=50, y=3.75, 
     label = TeX(paste0(str_sub(apa_print(rewp_aaar_model)$full_result$ADI_NATRANK_z, 1, 36),str_sub(apa_print(rewp_aaar_model)$full_result$ADI_NATRANK_z, 54, 63))), 
                                                 color = "black", rot = 0, size=4),
                                      scatterplot_275425_adi + 
                                        coord_cartesian(xlim=c(0,100), ylim=c(-3,4)) +
                                        theme(text = element_text(size=14)) + 
-                                       annotate("text", x=50, y=3.4, 
+                                       annotate("text", x=50, y=3.75, 
      label = TeX(paste0(str_sub(apa_print(p3_aaar_model)$full_result$ADI_NATRANK_z, 1, 36),str_sub(apa_print(p3_aaar_model)$full_result$ADI_NATRANK_z, 54, 63))), 
                                                 color = "black", rot = 0, size=4),
     common.legend = TRUE, legend = "bottom",
@@ -643,13 +662,24 @@ adi_plots_scatter <- ggarrange(scatterplot_150275_adi +
 adi_plots_scatter <- annotate_figure(adi_plots_scatter, 
                                    left=text_grob("Mean amplitude (µV) to acceptance", color = "black", rot = 90, size=12))
 
+adi_plots_scatter
+
+# adi_plots <- cowplot::plot_grid(adi_plots_scatter, adi_plots_na,
+#           labels = c("A","B"),
+#           ncol = 2, nrow = 1,
+#           rel_heights = c(1,1),
+#           rel_width=c(2.5,3),
+#           align="v")
+# adi_plots
+# ggsave("../figures/adi_plots_na.png", adi_plots_na, width=11, height=7)
+```
+
+```{r, include=TRUE, results='asis', fig.height=7, fig.width=5, fig.cap=paste("Interactions for which SES significantly moderated association between brain responses to acceptance or rejection and negative affect. Orange lines = -1 standard deviation below the mean SES; Blue lines = +1 standard deviation above the mean. RewP to acceptance: ",paste0('b= ',round(rewp_na_stat$estimate,3),', p= ',round(rewp_na_stat$p.value,2)),"; No simple slopes significant. P300 to acceptance: ",paste0('b= ',round(p300_na_stat$estimate,3),', p= ',round(p300_na_stat$p.value,2)),"; Simple slope significant for SES -1 SD. P300 to rejection: ",paste0('b= ',round(p300_na_ar_stat$estimate,3),', p= ',round(p300_na_ar_stat$p.value,2)),"; Simple slope significant for SES -1 SD. Note: All plots use residualized scores, such that 'Acceptance RewP' indicates responses to acceptance residualized for rejection, and vice versa.")}
 model_150275_ema_na_stats <- filter(tidy(model_150275_ema_na),term=="ADI_NATRANK_z:AA_AR_z" & component=="cond")
+model_275425_ema_na_stats <- filter(tidy(model_275425_ema_na),term=="ADI_NATRANK_z:AA_AR_z" & component=="cond")
 model_275425_ema_na_AR_pa_stats <- filter(tidy(model_275425_ema_na_AR_pa),term=="ADI_NATRANK_z:AR_AA_z" & component=="cond")
 
-adi_plots_na <- ggarrange(plot_150275_adi_na + coord_cartesian(xlim=c(-4,3), ylim=c(1.5,3.5)) + rremove("ylab") + annotate("text", x=0, y=3.5, 
-                                                label = paste0("b= ",round(model_150275_ema_na_stats$estimate,3), 
-                                                               ", p= ",round(model_150275_ema_na_stats$p.value,3)),
-                                                color = "black", rot = 0, size=4)  
+adi_plots_na <- ggarrange(plot_150275_adi_na + coord_cartesian(xlim=c(-4,3), ylim=c(1.5,3.5)) + rremove("ylab")
                                   + annotate("text", x=-2, y=1.75, 
                                                 label = paste0("b = ",round(m_rewp_acc_ss$emtrends[1,2],2), 
                                                                " p = ",round(m_rewp_acc_ss$emtrends[1,6],2)),
@@ -658,10 +688,16 @@ adi_plots_na <- ggarrange(plot_150275_adi_na + coord_cartesian(xlim=c(-4,3), yli
                                                 label = paste0("b = ",round(m_rewp_acc_ss$emtrends[2,2],2), 
                                                                " p = ",round(m_rewp_acc_ss$emtrends[2,6],2)),
                                                 color = "orange", rot = 0, size=4),
-                          plot_275425_adi_na_rej + coord_cartesian(xlim=c(-3,3), ylim=c(1.5,3.5)) + rremove("ylab") + annotate("text", x=0, y=3.5, 
-                                                label = paste0("b= ",round(model_275425_ema_na_AR_pa_stats$estimate,3), 
-                                                               ", p= ",round(model_275425_ema_na_AR_pa_stats$p.value,3)),
-                                                color = "black", rot = 0, size=4)  
+                          plot_275425_adi_na + coord_cartesian(xlim=c(-4,3), ylim=c(1.5,3.5)) + rremove("ylab")
+                                  + annotate("text", x=-2, y=1.75, 
+                                                label = paste0("b = ",round(m_p300_acc_ss$emtrends[1,2],2), 
+                                                               " p = ",round(m_p300_acc_ss$emtrends[1,6],2)),
+                                                color = "darkblue", rot = 0, size=4)
+                                  + annotate("text", x=-2, y=3.25, 
+                                                label = paste0("b = ",round(m_p300_acc_ss$emtrends[2,2],2), 
+                                                               " p = ",round(m_p300_acc_ss$emtrends[2,6],2)),
+                                                color = "orange", rot = 0, size=4),
+                          plot_275425_adi_na_rej + coord_cartesian(xlim=c(-4,3), ylim=c(1.5,3.5)) + rremove("ylab")
                                  + annotate("text", x=-1, y=3.25, 
                                                 label = paste0("b = ",round(m_p300_rej_ss$emtrends[1,2],2), 
                                                                " p = ",round(m_p300_rej_ss$emtrends[1,6],2)),
@@ -673,20 +709,13 @@ adi_plots_na <- ggarrange(plot_150275_adi_na + coord_cartesian(xlim=c(-4,3), yli
     # labels = c("A","B"),
     # label.x = c(rep(.04,4)),
     # label.y = c(rep(1,4)),
-    heights = c(2, 2),
-    common.legend = TRUE, legend = "right",
-    ncol = 1, nrow = 2,
+    heights = c(4, 4, 4),
+    common.legend = FALSE, legend = "none",
+    ncol = 1, nrow = 3,
     align="v")
 adi_plots_na <- annotate_figure(adi_plots_na, left=text_grob("Mean negative affect (cubed root)", rot=90, color = "black", size=14))
 
-adi_plots <- cowplot::plot_grid(adi_plots_scatter, adi_plots_na,
-          labels = c("A","B"),
-          ncol = 2, nrow = 1,
-          rel_heights = c(1,1),
-          rel_width=c(2.5,3),
-          align="v")
-adi_plots
-# ggsave("../figures/adi_plots_na.png", adi_plots_na, width=11, height=7)
+adi_plots_na
 ```
 
 ```{r}
@@ -755,7 +784,7 @@ scatterplot_275425_disc_no_outliers <- ggplot(df_275425_pz_model, aes(x=predicte
   theme()
 ```
 
-```{r, include=TRUE, results='asis', fig.cap="Relationship between self-reported discrimination distress and brain responses to acceptance (relative to rejection) for both the RewP and P300 ERP components.", fig.width=5, fig.height=5}
+```{r, include=FALSE, results='asis', fig.cap="Relationship between self-reported discrimination distress and brain responses to acceptance (relative to rejection) for both the RewP and P300 ERP components.", fig.width=5, fig.height=5}
 addi_plots_nocov <- cowplot::plot_grid(scatterplot_150275_disc + 
                                 ylab(expression("RewP"[resid])) +
                                 coord_cartesian(xlim = c(-0.5, 31), ylim=c(-3,4)) +
