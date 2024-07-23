@@ -270,9 +270,39 @@ plot_stats <- function(model, var) {
 }
 ```
 
-# Methods
+# Methods and Materials
 ## Participants
 Informed assent and consent were obtained from the adolescent and parent, respectively, and adolescents 18 years or older provided consent. General inclusion criteria included: (a) Tanner Stage $\ge$ 3 (Tanner & Davies, 1985), (b) parental and child fluency in English, (c) Wechsler Abbreviated Scale of Intelligence-II (WASI-II) > 85 (Wechsler, 2011), (d) ownership of a personal smartphone (android or iOS), and (e) right-handedness. General exclusion criteria included: (a) history of head injury or neurological disorders, (b) current moderate or severe substance use disorder, and (c) lifetime history of bipolar or psychotic disorders, oppositional defiant disorder, conduct disorder, organic mental disorder, or developmental disorder. 
+
+## ERP task effects
+```{r, include=TRUE, fig.cap="Topographic maps of N1, RewP, and P300 to A) high-value peer acceptance, B) high-value peer rejection, C) high-value peer acceptance > high-value peer rejection."}
+library(eegUtils)
+chanlocs <- electrode_locations(read.csv(here('../data/topo_plots/chanlocs32.csv')), montage="biosemi64")
+ga_acc <- read.delim(here('../data/topo_plots/ga_highvalue_acceptance_AA (Acc-Acc).txt'))%>%
+  pivot_longer(cols=c(-time),
+               values_to ="amplitude", names_to="electrode")
+ga_rej <- read.delim(here('../data/topo_plots/ga_highvalue_rejection_AR (Acc-Rej).txt'))%>%
+  pivot_longer(cols=c(-time),
+               values_to ="amplitude", names_to="electrode")
+ga_diff <- read.delim(here('../data/topo_plots/ga_highvalue_acc_rej_difference_BIN5=B1-B2.txt'))%>%
+  pivot_longer(cols=c(-time),
+               values_to ="amplitude", names_to="electrode")
+
+scaling_factor=0.75
+topo_maps <- ggarrange(topoplot(ga_acc, time_lim=c(50,150), chanLocs=chanlocs, contour=FALSE, interp_limit="skirt", chan_marker="name", scaling=scaling_factor),
+          topoplot(ga_rej,time_lim=c(50,150), chanLocs=chanlocs, contour=FALSE, interp_limit="skirt", chan_marker="name", scaling=scaling_factor),
+          topoplot(ga_diff,time_lim=c(50,150), chanLocs=chanlocs, contour=FALSE, interp_limit="skirt", chan_marker="name", scaling=scaling_factor),
+          topoplot(ga_acc,time_lim=c(150,275), chanLocs=chanlocs, contour=FALSE, interp_limit="skirt", chan_marker="name", scaling=scaling_factor),
+          topoplot(ga_rej,time_lim=c(150,275), chanLocs=chanlocs, contour=FALSE, interp_limit="skirt", chan_marker="name", scaling=scaling_factor),
+          topoplot(ga_diff,time_lim=c(150,275), chanLocs=chanlocs, contour=FALSE, interp_limit="skirt", chan_marker="name", scaling=scaling_factor),
+          topoplot(ga_acc,time_lim=c(275,425), chanLocs=chanlocs, contour=FALSE, interp_limit="skirt", chan_marker="name", scaling=scaling_factor),
+          topoplot(ga_rej,time_lim=c(275,425), chanLocs=chanlocs, contour=FALSE, interp_limit="skirt", chan_marker="name", scaling=scaling_factor),
+          topoplot(ga_diff,time_lim=c(275,425), chanLocs=chanlocs, contour=FALSE, interp_limit="skirt", chan_marker="name", scaling=scaling_factor),
+          nrow=3, ncol=3)
+
+topo_maps
+```
+
 
 # Results
 ## Behavioral ratings
