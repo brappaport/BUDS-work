@@ -106,7 +106,10 @@ knitr::opts_chunk$set(set.seed(312), warning=FALSE, message=FALSE, include=FALSE
   library(marginaleffects)
   library(interactions)
   library(emmeans) # testing simple slopes
-
+    
+  library(eegUtils)
+  library(gridExtra)
+    
   library(datawizard)
   library(performance)
   library(Rmisc)
@@ -135,7 +138,7 @@ load(file=here("../data/BUDS_cleaning04_gaplots.RData"))
 spearman_brown <- read.csv(file=here("../tables/spearman_brown.csv"))
 ```
 
-```{r, remove subjects with too few trials}
+```{r eval=FALSE, remove subjects with too few trials}
 bad_150275 <- c(1025,
 1055,
 1084,
@@ -275,8 +278,8 @@ plot_stats <- function(model, var) {
 Informed assent and consent were obtained from the adolescent and parent, respectively, and adolescents 18 years or older provided consent. General inclusion criteria included: (a) Tanner Stage $\ge$ 3 (Tanner & Davies, 1985), (b) parental and child fluency in English, (c) Wechsler Abbreviated Scale of Intelligence-II (WASI-II) > 85 (Wechsler, 2011), (d) ownership of a personal smartphone (android or iOS), and (e) right-handedness. General exclusion criteria included: (a) history of head injury or neurological disorders, (b) current moderate or severe substance use disorder, and (c) lifetime history of bipolar or psychotic disorders, oppositional defiant disorder, conduct disorder, organic mental disorder, or developmental disorder. 
 
 ## ERP task effects
-```{r, include=TRUE, fig.cap="Topographic maps of N1, RewP, and P300 to A) high-value peer acceptance, B) high-value peer rejection, C) high-value peer acceptance > high-value peer rejection."}
-library(eegUtils)
+```{r, include=TRUE, fig.cap="Topographic maps of N1, RewP, and P300 to high-value peer acceptance, high-value peer rejection, high-value peer acceptance relative to high-value peer rejection."}
+
 chanlocs <- electrode_locations(read.csv(here('../data/topo_plots/chanlocs32.csv')), montage="biosemi64")
 ga_acc <- read.delim(here('../data/topo_plots/ga_highvalue_acceptance_AA (Acc-Acc).txt'))%>%
   pivot_longer(cols=c(-time),
@@ -288,19 +291,39 @@ ga_diff <- read.delim(here('../data/topo_plots/ga_highvalue_acc_rej_difference_B
   pivot_longer(cols=c(-time),
                values_to ="amplitude", names_to="electrode")
 
-scaling_factor=0.75
-topo_maps <- ggarrange(topoplot(ga_acc, time_lim=c(50,150), chanLocs=chanlocs, contour=FALSE, interp_limit="skirt", chan_marker="name", scaling=scaling_factor),
-          topoplot(ga_rej,time_lim=c(50,150), chanLocs=chanlocs, contour=FALSE, interp_limit="skirt", chan_marker="name", scaling=scaling_factor),
-          topoplot(ga_diff,time_lim=c(50,150), chanLocs=chanlocs, contour=FALSE, interp_limit="skirt", chan_marker="name", scaling=scaling_factor),
-          topoplot(ga_acc,time_lim=c(150,275), chanLocs=chanlocs, contour=FALSE, interp_limit="skirt", chan_marker="name", scaling=scaling_factor),
-          topoplot(ga_rej,time_lim=c(150,275), chanLocs=chanlocs, contour=FALSE, interp_limit="skirt", chan_marker="name", scaling=scaling_factor),
-          topoplot(ga_diff,time_lim=c(150,275), chanLocs=chanlocs, contour=FALSE, interp_limit="skirt", chan_marker="name", scaling=scaling_factor),
-          topoplot(ga_acc,time_lim=c(275,425), chanLocs=chanlocs, contour=FALSE, interp_limit="skirt", chan_marker="name", scaling=scaling_factor),
-          topoplot(ga_rej,time_lim=c(275,425), chanLocs=chanlocs, contour=FALSE, interp_limit="skirt", chan_marker="name", scaling=scaling_factor),
-          topoplot(ga_diff,time_lim=c(275,425), chanLocs=chanlocs, contour=FALSE, interp_limit="skirt", chan_marker="name", scaling=scaling_factor),
-          nrow=3, ncol=3)
+scaling_factor=0.7
+# Create grobs for the column titles
+title_n1 <- textGrob("N1", gp=gpar(fontsize=14, fontface="bold"))
+title_rewp <- textGrob("RewP", gp=gpar(fontsize=14, fontface="bold"))
+title_p300 <- textGrob("P300", gp=gpar(fontsize=14, fontface="bold"))
 
-topo_maps
+title_acc <- textGrob("Acceptance", gp=gpar(fontsize=14, fontface="bold"), rot=90)
+title_rej <- textGrob("Rejection", gp=gpar(fontsize=14, fontface="bold"), rot=90)
+title_diff <- textGrob("Acceptance > \nRejection", gp=gpar(fontsize=14, fontface="bold"), rot=90)
+
+chanlocs <- chanlocs %>%
+  mutate(electrode = case_match(electrode, "Poz" ~ "POz",
+                          .default=electrode))
+
+plot1 <- topoplot(ga_acc, time_lim=c(50,150), chanLocs=chanlocs, contour=FALSE, interp_limit="skirt", chan_marker="name", scaling=scaling_factor)
+plot2 <- topoplot(ga_rej,time_lim=c(50,150), chanLocs=chanlocs, contour=FALSE, interp_limit="skirt", chan_marker="name", scaling=scaling_factor)
+plot3 <- topoplot(ga_diff,time_lim=c(50,150), chanLocs=chanlocs, contour=FALSE, interp_limit="skirt", chan_marker="name", scaling=scaling_factor)
+plot4 <- topoplot(ga_acc,time_lim=c(150,275), chanLocs=chanlocs, contour=FALSE, interp_limit="skirt", chan_marker="name", scaling=scaling_factor)
+plot5 <- topoplot(ga_rej,time_lim=c(150,275), chanLocs=chanlocs, contour=FALSE, interp_limit="skirt", chan_marker="name", scaling=scaling_factor)
+plot6 <- topoplot(ga_diff,time_lim=c(150,275), chanLocs=chanlocs, contour=FALSE, interp_limit="skirt", chan_marker="name", scaling=scaling_factor)
+plot7 <- topoplot(ga_acc,time_lim=c(275,425), chanLocs=chanlocs, contour=FALSE, interp_limit="skirt", chan_marker="name", scaling=scaling_factor)
+plot8 <- topoplot(ga_rej,time_lim=c(275,425), chanLocs=chanlocs, contour=FALSE, interp_limit="skirt", chan_marker="name", scaling=scaling_factor)
+plot9 <- topoplot(ga_diff,time_lim=c(275,425), chanLocs=chanlocs, contour=FALSE, interp_limit="skirt", chan_marker="name", scaling=scaling_factor)
+
+blank <- textGrob("")
+grid.arrange(blank, title_n1, title_rewp, title_p300,
+             title_acc,plot1,plot2,plot3,
+             title_rej,plot4,plot5,plot6,
+             title_diff,plot7,plot8,plot9,
+             layout_matrix = rbind(seq(1,4), seq(5,8), seq(9,12), seq(13,16)),
+             heights = c(0.1, 1, 1, 1),
+             widths = c(0.2, 1, 1, 1)
+)
 ```
 
 
@@ -318,27 +341,33 @@ post_task_table <- st(dplyr::select(df_BUDS_rating_it_pt, SP_debriefing_interest
 apa_table(post_task_table)
 ```
 
-Of note, for low-value peers, participants rated being rejected as feeling *happier* than being accepted. Although seemingly counter-intuitive, previous work suggests that this is likely reflects participants feeling good that they were "right"---that they rejected the person who rejected them---and feeling guilty when they were "wrong"---rejected someone who accepted them [@distefanoComparisonElectrocorticalResponse2018].
+Of note, for low-value peers, participants rated being rejected as feeling *better* than being accepted. Although seemingly counter-intuitive, previous work suggests that this is likely reflects participants feeling good that they were "right"---that they rejected the person who rejected them---and feeling guilty when they were "wrong"---rejected someone who accepted them [@distefanoComparisonElectrocorticalResponse2018].
 
 # Internal consistency
 ```{r}
 spearman_brown <- spearman_brown[,-1]
 spearman_brown[,1] <- c("N1", "RewP", "P300")
+colnames(spearman_brown) <- c("ERP Component","HV Acceptance","HV Rejection","LV Acceptance","LV Rejection","HV Acceptance > \nHV Rejection","HV Rejection > \nHV Acceptance")
+
+apa_table(spearman_brown,
+          note="HV: High-value peer, LV: Low-value peer")
 ```
 
+# Dependability
 
-## Feedback x Value x ADI interaction
+
+# Feedback x Value x ADI interaction
 ### N1
 ```{r, eval=T}
-# models_50150_cz_table <- lmer_adi_interaction_table(df_50150_cz_long)
-# models_50150_cz_table$component <- "50150_cz"
+# models_50150_fz_table <- lmer_adi_interaction_table(df_50150_fz_long)
+# models_50150_fz_table$component <- "50150_fz"
 
-model_50150_cz <- lmer(formula = ERP ~ Feedback*ADI_NATRANK_z*Voting + (1 | ID) + (1 | site), data = df_50150_cz_long)
-model_50150_cz_high <- lmer(formula = ERP ~ Feedback*ADI_NATRANK_z + (1 | ID) + (1 | site), data = filter(df_50150_cz_long,Voting=="Like"))
-model_50150_cz_low <- lmer(formula = ERP ~ Feedback*ADI_NATRANK_z + (1 | ID) + (1 | site), data = filter(df_50150_cz_long,Voting=="Dislike"))
+model_50150_fz <- lmer(formula = ERP ~ Feedback*ADI_NATRANK_z*Voting + (1 | ID) + (1 | site), data = df_50150_fz_long)
+model_50150_fz_high <- lmer(formula = ERP ~ Feedback*ADI_NATRANK_z + (1 | ID) + (1 | site), data = filter(df_50150_fz_long,Voting=="Like"))
+model_50150_fz_low <- lmer(formula = ERP ~ Feedback*ADI_NATRANK_z + (1 | ID) + (1 | site), data = filter(df_50150_fz_long,Voting=="Dislike"))
 
 model_50150_adi <- plot_cap(
-    model_50150_cz,
+    model_50150_fz,
     condition = list(
       "ADI_NATRANK_z" = "threenum",
         "Feedback",
@@ -350,8 +379,8 @@ model_50150_adi <- plot_cap(
                                     "Rej" ~ "Rejection"))
 
 plot_50150_adi_t <- data.frame(
-  label = c(plot_stats(model_50150_cz_high, "Feedback1:ADI_NATRANK_z"),
-            plot_stats(model_50150_cz_low, "Feedback1:ADI_NATRANK_z")), 
+  label = c(plot_stats(model_50150_fz_high, "Feedback1:ADI_NATRANK_z"),
+            plot_stats(model_50150_fz_low, "Feedback1:ADI_NATRANK_z")), 
   Value  = c("High", "Low"),
   Feedback=c("Acceptance","Rejection"))
 
@@ -361,8 +390,8 @@ plot_50150_adi <- ggplot(filter(model_50150_adi, ADI_NATRANK_z!="Mean"), aes(x=A
   scale_fill_manual(values = c("darkgreen", "red"), name = "Feedback") +
   facet_wrap(~Value) +
   geom_text(data = data.frame(
-  label = c(plot_stats(model_50150_cz_high, "Feedback1:ADI_NATRANK_z"),
-            plot_stats(model_50150_cz_low, "Feedback1:ADI_NATRANK_z")),
+  label = c(plot_stats(model_50150_fz_high, "Feedback1:ADI_NATRANK_z"),
+            plot_stats(model_50150_fz_low, "Feedback1:ADI_NATRANK_z")),
   Value  = c("High", "Low"),
   Feedback=c("Acceptance","Rejection")), aes(x = 1.5, y = 10, label = label)) +
   theme_apa() +
@@ -375,8 +404,8 @@ plot_50150_adi <- ggplot(filter(model_50150_adi, ADI_NATRANK_z!="Mean"), aes(x=A
 #   scale_fill_manual(values = c("gray", "white"), name = "Feedback") +
 #   facet_wrap(~Value) +
 #   geom_text(data = data.frame(
-#   label = c(plot_stats(model_50150_cz_high, "Feedback1:ADI_NATRANK_z"),
-#             plot_stats(model_50150_cz_low, "Feedback1:ADI_NATRANK_z")), 
+#   label = c(plot_stats(model_50150_fz_high, "Feedback1:ADI_NATRANK_z"),
+#             plot_stats(model_50150_fz_low, "Feedback1:ADI_NATRANK_z")), 
 #   Value  = c("High", "Low"),
 #   Feedback=c("Acceptance","Rejection")), aes(x = 2, y = 11, label = label)) +
 #   theme_apa() +
@@ -393,11 +422,11 @@ df_150275_cz_rating2 <- df_150275_cz_rating %>%
   select(ID, Age, StressCT, StressTH, SP_debriefing_deceived) %>%
   full_join(df_150275_cz, by="ID")
 
-df_275425_cz_rating2 <- df_275425_cz_rating %>%
+df_275425_pz_rating2 <- df_275425_pz_rating %>%
   select(ID, SP_debriefing_deceived) %>%
   full_join(df_BUDS_rating_it_pt_demo, by="ID") %>%
   select(ID, Age, StressCT, StressTH, SP_debriefing_deceived) %>%
-  full_join(df_275425_cz, by="ID")
+  full_join(df_275425_pz, by="ID")
 
 ses_lm_dec <- function(data, y) {
   y <- enquo(y)
@@ -407,7 +436,7 @@ ses_lm_dec <- function(data, y) {
 }
 
 rewp_aaar_model <- ses_lm_dec(df_150275_cz_rating2, AA_AR_z)
-p3_aaar_model <- ses_lm_dec(df_275425_cz_rating2, AA_AR_z)
+p3_aaar_model <- ses_lm_dec(df_275425_pz_rating2, AA_AR_z)
 ```
 
 ### Outliers removed
@@ -426,12 +455,12 @@ scatterplot_150275_adi_no_outliers <- ggplot(df_150275_cz_model, aes(x=predicted
   theme()
 
 # REMOVING OUTLIERS 
-p3_aaar_model_no_outliers <- lm(formula = AA_AR_z ~ ADI_NATRANK_z + site, data = df_275425_cz_no_outliers)
-df_275425_cz_model_no_outliers <- df_275425_cz_no_outliers %>%
+p3_aaar_model_no_outliers <- lm(formula = AA_AR_z ~ ADI_NATRANK_z + site, data = df_275425_pz_no_outliers)
+df_275425_pz_model_no_outliers <- df_275425_pz_no_outliers %>%
   filter(complete.cases(ADI_NATRANK_z) & complete.cases(site)) %>%
   mutate(predicted = predict(p3_aaar_model_no_outliers))
 
-scatterplot_275425_adi_no_outliers <- ggplot(df_275425_cz_model_no_outliers, aes(x=predicted, y=AA_AR_z)) +
+scatterplot_275425_adi_no_outliers <- ggplot(df_275425_pz_model_no_outliers, aes(x=predicted, y=AA_AR_z)) +
   geom_point(colour="black") +
   stat_smooth(method="lm", se=TRUE) +
   theme_apa() +
@@ -445,7 +474,7 @@ The interactions between ADI and Feedback condition predicting mean RewP and P3 
 ## EMA
 ```{r}
 # Pairwise vs listwise deletion issues
-df_275425_missing_na <- df_275425_cz_ema %>%
+df_275425_missing_na <- df_275425_pz_ema %>%
   group_by(ID, daysFrom) %>%
   reframe(all_na = all(is.na(na)),
           adi_na = all(is.na(ADI_NATRANK_log)),
@@ -470,7 +499,7 @@ df_150275_cz_ema <- df_150275_cz_ema %>%
   filter(row_number()==1) %>%
   arrange(ID,daysFrom,tm_start)
 
-df_275425_cz_ema <- df_275425_cz_ema %>%
+df_275425_pz_ema <- df_275425_pz_ema %>%
   group_by(ID,daysFrom,slot) %>%
   arrange(tm_start) %>%
   filter(row_number()==1) %>%
@@ -480,9 +509,9 @@ df_275425_cz_ema <- df_275425_cz_ema %>%
 
 ### ADI and ADDI predicting NA
 ```{r, include=FALSE}
-df_50150_cz_ema$na_cubert <- df_50150_cz_ema$na^(1/3)
+df_50150_fz_ema$na_cubert <- df_50150_fz_ema$na^(1/3)
 df_150275_cz_ema$na_cubert <- df_150275_cz_ema$na^(1/3)
-df_275425_cz_ema$na_cubert <- df_275425_cz_ema$na^(1/3)
+df_275425_pz_ema$na_cubert <- df_275425_pz_ema$na^(1/3)
 
 summary(glmmTMB(addi_total ~ ADI_NATRANK_c,
                     zi = ~ ADI_NATRANK_c,
@@ -540,13 +569,13 @@ ggplot(df_150275_cz_ema, aes(y=na_cubert, x=addi_total_c)) +
 # 
 # model_275425_ema_na_no_outliers <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + (1 | ID) + (1 | site),
 #         zi = ~ ADI_NATRANK_z*AA_AR_z + (1 | ID) + (1 | site),
-#   data = df_275425_cz_ema_no_outliers,
+#   data = df_275425_pz_ema_no_outliers,
 #   family=gaussian, REML=TRUE, na.action=na.exclude)
 # # glmmTMB:::Anova.glmmTMB(model_275425_ema_na_no_outliers)
 # 
 # model_275425_ema_na_AR_no_outliers <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AR_AA_c + (1 | ID) + (1 | site),
 #         zi = ~ ADI_NATRANK_z*AR_AA_c + (1 | ID) + (1 | site),
-#   data = df_275425_cz_ema_no_outliers,
+#   data = df_275425_pz_ema_no_outliers,
 #   family=gaussian, REML=TRUE, na.action=na.exclude)
 # # glmmTMB:::Anova.glmmTMB(model_275425_ema_na_AR_no_outliers)
 ```
@@ -562,15 +591,15 @@ sd_rewp <- sd(df_150275_cz_ema$AA_AR_c, na.rm=TRUE)
 
 ### Covary for deception
 ```{r}
-df_275425_cz_ema_rating <- df_BUDS_rating_it_pt %>%
+df_275425_pz_ema_rating <- df_BUDS_rating_it_pt %>%
   select(-site) %>%
-  full_join(df_275425_cz_ema, by="ID", relationship="many-to-many")
+  full_join(df_275425_pz_ema, by="ID", relationship="many-to-many")
 model_275425_ema_na_dec <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + SP_debriefing_deceived + (1 | ID) + (1 | site),
         zi = ~ ADI_NATRANK_z*AA_AR_z + (1 | ID) + (1 | site),
-  data = df_275425_cz_ema_rating,
+  data = df_275425_pz_ema_rating,
   family=gaussian, REML=TRUE, na.action=na.exclude)
 
-df_275425_cz_ema_rating <- df_275425_cz_ema %>%
+df_275425_pz_ema_rating <- df_275425_pz_ema %>%
     select(-site) %>%
   full_join(df_BUDS_rating_it_pt, by="ID", relationship = "many-to-many")
 
@@ -581,7 +610,7 @@ model_150275_ema_na_dec <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + SP_debrie
 
 model_275425_ema_na_dec <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + (1 | ID) + (1 | site),
         zi = ~ ADI_NATRANK_z*AA_AR_z + (1 | ID) + (1 | site),
-  data = df_275425_cz_ema_rating,
+  data = df_275425_pz_ema_rating,
   family=gaussian, REML=TRUE)
 ```
 Interactions between ADI and P3 predicting mean negative affect over the following week were non-significant when covarying for age, sex, hispanic ethnicity, majority/minority race, stress life event frequency and severity, and self-reported well-being.
@@ -590,7 +619,7 @@ Interactions between ADI and P3 predicting mean negative affect over the followi
 ```{r}
 model_275425_ema_na_cov <- glmmTMB(na_cubert ~ ADI_NATRANK_c*AA_AR_c + Age + Sex + demo_child_hispanic + White_nonwhite + StressCT + StressTH + IDAS_wellbeing + (1 | ID) + (1 | site),
                     zi = ~ ADI_NATRANK_c*AA_AR_c + (1 | ID) + (1 | site),
-    data = df_275425_cz_ema_rating,
+    data = df_275425_pz_ema_rating,
     family=gaussian, REML=TRUE)
 ```
 
@@ -603,7 +632,7 @@ model_150275_addi_na <- glmmTMB(na_cubert ~ addi_total_c*AA_AR_c + (1 | ID) + (1
 
 model_275425_addi_na <- glmmTMB(na_cubert ~ addi_total_c*AA_AR_c + (1 | ID) + (1 | site),
                     zi = ~ addi_total_c*AA_AR_c + (1 | ID) + (1 | site),
-    data = df_275425_cz_ema,
+    data = df_275425_pz_ema,
     family=gaussian, REML=TRUE, na.action=na.exclude)
 
 plot_150275_addi_na <- ggpredict(model_150275_addi_na, terms = c("addi_total_c","AA_AR_c")) %>% 
