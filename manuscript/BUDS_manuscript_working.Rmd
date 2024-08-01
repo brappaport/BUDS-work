@@ -145,6 +145,7 @@ knitr::opts_chunk$set(set.seed(312), warning=FALSE, message=FALSE, include=FALSE
   library(r2symbols) # symbols inline text
   library(papaja)
   library(workflowr)  #helps with workflow
+  library(dplyr)
 
 here <- here::here
 r_refs("BUDS.bib")
@@ -450,9 +451,9 @@ mutate(site = case_when(ID < 9000 ~ "Columbia",
                           ID > 8999 ~ "Northwestern"))
 
 df_BUDS_rating_it_pt2 <- df_BUDS_rating_it_pt %>%
-    group_by(ID, Condition) %>%
-    summarise(rating=mean(rating)) %>%
-    ungroup() %>%
+    dplyr::group_by(ID, Condition) %>%
+    dplyr::summarise(rating=mean(rating)) %>%
+    dplyr::ungroup() %>%
     pivot_wider(names_from = Condition, values_from = rating, id_cols = ID) %>%
   filter(complete.cases(Acc_Acc)) %>%
   mutate(beh_AA_AR_z = scale(stdres(lm(Acc_Acc ~ Acc_Rej, .)), center=T, scale=T),
