@@ -253,7 +253,7 @@ subjects_150275 <- segments %>%
 subjects_150275 <- setdiff(subjects, subjects_150275$subject)
 
 subjects_275425 <- segments %>%
-  dplyr::filter(Acc_Acc < 12 | Acc_Rej < 11) %>%
+  dplyr::filter(Acc_Acc < 15 | Acc_Rej < 13) %>%
   select(subject)
 subjects_275425 <- setdiff(subjects, subjects_275425$subject)
 
