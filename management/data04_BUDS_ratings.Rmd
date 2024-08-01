@@ -229,9 +229,9 @@ subjects <- c(1000,
 9099,
 9100)
 
-too_few_segments <- c(1025, 1053, 1055, 1084, 1087, 9051, 9081, 9082, 9093)
+# too_few_segments <- c(1025, 1053, 1055, 1084, 1087, 9051, 9081, 9082, 9093)
 
-subjects <- setdiff(subjects, c(too_few_segments))
+# subjects <- setdiff(subjects, c(too_few_segments))
 
 read_utf16_table <- function(path, ...) {
   stringi::stri_read_lines(
@@ -253,17 +253,17 @@ for (s in subjects) {
  }, error=function(e){cat("ERROR: ",s, ": ", conditionMessage(e), "\n")})
 }
 
-save(df_beh, file=here("./data/df_beh.RData"))
+save(df_beh, file=here::here("data/df_beh.RData"))
 ```
 
 ```{r}
 df_BUDS_rating <- df_beh %>%
-  mutate(PicRating_n=as.numeric(PicRating)) %>%
-  filter(complete.cases(Event) & Event!="none") %>%
+  dplyr::mutate(PicRating_n=as.numeric(PicRating)) %>%
+  dplyr::filter(complete.cases(Event) & Event!="none") %>%
   dplyr::select(ID,Event,PicRating_n) %>%
-  group_by(ID,Event) %>%
-  reframe(rating = mean(PicRating_n)) %>%
-  mutate(Condition=case_match(Event, "Accept-Accept" ~ "Acc_Acc",
+  dplyr::group_by(ID,Event) %>%
+  dplyr::reframe(rating = mean(PicRating_n)) %>%
+  dplyr::mutate(Condition=case_match(Event, "Accept-Accept" ~ "Acc_Acc",
                                      "Accept-Reject" ~ "Acc_Rej",
                                      "Reject-Reject" ~ "Rej_Rej",
                                      "Reject-Accept" ~ "Rej_Acc"))
@@ -389,7 +389,7 @@ summary(lm(SP_debriefing_7 ~ rating, filter(df_BUDS_rating_it_pt, Condition=="Re
 ```{r}
 load(file=here("./data/BUDS_df_ERP.RData"))
 
-df_50150_cz_rating <- df_50150_cz %>%
+df_50150_fz_rating <- df_50150_fz %>%
   dplyr::select(ID,AA_AR) %>%
   full_join(df_BUDS_rating_it_pt, by="ID", relationship = "many-to-many") %>%
   dplyr::select(ID,Condition,rating,AA_AR,SP_debriefing_deceived) %>%
@@ -411,7 +411,7 @@ df_150275_cz_rating <- df_150275_cz %>%
   mutate(rating_r = rstandard(lm(Acc_Acc ~ Acc_Rej, .)),
          SP_debriefing_deceived_f = as.factor(SP_debriefing_deceived))
 
-df_275425_cz_rating <- df_275425_cz %>%
+df_275425_pz_rating <- df_275425_pz %>%
   dplyr::select(ID,AA_AR) %>%
   full_join(df_BUDS_rating_it_pt, by="ID", relationship = "many-to-many") %>%
   dplyr::select(ID,Condition,rating,AA_AR,SP_debriefing_deceived) %>%
@@ -426,5 +426,5 @@ df_275425_cz_rating <- df_275425_cz %>%
 # Save files
 ```{r}
 save(df_BUDS_rating, df_BUDS_rating_it_pt, 
-     df_50150_cz_rating, df_150275_cz_rating, df_275425_cz_rating, file=here("./data/BUDS_behavior.RData"))
+     df_50150_fz_rating, df_150275_cz_rating, df_275425_pz_rating, file=here("./data/BUDS_behavior.RData"))
 ```
