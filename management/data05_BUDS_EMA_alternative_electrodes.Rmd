@@ -64,8 +64,11 @@ Remember to immediately rename and remove. Avoid overwriting old data.
 ```{r, eval=F}
 subjects <- c(1000,
 1001,
+1002,
 1004,
 1006,
+1008,
+1009,
 1010,
 1012,
 1014,
@@ -86,6 +89,7 @@ subjects <- c(1000,
 1037,
 1039,
 1040,
+1041,
 1043,
 1044,
 1046,
@@ -112,6 +116,7 @@ subjects <- c(1000,
 1070,
 1071,
 1072,
+1073,
 1074,
 1075,
 1077,
@@ -131,6 +136,7 @@ subjects <- c(1000,
 1094,
 1095,
 1096,
+1097,
 1098,
 1099,
 1100,
@@ -146,8 +152,10 @@ subjects <- c(1000,
 1110,
 1111,
 1112,
+1113,
 1114,
 1115,
+1116,
 1117,
 1118,
 1119,
@@ -161,6 +169,7 @@ subjects <- c(1000,
 9001,
 9003,
 9004,
+9005,
 9006,
 9007,
 9008,
@@ -194,10 +203,12 @@ subjects <- c(1000,
 9046,
 9048,
 9049,
+9050,
 9051,
 9052,
 9053,
 9055,
+9056,
 9057,
 9059,
 9060,
@@ -231,7 +242,8 @@ subjects <- c(1000,
 9097,
 9098,
 9099,
-9100)
+9100
+)
 
 # df_ema_daily <- read.csv(here::here("./data/PREDICT_daily_merged_all.csv"), header=TRUE)
 # df_ema <- read.csv(here::here("./data/PREDICT_EMA_merged_all.csv"), header=TRUE)
@@ -326,6 +338,9 @@ check = baseline %>% dplyr::count(subject_id, date, block) %>% arrange(-n)
 # remove people with < 3 responses
 resp.rate = baseline %>% dplyr::count(subject_id)
 remove = resp.rate %>% filter(n < 3)
+subjects_with_less_than_3_responses <- resp.rate[(resp.rate$n<3),"subject_id"]
+write.csv(subjects_with_less_than_3_responses, file=here::here("./data/number_with_less_than_3_EMA_responses.csv"))
+
 baseline = baseline %>% 
   filter(!(subject_id %in% remove$subject_id)) %>%
   mutate(pa = rowMeans(.[, c("happy", "excited", "supported")], na.rm = F),
