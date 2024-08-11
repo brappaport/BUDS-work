@@ -263,7 +263,6 @@ subjects_275425 <- setdiff(subjects, subjects_275425$subject)
 
 
 ## Load ERP data
-Remember to immediately rename and remove. Avoid overwriting old data.
 ```{r, eval=FALSE}
 channels_oldmontage <- c("Fp1", "Fz", "F3", "F7", "FT9", "FC5", "FC1", 
               "C3", "TP9", "CP5", "CP1", 
