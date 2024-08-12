@@ -36,6 +36,8 @@ This script imports and merges the self-report data from BUDS study: Bullying, U
   library(ggplot2)    #creates plots
   library(Hmisc)
   library(workflowr)  #helps with workflow
+
+here <- here::here
 ```
 
 ## Get the Working Directory
@@ -87,7 +89,7 @@ BUDS_cleaning02[duplicated(BUDS_cleaning02$ID),"ID"]
 strain_data <- read.csv(here("../_rawdata/Columbia-NW_SocialProcesses_Lifetime_04-05-23.csv"))
 strain_data <- strain_data[-(1:4),]
 BUDS_cleaning02_with_strain <- merge(BUDS_cleaning02, strain_data, by="ID")
-sort(table(BUDS_cleaning02_with_strain$ID))
+# sort(table(BUDS_cleaning02_with_strain$ID))
 ```
 
 
