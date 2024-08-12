@@ -170,26 +170,20 @@ df_275425_pz_no_outliers <- df_275425_pz %>%
 ```{r}
 # Rename site variables
 df_50150_fz_long <- df_50150_fz %>%
-  mutate(site = case_match(as.character(id_2_i), "CUMC" ~ "Columbia",
-                                   "2" ~ "Northwestern",
+  mutate(site = case_when(ID < 9000 ~ "Columbia",
+                          ID > 8999 ~ "Northwestern",
                                    NA ~ NA)) %>%
     pivot_longer(cols=c("Acc_Acc","Rej_Acc","Acc_Rej","Rej_Rej"), names_to=c("Voting","Feedback"), names_sep="_", values_to="ERP")
 df_150275_cz_long <- df_150275_cz %>%
-  mutate(site = case_match(as.character(id_2_i), "CUMC" ~ "Columbia",
-                                   "2" ~ "Northwestern",
+  mutate(site = case_when(ID < 9000 ~ "Columbia",
+                          ID > 8999 ~ "Northwestern",
                                    NA ~ NA)) %>%
     pivot_longer(cols=c("Acc_Acc","Rej_Acc","Acc_Rej","Rej_Rej"), names_to=c("Voting","Feedback"), names_sep="_", values_to="ERP")
 df_275425_pz_long <- df_275425_pz %>%
-  mutate(site = case_match(as.character(id_2_i), "CUMC" ~ "Columbia",
-                                   "2" ~ "Northwestern",
+  mutate(site = case_when(ID < 9000 ~ "Columbia",
+                          ID > 8999 ~ "Northwestern",
                                    NA ~ NA)) %>%
     pivot_longer(cols=c("Acc_Acc","Rej_Acc","Acc_Rej","Rej_Rej"), names_to=c("Voting","Feedback"), names_sep="_", values_to="ERP")
-
-# Make outliers datasets
-df_150275_cz_long_no_outliers <- df_150275_cz_long %>%
-  filter(ADI_NATRANK_z > -3 & ADI_NATRANK_z < 3 & AA_AR_z > -3 & AA_AR_z < 3)
-df_275425_pz_long_no_outliers <- df_275425_pz_long %>%
-  filter(ADI_NATRANK_z > -3 & ADI_NATRANK_z < 3 & AA_AR_z > -3 & AA_AR_z < 3)
 
 # Clean ema datasets
 df_150275_cz_ema <- df_150275_cz_ema %>%
@@ -210,9 +204,6 @@ df_275425_pz_ema <- df_275425_pz_ema %>%
 
 # df_150275_cz_ema$na_cubert <- df_150275_cz_ema$na^(1/3)
 # df_275425_pz_ema$na_cubert <- df_275425_pz_ema$na^(1/3)
-
-df_150275_cz_ema_no_outliers <- df_150275_cz_ema[df_150275_cz_ema$ID %in% df_150275_cz_no_outliers$ID,]
-df_275425_pz_ema_no_outliers <- df_275425_pz_ema[df_275425_pz_ema$ID %in% df_275425_pz_no_outliers$ID,]
 ```
 
 ```{r Functions}
@@ -312,13 +303,25 @@ make_long_format <- function(data, site_variable) {
 ```
 
 ```{r demoTable, include=TRUE, results="asis"}
-demo_table <- FullTable1(df_275425_pz_strain, strata="site",
+df_50150_fz_strain <- df_50150_fz_strain %>%
+  mutate(site = case_when(ID < 9000 ~ "Columbia",
+                          ID > 8999 ~ "Northwestern",
+                                   NA ~ NA)) %>%
+  filter(complete.cases(AA_AR))
+
+demo_table <- FullTable1(df_50150_fz_strain, strata="site",
            vars=c("Age","ADI_NATRANK","demo_child_sex","demo_child_hispanic","demo_child_race",
                   "IDAS_depression","IDAS_anxiety","StressCT","StressTH"),
            factor_vars=c("demo_child_sex","demo_child_hispanic","demo_child_race"),
            var_names=c("Age","SES (percentile)","Sex","Hispanic ethnicity","Race",
                        "IDAS depression","IDAS anxiety","Lifetime number of stressors","Lifetime stressor severity"),
            round_n=2)
+
+paste0("Missing STRAIN: ",df_50150_fz_strain[is.na(df_50150_fz_strain$Age),"ID"])
+paste0("Missing sex: ",df_50150_fz_strain[is.na(df_50150_fz_strain$demo_child_sex),"ID"])
+paste0("Missing ethnicity: ",df_50150_fz_strain[is.na(df_50150_fz_strain$demo_child_hispanic),"ID"])
+paste0("Missing race: ",df_50150_fz_strain[is.na(df_50150_fz_strain$demo_child_race),"ID"])
+paste0("Missing IDAS: ",df_50150_fz_strain[is.na(df_50150_fz_strain$IDAS_depression),"ID"])
 
 # Remove race heading variable
 demo_table$table[6,4:7] <- demo_table$table[5,4:7]
@@ -382,7 +385,7 @@ Cz_ga_aa_ar_plot <- ggplot(data=filter(df_ga_Cz_long, Condition=="Acc_Acc" | Con
   theme(legend.position="right", text=element_text(size=18))
 ```
 
-```{r, include=FALSE, results="asis", fig.cap = "Grand average ERP for acceptance and rejection feedback from high-value peers. Colored sections of the graph represent time windows where ERP components were extracted at Cz electrode: N1 = purple, RewP = orange, P300 = blue."}
+```{r, include=FALSE, results="asis", fig.cap = "Grand average ERP for acceptance and rejection feedback from high-value peers. Colored sections of the graph represent time windows where ERP components were extracted at Cz electrode: N100 = purple, RewP = orange, P300 = blue."}
 Cz_ga_aa_ar_plot
 ```
 
@@ -413,7 +416,7 @@ img_plot <- ggplot() +
   theme(plot.margin = margin(t=0, l=0, r=0, b=0, unit = "cm"))
 ```
 
-```{r, include=TRUE, results="asis", fig.cap = "A) Example of trial from chatroom task. B) Grand average ERP for acceptance and rejection feedback from high-value peers. Colored sections of the graph represent time windows where ERP components were extracted at Cz electrode: N1 = purple, RewP = orange, P300 = blue. C) Mean in-task, post-feedback emotional ratings across all trials and participants by Feedback (acceptance, rejection) and Value (high, low).", fig.height=8.5, fig.width=7}
+```{r, include=TRUE, results="asis", fig.cap = "A) Example of trial from chatroom task. B) Grand average ERP for acceptance and rejection feedback from high-value peers. Colored sections of the graph represent time windows where ERP components were extracted at Cz electrode: N100 = purple, RewP = orange, P300 = blue. C) Mean in-task, post-feedback emotional ratings across all trials and participants by Feedback (acceptance, rejection) and Value (high, low).", fig.height=8.5, fig.width=7}
 # Combine image of task, grand average waveform, and behavioral ratings into one plot
 figure_1 <- cowplot::plot_grid(img_plot, Cz_ga_aa_ar_plot, rating_plot,
           labels = c("A","B","C"),
