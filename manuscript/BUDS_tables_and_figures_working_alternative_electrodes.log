@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.26 (TeX Live 2024) (preloaded format=pdflatex 2024.6.3)  5 JUL 2024 11:00
+This is pdfTeX, Version 3.141592653-2.6-1.40.26 (TeX Live 2024) (preloaded format=pdflatex 2024.6.3)  22 JUL 2024 20:05
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -810,12 +810,7 @@ Package: ltcaption 2021/01/08 v1.4c longtable captions (AR)
 Package caption Info: End \AtBeginDocument code.
 
 Underfull \hbox (badness 10000) in paragraph at lines 193--193
-[]|\T1/lmr/m/n/10.95 Columbia
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 193--193
-[]|\T1/lmr/m/n/10.95 Northwestern
+[]|\T1/lmr/m/n/10.95 Chicago
  []
 
 
@@ -825,12 +820,7 @@ Underfull \hbox (badness 10000) in paragraph at lines 193--194
 
 
 Underfull \hbox (badness 10000) in paragraph at lines 198--198
-[]|\T1/lmr/m/n/10.95 Columbia
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 198--198
-[]|\T1/lmr/m/n/10.95 Northwestern
+[]|\T1/lmr/m/n/10.95 Chicago
  []
 
 
@@ -891,25 +881,28 @@ Package pdftex.def Info: BUDS_tables_and_figures_working_alternative_electrodes_
 
 LaTeX Warning: Float too large for page by 54.47563pt on input line 232.
 
-<BUDS_tables_and_figures_working_alternative_electrodes_files/figure-latex/unnamed-chunk-14-1.pdf, id=22, 650.43pt x 505.89pt>
+<BUDS_tables_and_figures_working_alternative_electrodes_files/figure-latex/unnamed-chunk-14-1.pdf, id=22, 361.35pt x 505.89pt>
 File: BUDS_tables_and_figures_working_alternative_electrodes_files/figure-latex/unnamed-chunk-14-1.pdf Graphic file (type pdf)
 <use BUDS_tables_and_figures_working_alternative_electrodes_files/figure-latex/unnamed-chunk-14-1.pdf>
 Package pdftex.def Info: BUDS_tables_and_figures_working_alternative_electrodes_files/figure-latex/unnamed-chunk-14-1.pdf  used on input line 236.
-(pdftex.def)             Requested size: 469.76817pt x 365.37524pt.
+(pdftex.def)             Requested size: 361.34912pt x 505.88875pt.
 LaTeX Font Info:    External font `lmex10' loaded for size
 (Font)              <12> on input line 237.
-<BUDS_tables_and_figures_working_alternative_electrodes_files/figure-latex/unnamed-chunk-18-1.pdf, id=23, 361.35pt x 361.35pt>
-File: BUDS_tables_and_figures_working_alternative_electrodes_files/figure-latex/unnamed-chunk-18-1.pdf Graphic file (type pdf)
-<use BUDS_tables_and_figures_working_alternative_electrodes_files/figure-latex/unnamed-chunk-18-1.pdf>
-Package pdftex.def Info: BUDS_tables_and_figures_working_alternative_electrodes_files/figure-latex/unnamed-chunk-18-1.pdf  used on input line 242.
-(pdftex.def)             Requested size: 361.34912pt x 361.34912pt.
+<BUDS_tables_and_figures_working_alternative_electrodes_files/figure-latex/unnamed-chunk-15-1.pdf, id=23, 361.35pt x 505.89pt>
+File: BUDS_tables_and_figures_working_alternative_electrodes_files/figure-latex/unnamed-chunk-15-1.pdf Graphic file (type pdf)
+<use BUDS_tables_and_figures_working_alternative_electrodes_files/figure-latex/unnamed-chunk-15-1.pdf>
+Package pdftex.def Info: BUDS_tables_and_figures_working_alternative_electrodes_files/figure-latex/unnamed-chunk-15-1.pdf  used on input line 242.
+(pdftex.def)             Requested size: 361.34912pt x 505.88875pt.
+
+LaTeX Warning: Float too large for page by 33.4383pt on input line 244.
+
 AED endfloat: Processing end Figures and Tables
 
 [2 <./BUDS_tables_and_figures_working_alternative_electrodes_files/figure-latex/unnamed-chunk-6-1.pdf>]
 
 [3 <./BUDS_tables_and_figures_working_alternative_electrodes_files/figure-latex/unnamed-chunk-14-1.pdf>]
 
-[4 <./BUDS_tables_and_figures_working_alternative_electrodes_files/figure-latex/unnamed-chunk-18-1.pdf>] (./BUDS_tables_and_figures_working_alternative_electrodes.aux)
+[4 <./BUDS_tables_and_figures_working_alternative_electrodes_files/figure-latex/unnamed-chunk-15-1.pdf>] (./BUDS_tables_and_figures_working_alternative_electrodes.aux)
  ***********
 LaTeX2e <2024-06-01>
 L3 programming layer <2020/03/25>
@@ -924,10 +917,10 @@ Here is how much of TeX's memory you used:
  14 hyphenation exceptions out of 8191
  99i,11n,107p,917b,616s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </home/bir8884/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmbx12.pfb></home/bir8884/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmmi10.pfb></home/bir8884/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmr10.pfb></home/bir8884/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmr12.pfb></home/bir8884/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmr8.pfb></home/bir8884/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmri12.pfb></home/bir8884/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmri8.pfb>
-Output written on BUDS_tables_and_figures_working_alternative_electrodes.pdf (4 pages, 812848 bytes).
+Output written on BUDS_tables_and_figures_working_alternative_electrodes.pdf (4 pages, 795774 bytes).
 PDF statistics:
- 112 PDF objects out of 1000 (max. 8388607)
- 81 compressed objects within 1 object stream
+ 108 PDF objects out of 1000 (max. 8388607)
+ 77 compressed objects within 1 object stream
  9 named destinations out of 1000 (max. 500000)
  28 words of extra memory for PDF output out of 10000 (max. 10000000)
 

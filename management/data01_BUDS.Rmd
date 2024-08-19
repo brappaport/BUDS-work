@@ -1,5 +1,5 @@
 ---
-title: "Data prep script 1: Importing and combining self-report data"
+title: "Data prep script 1: Importing and combining raw self-report, demographic, and STRAIN data"
 author: "Brent Rappaport"
 date: "`r format(Sys.time(),  '%Y-%m-%d')`"
 output:
@@ -13,7 +13,7 @@ toc: yes
 ---
 
 # About
-This script imports and merges the self-report data from BUDS study: Bullying, Unsupportive family/peers, Discrimination, and Social feedback study using data from PREDICT project collaboration between Northwestern (PI: Shankman) and Columbia (PI: Auerbach).
+This script imports and merges the raw self-report data files from PREDICT project collaboration between Northwestern (PI: Shankman) and Columbia (PI: Auerbach).
 
 # Get Setup
 ## Clear everything & set width
@@ -37,61 +37,58 @@ This script imports and merges the self-report data from BUDS study: Bullying, U
   library(Hmisc)
   library(workflowr)  #helps with workflow
 
+  here::i_am("management/data01_BUDS.Rmd")
+  
 here <- here::here
 ```
 
-## Get the Working Directory
-```{r}
-  here::i_am("management/data01_BUDS.Rmd")
-```
-
-## Load Data
-Remember to immediately rename and remove. Avoid overwriting old data.
+# Import Data
+## Columbia University
 ```{r}
 # Import data from Columbia University
 BUDS_cleaning01_columbia <- read.csv(here("../_rawdata/Columbia/SP_Self-Report_Baseline (3.17.21)_March 6, 2023_13.46.csv"), header=TRUE)
-# var.labels = BUDS_cleaning01_columbia[2,]; label(BUDS_cleaning01_columbia) <- var.labels[match(names(BUDS_cleaning01_columbia), names(var.labels))]
+BUDS_cleaning01_columbia[BUDS_cleaning01_columbia$id_1_i=="1008","id_1_i"] <- "1108" # Per Emma, subject 1108 mistakenly entered as 1008 but confirmed the date matches their baseline session
 
 BUDS_cleaning02_columbia <- read.csv(here("../_rawdata/Columbia/SP_Self-Report_Baseline (9.2020)_March 1, 2023_07.26.csv"), header=TRUE)
-# var.labels = BUDS_cleaning02_columbia[2,]; label(BUDS_cleaning02_columbia) <- var.labels[match(names(BUDS_cleaning02_columbia), names(var.labels))]
-BUDS_cleaning03_columbia <- bind_rows(BUDS_cleaning01_columbia, BUDS_cleaning02_columbia)
 
-# Import data from Northwestern University
+BUDS_cleaning03_columbia <- bind_rows(BUDS_cleaning01_columbia, BUDS_cleaning02_columbia)
+```
+
+## Northwestern University
+```{r}
 BUDS_cleaning01_nw1 <- read.csv(here("../_rawdata/Northwestern/SP Self-Report Baseline 9001-9012.csv"), header=TRUE)
-# Use the first row as the variable labels
-# var.labels = BUDS_cleaning01_nw1[1,]; label(BUDS_cleaning01_nw1) <- var.labels[match(names(BUDS_cleaning01_nw1), names(var.labels))]
 BUDS_cleaning02_nw1 <- BUDS_cleaning01_nw1[-(1),]; rm("BUDS_cleaning01_nw1")
 
 BUDS_cleaning01_nw2 <- read.csv(here("../_rawdata/Northwestern/SP Self-Report Baseline 9013-9038.csv"), header=TRUE)
-# Use the first row as the variable labels
-# var.labels = BUDS_cleaning01_nw2[1,]; label(BUDS_cleaning01_nw2) <- var.labels[match(names(BUDS_cleaning01_nw2), names(var.labels))]
 BUDS_cleaning02_nw2 <- BUDS_cleaning01_nw2[-(1),]; rm("BUDS_cleaning01_nw2")
 
 BUDS_cleaning01_nw3 <- read.csv(here("../_rawdata/Northwestern/SP Self-Report Baseline 9039-9100.csv"), header=TRUE)
-# Use the first row as the variable labels
-# var.labels = BUDS_cleaning01_nw3[1,]; label(BUDS_cleaning01_nw3) <- var.labels[match(names(BUDS_cleaning01_nw3), names(var.labels))]
 BUDS_cleaning02_nw3 <- BUDS_cleaning01_nw3[-(1),]; rm("BUDS_cleaning01_nw3")
 
 BUDS_cleaning02_nw <- bind_rows(BUDS_cleaning02_nw1, BUDS_cleaning02_nw2, BUDS_cleaning02_nw3)
+```
 
+## Combine NW and Columbia data
+```{r}
 BUDS_cleaning02 <- bind_rows(BUDS_cleaning03_columbia, BUDS_cleaning02_nw)
+
 BUDS_cleaning02 <- BUDS_cleaning02 %>%
   mutate(ID = as.integer(id_1_i)) %>%
-  filter(!is.na(ID))
+  filter(!is.na(ID)) %>% # Remove subject IDs with strings attached (e.g., "out of date" or "old")
+  filter(ID!=1073) # Can remove subjects 1073 and 1008 because they did not complete EEG
 
 # Which subjects have more than 1 row of data?
 BUDS_cleaning02[duplicated(BUDS_cleaning02$ID),"ID"]
 
-# CHANGE THIS
-# BUDS_cleaning02 <- BUDS_cleaning02 %>%
-  # distinct(ID, .keep_all=TRUE)
-
+ # Per Sarah Sarkes, for the STRAIN, 9042 was mis-entered as 9024 and 9067 was mis-entered as 9072, for 9024 the completion date should be 6/16/2021, and the correct date for 9042 entered as 9024 would be 11/9/2021. For 9072, the completion date should be 6/13/2022, and 9067 entered as 9072 should have the completion date of 5/21/2022.
 strain_data <- read.csv(here("../_rawdata/Columbia-NW_SocialProcesses_Lifetime_04-05-23.csv"))
-strain_data <- strain_data[-(1:4),]
-BUDS_cleaning02_with_strain <- merge(BUDS_cleaning02, strain_data, by="ID")
-# sort(table(BUDS_cleaning02_with_strain$ID))
-```
+strain_data <- subset(strain_data, ID != "test" & ID != "testing" & ID != "testdata" & ID != "999" & ID != "9999")
 
+strain_data[strain_data$ID==9024,"ID"][2] <- "9042"
+strain_data[strain_data$ID==9072,"ID"][1] <- "9067"
+
+BUDS_cleaning02_with_strain <- merge(BUDS_cleaning02, strain_data, by="ID")
+```
 
 ```{r}
 save(BUDS_cleaning02, file=here("data/BUDS_cleaning02.RData"))
