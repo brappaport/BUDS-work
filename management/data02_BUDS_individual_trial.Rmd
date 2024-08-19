@@ -1,0 +1,300 @@
+---
+title: "Data prep script 2: Generate individual trial values for Dependability analyses"
+author: "Brent Rappaport"
+date: "`r format(Sys.time(),  '%Y-%m-%d')`"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+subtitle: Template Rmd
+editor_options:
+  chunk_output_type: console
+toc: yes
+---
+
+# About
+This script imports ERP data from Chatroom task (Social Processing task) and calculates split-half reliability from PREDICT project collaboration between Northwestern (PI: Shankman) and Columbia (PI: Auerbach).
+
+# Get Setup
+## Clear everything & set width
+```{r}
+knitr::opts_chunk$set(set.seed(312), echo=FALSE, results='hide', message=FALSE, warning=FALSE, error=FALSE)
+    options(width=80) #Set width
+    rm(list=ls())     #Remove everything from environment
+    cat("\014")       #Clear Console
+```
+
+## Load Libraries
+```{r}
+  library(knitr)      #allows rmarkdown files
+  library(haven)      #helps import stata
+  library(questionr)  #allows lookfor function
+  library(broom)      #nice statistical output
+  library(here)       #nice file paths
+  library(expss)      #labeling variables/values
+  library(psych)      #used for statistical analyses
+  library(ggplot2)    #creates plots
+  library(MASS)
+  library(papaja)     #generate APA documents
+  library(Hmisc)
+  library(misty)      #ordinal Cronbach's alpha
+  library(lavaan)     #SEM
+  library(papaja)
+  library(pscl)       # for zero inflated models
+  library(lme4)
+  library(lmerTest)
+  library(bbmle)
+  library(marginaleffects)
+  library(confintr)
+  library(bestNormalize) # for normalizing data
+  library(tidyverse)  #plotting/cleaning, etc.
+  library(workflowr)  #helps with workflow
+
+select <- dplyr::select
+here <- here::here
+```
+
+## Get the Working Directory
+```{r}
+here::i_am("./management/data03_BUDS.Rmd")
+# Set import directory
+erp_data_dir <- here::here("data/eeg_processing/")
+```
+
+## Subjects
+```{r}
+subjects <- c(1000,
+1001,
+1002,
+1004,
+1006,
+1008,
+1009,
+1010,
+1012,
+1014,
+1017,
+1021,
+1022,
+1023,
+1024,
+1025,
+1026,
+1027,
+1029,
+1030,
+1031,
+1033,
+1035,
+1036,
+1037,
+1039,
+1040,
+1041,
+1043,
+1044,
+1046,
+1047,
+1048,
+1049,
+1050,
+1052,
+1053,
+1054,
+1055,
+1057,
+1058,
+1059,
+1060,
+1061,
+1063,
+1064,
+1065,
+1066,
+1067,
+1068,
+1069,
+1070,
+1071,
+1072,
+1073,
+1074,
+1075,
+1077,
+1078,
+1079,
+1080,
+1081,
+1082,
+1084,
+1085,
+1086,
+1087,
+1088,
+1089,
+1090,
+1091,
+1094,
+1095,
+1096,
+1097,
+1098,
+1099,
+1100,
+1101,
+1102,
+1103,
+1104,
+1105,
+1106,
+1107,
+1108,
+1109,
+1110,
+1111,
+1112,
+1113,
+1114,
+1115,
+1116,
+1117,
+1118,
+1119,
+1120,
+1121,
+1122,
+1123,
+1124,
+1125,
+1126,
+9001,
+9003,
+9004,
+9005,
+9006,
+9007,
+9008,
+9010,
+9013,
+9014,
+9015,
+9017,
+9018,
+9019,
+9020,
+9021,
+9022,
+9024,
+9026,
+9027,
+9028,
+9030,
+9031,
+9033,
+9034,
+9035,
+9037,
+9038,
+9039,
+9040,
+9042,
+9043,
+9044,
+9045,
+9046,
+9048,
+9049,
+9050,
+9051,
+9052,
+9053,
+9055,
+9056,
+9057,
+9059,
+9060,
+9061,
+9062,
+9063,
+9067,
+9068,
+9069,
+9070,
+9072,
+9075,
+9076,
+9077,
+9078,
+9079,
+9080,
+9081,
+9082,
+9083,
+9084,
+9085,
+9087,
+9088,
+9089,
+9091,
+9092,
+9093,
+9094,
+9096,
+9097,
+9098,
+9099,
+9100
+)
+
+segments <- read.csv(paste0(erp_data_dir, "SegmentCount/summary_erp_bin_RewP.csv"))
+
+subjects_150275 <- segments %>%
+  dplyr::filter(Acc_Acc < 13 | Acc_Rej < 11) %>%
+  select(subject)
+subjects_150275 <- setdiff(subjects, subjects_150275$subject)
+
+subjects_275425 <- segments %>%
+  dplyr::filter(Acc_Acc < 15 | Acc_Rej < 13) %>%
+  select(subject)
+subjects_275425 <- setdiff(subjects, subjects_275425$subject)
+
+# unique(c(subjects_150275$subject,subjects_275425$subject))
+# segments[segments$subject==1025,]
+```
+
+```{r}
+files_artifacts  <- list.files(path=here::here(paste0(erp_data_dir, "Events/feedback/")), 
+                     pattern='\\_event_all.csv',
+                     full.names=TRUE)
+df_artifacts <- lapply(files_artifacts, read.csv, header = TRUE) %>%
+  do.call(rbind , .) %>%
+     filter(bindescr!="") %>%
+     mutate(ID = subject,
+            trial = epochN) %>%
+     select(ID,artifactFlag,trial,bindescr)
+
+files_50150  <- list.files(path="/projects/p31735/BUDS/eeg_processing/Scripts/trial_level_data/Fz",
+                     pattern='\\_Fz_50150_TrialLevelMeanAmplitude.csv',
+                     full.names=TRUE)
+df_50150 <- lapply(files_50150, read.csv, header = TRUE) %>%
+       do.call(rbind, .) %>%
+       right_join(df_artifacts, by=c("ID","trial"))
+
+files_150275  <- list.files(path="/projects/p31735/BUDS/eeg_processing/Scripts/trial_level_data/Cz",
+                     pattern='\\_Cz_150275_TrialLevelMeanAmplitude.csv',
+                     full.names=TRUE)
+df_150275 <- lapply(files_150275, read.csv, header = TRUE) %>%
+       do.call(rbind, .) %>%
+       right_join(df_artifacts, by=c("ID","trial"))
+
+files_275425  <- list.files(path="/projects/p31735/BUDS/eeg_processing/Scripts/trial_level_data/Pz", 
+                     pattern='\\_Pz_275425_TrialLevelMeanAmplitude.csv',
+                     full.names=TRUE)
+df_275425 <- lapply(files_275425, read.csv, header = TRUE) %>%
+       do.call(rbind, .) %>%
+       right_join(df_artifacts, by=c("ID","trial"))
+
+write.csv(df_50150, "./data/trial_Cz_50150ms.csv")
+write.csv(df_150275, "./data/trial_Cz_150275ms.csv")
+write.csv(df_275425, "./data/trial_Cz_275425ms.csv")
+```
