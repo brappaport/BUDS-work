@@ -1,5 +1,5 @@
 ---
-title: "Data prep script 2: Filtering and scoring self-report data"
+title: "Data prep script 2: Importing ERP data"
 author: "Brent Rappaport"
 date: "`r format(Sys.time(),  '%Y-%m-%d')`"
 output:
@@ -13,293 +13,446 @@ toc: yes
 ---
 
 # About
-This script filter and scores the self-report data from BUDS study: Bullying, Unsupportive family/peers, Discrimination, and Social feedback study using data from PREDICT project collaboration between Northwestern (PI: Shankman) and Columbia (PI: Auerbach).
+This script imports ERP data from Chatroom task (Social Processing task) and calculates split-half reliability from PREDICT project collaboration between Northwestern (PI: Shankman) and Columbia (PI: Auerbach).
 
-# 1. Get Setup
-## 1.1. Clear everything & set width
+# Get Setup
+## Clear everything & set width
 ```{r}
-knitr::opts_chunk$set(echo=TRUE, results='hide', message=FALSE, set.seed(312))
+knitr::opts_chunk$set(set.seed(312), echo=FALSE, results='hide', message=FALSE, warning=FALSE, error=FALSE)
     options(width=80) #Set width
     rm(list=ls())     #Remove everything from environment
     cat("\014")       #Clear Console
 ```
 
-## 1.2. Load Libraries
-```{r echo=TRUE, results='hide', message=FALSE}
+## Load Libraries
+```{r}
   library(knitr)      #allows rmarkdown files
   library(haven)      #helps import stata
   library(questionr)  #allows lookfor function
-  library(tidyverse)  #plotting/cleaning, etc.
   library(broom)      #nice statistical output
   library(here)       #nice file paths
   library(expss)      #labeling variables/values
   library(psych)      #used for statistical analyses
   library(ggplot2)    #creates plots
+  library(MASS)
+  library(papaja)     #generate APA documents
   library(Hmisc)
   library(misty)      #ordinal Cronbach's alpha
   library(lavaan)     #SEM
+  library(papaja)
+  library(pscl)       # for zero inflated models
+  library(lme4)
+  library(lmerTest)
+  library(bbmle)
+  library(marginaleffects)
+  library(confintr)
+  library(bestNormalize) # for normalizing data
+  library(tidyverse)  #plotting/cleaning, etc.
   library(workflowr)  #helps with workflow
+
+select <- dplyr::select
+here <- here::here
 ```
 
 ## Get the Working Directory
 ```{r}
-  here::i_am("./management/data02_BUDS.Rmd")
+here::i_am("./management/data03_BUDS.Rmd")
+# Set import directory
+erp_data_dir <- here::here("data/eeg_processing/")
 ```
 
-## Load Data
-Remember to immediately rename and remove. Avoid overwriting old data.
+## Subjects
 ```{r}
-load(here("./data/BUDS_cleaning02.RData"))
+subjects <- c(1000,
+1001,
+1002,
+1004,
+1006,
+1008,
+1009,
+1010,
+1012,
+1014,
+1017,
+1021,
+1022,
+1023,
+1024,
+1025,
+1026,
+1027,
+1029,
+1030,
+1031,
+1033,
+1035,
+1036,
+1037,
+1039,
+1040,
+1041,
+1043,
+1044,
+1046,
+1047,
+1048,
+1049,
+1050,
+1052,
+1053,
+1054,
+1055,
+1057,
+1058,
+1059,
+1060,
+1061,
+1063,
+1064,
+1065,
+1066,
+1067,
+1068,
+1069,
+1070,
+1071,
+1072,
+1073,
+1074,
+1075,
+1077,
+1078,
+1079,
+1080,
+1081,
+1082,
+1084,
+1085,
+1086,
+1087,
+1088,
+1089,
+1090,
+1091,
+1094,
+1095,
+1096,
+1097,
+1098,
+1099,
+1100,
+1101,
+1102,
+1103,
+1104,
+1105,
+1106,
+1107,
+1108,
+1109,
+1110,
+1111,
+1112,
+1113,
+1114,
+1115,
+1116,
+1117,
+1118,
+1119,
+1120,
+1121,
+1122,
+1123,
+1124,
+1125,
+1126,
+9001,
+9003,
+9004,
+9005,
+9006,
+9007,
+9008,
+9010,
+9013,
+9014,
+9015,
+9017,
+9018,
+9019,
+9020,
+9021,
+9022,
+9024,
+9026,
+9027,
+9028,
+9030,
+9031,
+9033,
+9034,
+9035,
+9037,
+9038,
+9039,
+9040,
+9042,
+9043,
+9044,
+9045,
+9046,
+9048,
+9049,
+9050,
+9051,
+9052,
+9053,
+9055,
+9056,
+9057,
+9059,
+9060,
+9061,
+9062,
+9063,
+9067,
+9068,
+9069,
+9070,
+9072,
+9075,
+9076,
+9077,
+9078,
+9079,
+9080,
+9081,
+9082,
+9083,
+9084,
+9085,
+9087,
+9088,
+9089,
+9091,
+9092,
+9093,
+9094,
+9096,
+9097,
+9098,
+9099,
+9100
+)
+
+segments <- read.csv(paste0(erp_data_dir, "SegmentCount/summary_erp_bin_RewP.csv"))
+
+subjects_150275 <- segments %>%
+  dplyr::filter(Acc_Acc < 13 | Acc_Rej < 11) %>%
+  select(subject)
+subjects_150275 <- setdiff(subjects, subjects_150275$subject)
+
+subjects_275425 <- segments %>%
+  dplyr::filter(Acc_Acc < 15 | Acc_Rej < 13) %>%
+  select(subject)
+subjects_275425 <- setdiff(subjects, subjects_275425$subject)
+
+# unique(c(subjects_150275$subject,subjects_275425$subject))
+# segments[segments$subject==1025,]
 ```
 
-# Filter and score data
-```{r}
-# Only include variables of interest
-BUDS_cleaning03 <- BUDS_cleaning02
-```
 
-## Score ADDI
-```{r}
-# ADDI
-## Make variable list
-addi_vars <- c("addi_1b_i","addi_2b_i","addi_3b_i","addi_4b_i","addi_5b_i","addi_6b_i","addi_7b_i","addi_8b_i","addi_9b_i","addi_10b_i",
-                                "addi_11b_i","addi_12b_i","addi_13b_i","addi_14b_i","addi_15b_i")
-BUDS_cleaning03_cleaned <- BUDS_cleaning03
-for (var in addi_vars) {
- eval(parse(text=paste0('
-  BUDS_cleaning03_cleaned$',var,'_correct <- dplyr::recode_factor(BUDS_cleaning03$',var,', "Not at all"=1, "Slightly"=2, "Moderately"=3,"Considerably"=4,"Extremely"=5, `1`=1, `2`=2, `3`=3, `4`=4,`5`=5)')))
-}
+# Load raw ERP data
+```{r, eval=FALSE}
+channels_oldmontage <- c("Fp1", "Fz", "F3", "F7", "FT9", "FC5", "FC1", 
+              "C3", "TP9", "CP5", "CP1", 
+              "Pz", "P3", "P7", "CPz", "Oz", "POz", "P4", "P8", "TP10", 
+              "CP6", "CP2", "Cz", "C4", "AFz", 
+              "FT10", "FC6", "FC2", "F4", "F8", "Fp2", "FCz")
+channels <- c("Fp1", "Fz", "F3", "F7", "FT9", "PO7", "FC1", 
+              "C3", "TP9", "CP5", "CP1", 
+              "Pz", "P3", "P7", "CPz", "Oz", "POz", "P4", "P8", "TP10", 
+              "CP6", "CP2", "Cz", "C4", "AFz", 
+              "FT10", "PO8", "FC2", "F4", "F8", "Fp2", "FCz")
+time_windows <- c("50150", "150275", "275425")
 
-addi_vars_correct <- paste0(addi_vars,"_correct")
-
-BUDS_cleaning03_cleaned[,addi_vars_correct] <- sapply(BUDS_cleaning03_cleaned[,addi_vars_correct], as.numeric) # make variables of numeric class
-
-# Sort by least to most endorsed item
-# sort(apply(BUDS_cleaning03_cleaned[,addi_vars_correct], 2, function(x) sum(x>0, na.rm=T)))
-
-## score
-BUDS_cleaning03_cleaned$addi_total <- rowSums(BUDS_cleaning03_cleaned[,addi_vars_correct], na.rm=TRUE)
-BUDS_cleaning03_cleaned$addi_total_no6 <- rowSums(BUDS_cleaning03_cleaned[,addi_vars_correct[addi_vars_correct != "addi_6b_i_correct"]], na.rm=TRUE)
-BUDS_cleaning03_cleaned$addi_total_c <- scale(BUDS_cleaning03_cleaned$addi_total, scale=FALSE, center=TRUE)
-BUDS_cleaning03_cleaned$addi_total_z <- scale(BUDS_cleaning03_cleaned$addi_total, scale=TRUE, center=TRUE)
-BUDS_cleaning03_cleaned$addi_01 <- ifelse(BUDS_cleaning03_cleaned$addi_total>0, 1, 0)
-BUDS_cleaning03_cleaned$addi_educ <- rowSums(BUDS_cleaning03_cleaned[,addi_vars_correct[c(1,2,3,6)]], na.rm=TRUE)
-BUDS_cleaning03_cleaned$addi_instit <- rowSums(BUDS_cleaning03_cleaned[,addi_vars_correct[c(7,9,10,13,14)]], na.rm=TRUE)
-BUDS_cleaning03_cleaned$addi_peer <- rowSums(BUDS_cleaning03_cleaned[,addi_vars_correct[c(4,5,8,11,15)]], na.rm=TRUE)
-```
-### Alphas
-```{r}
-# psych::alpha(BUDS_cleaning03_cleaned[,c(addi_vars)])$total$std.alpha
-# psych::alpha(BUDS_cleaning03_cleaned[,c(addi_vars[c(1,2,3,6)])])$total$std.alpha
-# psych::alpha(BUDS_cleaning03_cleaned[,c(addi_vars[c(7,9,10,13,14)])])$total$std.alpha
-# psych::alpha(BUDS_cleaning03_cleaned[,c(addi_vars[c(4,5,8,11,15)])])$total$std.alpha
-```
-
-## Score BCS-A
-```{r}
-# Score BCS
-bcs_vars <- c("bcs_offline_1_i","bcs_offline_2_i","bcs_offline_3_i","bcs_offline_4_i","bcs_offline_5_i","bcs_offline_6_i","bcs_offline_7_i","bcs_offline_8_i",
-              "bcs_online_1_i","bcs_online_2_i","bcs_online_3_i","bcs_online_4_i","bcs_online_5_i")
-
-for (var in bcs_vars) {
- eval(parse(text=paste0('
-  BUDS_cleaning03_cleaned$',var,'_correct <- dplyr::recode_factor(BUDS_cleaning03$',var,', "This did not happen to me"=0, "Once or twice"=1, "Every few weeks"=2,"About once a week"=3,"Several times a week or more"=4, `0`=0, `1`=1, `2`=2, `3`=3, `4`=4)')))
-}
-BUDS_cleaning03_cleaned <- as.data.frame(BUDS_cleaning03_cleaned)
-BUDS_cleaning03_cleaned[,paste0(bcs_vars,"_correct")] <- sapply(BUDS_cleaning03_cleaned[,paste0(bcs_vars,"_correct")], FUN=function(x) as.integer(as.character(x))) # make variables of numeric class
-
-# Score using ordinal measurement scale where ratings of "about once a week" and "several times a week or more" are treated equally.
-BUDS_cleaning03_cleaned[,paste0(bcs_vars,"_correct")] <- sapply(BUDS_cleaning03_cleaned[,paste0(bcs_vars,"_correct")], function(x) ifelse(x>=2, 2, x))
-bcs_vars <- paste0(bcs_vars,"_correct")
-# Score using ordinal measurement scale
-## This means that 0 = not involved, 1 = sub-threshold, 2 = victimized/perpetrated. Based on the scoring that if any of the items endorsed at a 2, then their subscale is a 2 ("about once a week" or "several times a week or more"); if any items endorsed as a 1 ("once or twice"), then subscale is a 1; participants could only score a 0 if all items endorsed at a 0 ("this did not happen to me").
-BUDS_cleaning04 <- BUDS_cleaning03_cleaned %>% 
-    mutate(bcs_physical_vic = ifelse(if_any(bcs_vars[1:4], ~.x %in% 2),2,if_any(bcs_vars[1:4], ~.x %in% 1,1,0)),
-           bcs_physical_vic_01 = ifelse(bcs_physical_vic > 0, 1, 0),
-           bcs_verbal_vic = ifelse(if_any(bcs_vars[5:6], ~.x %in% 2),2,if_any(bcs_vars[5:6], ~.x %in% 1,1,0)),
-           bcs_rel_vic = ifelse(if_any(bcs_vars[7:8], ~.x %in% 2),2,if_any(bcs_vars[7:8], ~.x %in% 1,1,0)),
-           bcs_cyber_vic = ifelse(if_any(bcs_vars[9:13], ~.x %in% 2),2,if_any(bcs_vars[9:13], ~.x %in% 1,1,0)),
-           bcs_total_vic = ifelse(if_any(bcs_vars[1:13], ~.x %in% 2),2,if_any(bcs_vars[1:13], ~.x %in% 1,1,0)),
-           
-           bcs_physical_vic_revised = ifelse(if_any(bcs_vars[c(1,4)], ~.x %in% 2),2,if_any(bcs_vars[c(1,4)], ~.x %in% 1,1,0)),
-           bcs_rel_vic_revised = ifelse(if_any(bcs_vars[c(2,3,7,8)], ~.x %in% 2),2,if_any(bcs_vars[c(2,3,7,8)], ~.x %in% 1,1,0)))
-```
-### Alphas
-```{r}
-item.alpha(BUDS_cleaning04[,c(bcs_vars[1:4])], std=TRUE)
-item.alpha(BUDS_cleaning04[,c(bcs_vars[5:6])], std=TRUE)
-item.alpha(BUDS_cleaning04[,c(bcs_vars[7:8])], std=TRUE)
-item.alpha(BUDS_cleaning04[,c(bcs_vars[9:13])], std=TRUE)
-item.alpha(BUDS_cleaning04[,c(bcs_vars[1:13])], std=TRUE)
-
-original <- '
-physical =~ bcs_offline_1_i_correct + bcs_offline_2_i_correct + bcs_offline_3_i_correct + bcs_offline_4_i_correct
-verbal =~ bcs_offline_5_i_correct + bcs_offline_6_i_correct
-relational =~ bcs_offline_7_i_correct + bcs_offline_8_i_correct
-'
-
-new <- '
-physical =~ bcs_offline_1_i_correct + bcs_offline_4_i_correct
-verbal =~ bcs_offline_5_i_correct + bcs_offline_6_i_correct
-relational =~ bcs_offline_2_i_correct + bcs_offline_3_i_correct + bcs_offline_7_i_correct + bcs_offline_8_i_correct
-'
-
-original_fit <- cfa(original, BUDS_cleaning04, estimator="ML", missing="FIML")
-new_fit <- cfa(new, BUDS_cleaning04, estimator="ML", missing="FIML")
-
-anova(original_fit, new_fit)
-```
-
-## Score PROMIS
-```{r}
-promis_vars <- c("promis_peer_rel_1_i","promis_peer_rel_2_i","promis_peer_rel_3_i","promis_peer_rel_4_i","promis_peer_rel_5_i","promis_peer_rel_6_i","promis_peer_rel_7_i","promis_peer_rel_8_i","promis_family_rel_1_i","promis_family_rel_2_i","promis_family_rel_3_i","promis_family_rel_4_i")
-# BUDS_cleaning04[,promis_vars] <- sapply(BUDS_cleaning04[,promis_vars], as.factor) # make variables of numeric class
-
-BUDS_cleaning04_cleaned = BUDS_cleaning04
-for (var in promis_vars[1:8]) {
- eval(parse(text=paste0('
-  BUDS_cleaning04_cleaned$',var,'_correct <- dplyr::recode_factor(BUDS_cleaning04_cleaned$',var,', "Never"=1, "Almost Never"=2, "Sometimes"=3,"Often"=4,"Almost Always"=5, `1`=1, `2`=2, `3`=3, `4`=4,`5`=5)')))
-}
-
-for (var in promis_vars[9:12]) {
- eval(parse(text=paste0('
-  BUDS_cleaning04_cleaned$',var,'_correct <- dplyr::recode_factor(BUDS_cleaning04_cleaned$',var,', "Never"=1, "Rarely"=2, "Sometimes"=3,"Often"=4,"Always"=5, `1`=1, `2`=2, `3`=3, `4`=4,`5`=5)')))
-}
-
-promis_vars_correct <- paste0(promis_vars,"_correct")
-BUDS_cleaning04_cleaned[,promis_vars_correct] <- sapply(BUDS_cleaning04_cleaned[,promis_vars_correct], FUN=function(x) as.integer(as.character(x))) # make variables of numeric class
-
-BUDS_cleaning05 <- BUDS_cleaning04_cleaned %>% 
-    full_join(BUDS_cleaning04) %>%
-    rowwise() %>%
-    mutate(promis_peer_meanraw = mean(c_across(promis_peer_rel_1_i_correct:promis_peer_rel_8_i_correct), na.rm=F),
-           promis_fam_meanraw = mean(c_across(promis_family_rel_1_i_correct:promis_family_rel_4_i_correct), na.rm=F),
-           promis_peer_sumraw = sum(c_across(promis_peer_rel_1_i_correct:promis_peer_rel_8_i_correct), na.rm=F),
-           promis_fam_sumraw = sum(c_across(promis_family_rel_1_i_correct:promis_family_rel_4_i_correct), na.rm=F)) %>%
-   mutate(
-     promis_peer_tscore = dplyr::recode(promis_peer_sumraw, 
-     `40`=64.4,`39`=59.5,`38`=56.8,`37`=54.5,`36`=52.6,`35`=50.9,`34`=49.4,`33`=48,`32`=46.7,`31`=45.5,
-     `30`=44.3,`29`=43.1,`28`=42,`27`=40.9,`26`=39.8,`25`=38.8,`24`=37.7,`23`=36.7,`22`=35.6,`21`=34.6,
-     `20`=33.6,`19`=32.5,`18`=31.4,`17`=30.3,`16`=29.2,`15`=28.1,`14`=26.9,`13`=25.7,`12`=24.4,`11`=23,
-     `10`=21.4,`9`=20,`8`=17.8),
-     promis_fam_tscore = dplyr::recode(promis_fam_sumraw,
-     `20`=59.5,`19`=52.1,`18`=49.0,`17`=46.7,`16`=44.7,`15`=42.8,`14`=41.0,`13`=39.1,`12`=37.4,`11`=35.7,
-     `10`=34.0,`9`=32.4,`8`=30.8,`7`=29.1,`6`=27.3,`5`=25.1,`4`=21.4))
-
-# Check to make sure mean is calculated correctly
-head(BUDS_cleaning05[,c(promis_vars_correct[1:8],"promis_peer_meanraw")])
-head(BUDS_cleaning05[,c(promis_vars_correct[9:12],"promis_fam_meanraw")])
-```
-### Alphas
-```{r}
-psych::alpha(BUDS_cleaning05[,c(promis_vars_correct[c(1:8)])])$total$std.alpha
-psych::alpha(BUDS_cleaning05[,c(promis_vars_correct[c(9:12)])])$total$std.alpha
-```
-
-# Check variables
-## Histograms
-```{r}
-# Check distributions
-hist(BUDS_cleaning05$addi_total)
-hist(BUDS_cleaning05$addi_educ)
-hist(BUDS_cleaning05$addi_instit)
-hist(BUDS_cleaning05$addi_peer)
-
-hist(BUDS_cleaning05$bcs_physical_vic)
-hist(BUDS_cleaning05$bcs_physical_vic_01)
-hist(BUDS_cleaning05$bcs_verbal_vic)
-hist(BUDS_cleaning05$bcs_rel_vic)
-hist(BUDS_cleaning05$bcs_cyber_vic)
-hist(BUDS_cleaning05$bcs_total_vic)
-
-table(BUDS_cleaning05$promis_peer_sumraw)
-hist(BUDS_cleaning05$promis_fam_sumraw)
-table(BUDS_cleaning05$promis_peer_tscore)
-table(BUDS_cleaning05$promis_fam_tscore)
-```
-
-## Correlation between measures
-```{r Correlation matrix table function}
-# from https://www.r-bloggers.com/2020/07/create-a-publication-ready-correlation-matrix-with-significance-levels-in-r/
-
-correlation_matrix <- function(df, 
-                               type = "pearson",
-                               digits = 3, 
-                               decimal.mark = ".",
-                               use = "all", 
-                               show_significance = TRUE, 
-                               replace_diagonal = FALSE, 
-                               replacement = ""){
-  
-  # check arguments
-  stopifnot({
-    is.numeric(digits)
-    digits >= 0
-    use %in% c("all", "upper", "lower")
-    is.logical(replace_diagonal)
-    is.logical(show_significance)
-    is.character(replacement)
-  })
-  # we need the Hmisc package for this
-  require(Hmisc)
-  
-  # retain only numeric and boolean columns
-  isNumericOrBoolean = vapply(df, function(x) is.numeric(x) | is.logical(x), logical(1))
-  if (sum(!isNumericOrBoolean) > 0) {
-    cat('Dropping non-numeric/-boolean column(s):', paste(names(isNumericOrBoolean)[!isNumericOrBoolean], collapse = ', '), '\n\n')
+for ( t in time_windows) {
+  eval(parse(text=paste0('df_',t,' <- as.data.frame(NA)')))
+  for (s in subjects) {
+    tryCatch({
+    ifelse(s < 1009 | (s > 9000 & s < 9006),
+         eval(parse(text=paste0(
+     'df_',s,'_',t,' <- as.data.frame(read.csv(here::here(paste0(erp_data_dir,"Results/subj_erp_Feedback/',s,'_component_',t,'.csv")), header=FALSE))
+     colnames(df_',s,'_',t,') <- c("Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All")
+     df_',s,'_',t,'$ID <- rep(',s,', 32)
+     df_',s,'_',t,'$Channel <- channels_oldmontage
+     df_',t,' <- bind_rows(df_',t,',df_',s,'_',t,')
+     print(paste0("Done with subject ", s))'
+     )))
+     ,
+   eval(parse(text=paste0(
+     'df_',s,'_',t,' <- as.data.frame(read.csv(here::here(paste0(erp_data_dir,"Results/subj_erp_Feedback/',s,'_component_',t,'.csv")), header=FALSE))
+     colnames(df_',s,'_',t,') <- c("Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All")
+     df_',s,'_',t,'$ID <- rep(',s,', 32)
+     df_',s,'_',t,'$Channel <- channels
+     df_',t,' <- bind_rows(df_',t,',df_',s,'_',t,')
+     print(paste0("Done with subject ", s))'
+     )))
+    )
+    }, error=function(e){cat("ERROR : For subject ",s, "; ", conditionMessage(e), "\n")})
   }
-  df = df[isNumericOrBoolean]
-  
-  # transform input data frame to matrix
-  x <- as.matrix(df)
-  
-  # run correlation analysis using Hmisc package
-  correlation_matrix <- Hmisc::rcorr(x, type = )
-  R <- correlation_matrix$r # Matrix of correlation coeficients
-  p <- correlation_matrix$P # Matrix of p-value 
-  
-  # transform correlations to specific character format
-  Rformatted = formatC(R, format = 'f', digits = digits, decimal.mark = decimal.mark)
-  
-  # if there are any negative numbers, we want to put a space before the positives to align all
-  if (sum(R < 0) > 0) {
-    Rformatted = ifelse(R > 0, paste0(' ', Rformatted), Rformatted)
-  }
-  
-  # add significance levels if desired
-  if (show_significance) {
-    # define notions for significance levels; spacing is important.
-    stars <- ifelse(is.na(p), "   ", ifelse(p < .001, "***", ifelse(p < .01, "** ", ifelse(p < .05, "*  ", "   "))))
-    Rformatted = paste0(Rformatted, stars)
-  }
-  # build a new matrix that includes the formatted correlations and their significance stars
-  Rnew <- matrix(Rformatted, ncol = ncol(x))
-  rownames(Rnew) <- colnames(x)
-  colnames(Rnew) <- paste(colnames(x), "", sep =" ")
-  
-  # replace undesired values
-  if (use == 'upper') {
-    Rnew[lower.tri(Rnew, diag = replace_diagonal)] <- replacement
-  } else if (use == 'lower') {
-    Rnew[upper.tri(Rnew, diag = replace_diagonal)] <- replacement
-  } else if (replace_diagonal) {
-    diag(Rnew) <- replacement
-  }
-  
-  return(Rnew)
 }
+
+# Load Even and Odd trials
+for (t in time_windows) {
+  eval(parse(text=paste0('df_even_',t,' <- as.data.frame(NA)')))
+  eval(parse(text=paste0('df_odd_',t,' <- as.data.frame(NA)')))
+  print(paste0("***********Loading data from time window ",t," now***********"))
+  for (s in subjects) {
+    tryCatch({
+   eval(parse(text=paste0('
+     print(paste0("Load subject ",s,"_even data now"))
+     df_even_',s,'_',t,' <- as.data.frame(
+     read.delim(here::here(paste0(erp_data_dir,"Results/subj_erp_Feedback/split_half/even/',s,'_component_',t,'.txt")), 
+                header=TRUE))
+     df_even_',s,'_',t,'$ID <- rep(',s,', 1)
+     df_even_',t,' <- bind_rows(df_even_',t,',df_even_',s,'_',t,')'
+     )))
+   eval(parse(text=paste0('
+   print(paste0("Load subject ",s,"_odd data now"))
+     df_odd_',s,'_',t,' <- as.data.frame(read.delim(here::here(paste0(erp_data_dir,"Results/subj_erp_Feedback/split_half/odd/',s,'_component_',t,'.txt")), header=TRUE))
+     df_odd_',s,'_',t,'$ID <- rep(',s,', 1)
+     df_odd_',t,' <- bind_rows(df_odd_',t,',df_odd_',s,'_',t,')'
+     )))
+    }, error=function(e){cat("ERROR : For subject ",s, "; ", conditionMessage(e), "\n")})
+  }
+}
+
+df_150275 <- filter(df_150275, ID %in% subjects_150275)
+df_even_150275 <- filter(df_even_150275, ID %in% subjects_150275)
+df_odd_150275 <- filter(df_odd_150275, ID %in% subjects_150275)
+
+df_275425 <- filter(df_275425, ID %in% subjects_275425)
+df_even_275425 <- filter(df_even_275425, ID %in% subjects_275425)
+df_odd_275425 <- filter(df_odd_275425, ID %in% subjects_275425)
+
+# load(file=here::here("./data/ERP_data.RData"))
+save(df_50150, df_150275, df_275425,
+     df_even_50150, df_even_150275, df_even_275425,
+     df_odd_50150, df_odd_150275, df_odd_275425,
+     file=here::here("./data/ERP_data.RData"))
 ```
+
+# Load ERP data
 ```{r}
-all_measures <- c("addi_total","addi_educ","addi_instit","addi_peer",
-                  "bcs_total_vic","bcs_physical_vic_01","bcs_verbal_vic","bcs_rel_vic","bcs_cyber_vic",
-                  "promis_peer_tscore","promis_fam_tscore")
-
-# write.csv(correlation_matrix(BUDS_cleaning05[c(all_measures)], use="lower", replace_diagonal = TRUE, show_significance=FALSE), file = here("manuscript/tables/beh_cor_matrix.csv"))
-
-library(corrplot)
-corrplot(cor(BUDS_cleaning05[c(all_measures)],use="pairwise.complete.obs"), method="circle")
+load(here::here("./data/ERP_data.RData"))
 ```
 
+# Split-half
+## Even
 ```{r}
-save(BUDS_cleaning05, file=here("data/BUDS_cleaning05.RData"))
+df_even_50150_fz <- df_even_50150 %>%
+  dplyr::select(ID, contains("_Fz"))
+colnames(df_even_50150_fz) <- c("ID","Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All")
+df_even_50150_fz <- df_even_50150_fz[,1:7] %>%
+  # full_join(BUDS_cleaning05, by="ID") %>%
+  filter(!is.na(Acc_All)) %>%
+  mutate(A_all = stdres(lm(Acc_All ~ Rej_All, .)),
+         AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, .)),
+         AR_AA = stdres(lm(Acc_Rej ~ Acc_Acc, .)))
+
+df_even_150275_cz <- df_even_150275 %>%
+  dplyr::select(ID, contains("_Cz"))
+colnames(df_even_150275_cz) <- c("ID","Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All")
+df_even_150275_cz <- df_even_150275_cz[,1:7] %>%
+  # full_join(BUDS_cleaning05, by="ID") %>%
+  filter(!is.na(Acc_All)) %>%
+  mutate(A_all = stdres(lm(Acc_All ~ Rej_All, .)),
+         AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, .)),
+         AR_AA = stdres(lm(Acc_Rej ~ Acc_Acc, .)))
+
+df_even_275425_pz <- df_even_275425 %>%
+  dplyr::select(ID, contains("_Pz"))
+colnames(df_even_275425_pz) <- c("ID","Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All")
+df_even_275425_pz <- df_even_275425_pz[,1:7] %>%
+  # full_join(BUDS_cleaning05, by="ID") %>%
+  filter(!is.na(Acc_All)) %>%
+  mutate(A_all = stdres(lm(Acc_All ~ Rej_All, .)),
+         AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, .)),
+         AR_AA = stdres(lm(Acc_Rej ~ Acc_Acc, .)))
+```
+
+## Odd
+```{r}
+df_odd_50150_fz <- df_odd_50150 %>%
+  dplyr::select(ID, contains("_Fz"))
+colnames(df_odd_50150_fz) <- c("ID","Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All")
+df_odd_50150_fz <- df_odd_50150_fz[,1:7] %>%
+  # full_join(BUDS_cleaning05, by="ID") %>%
+  filter(!is.na(Acc_All)) %>%
+  mutate(A_all = stdres(lm(Acc_All ~ Rej_All, .)),
+         AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, .)),
+         AR_AA = stdres(lm(Acc_Rej ~ Acc_Acc, .)))
+
+df_odd_150275_cz <- df_odd_150275 %>%
+  dplyr::select(ID, contains("_Cz"))
+colnames(df_odd_150275_cz) <- c("ID","Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All")
+df_odd_150275_cz <- df_odd_150275_cz[,1:7] %>%
+  # full_join(BUDS_cleaning05, by="ID") %>%
+  filter(!is.na(Acc_All)) %>%
+  mutate(A_all = stdres(lm(Acc_All ~ Rej_All, .)),
+         AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, .)),
+         AR_AA = stdres(lm(Acc_Rej ~ Acc_Acc, .)))
+
+df_odd_275425_pz <- df_odd_275425 %>%
+  dplyr::select(ID, contains("_Pz"))
+colnames(df_odd_275425_pz) <- c("ID","Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All")
+df_odd_275425_pz <- df_odd_275425_pz[,1:7] %>%
+  # full_join(BUDS_cleaning05, by="ID") %>%
+  filter(!is.na(Acc_All)) %>%
+  mutate(A_all = stdres(lm(Acc_All ~ Rej_All, .)),
+         AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, .)),
+         AR_AA = stdres(lm(Acc_Rej ~ Acc_Acc, .)))
+```
+
+## Compute
+```{r}
+compute_split_half <- function(time_window, component) {
+  for (contrast in c("Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All","A_all","AA_AR","AR_AA")){
+    eval(parse(text=paste0('
+    r_half_',time_window,'',contrast,' <- cor(df_even_',time_window,'_',component,'$',contrast,', df_odd_',time_window,'_',component,'$',contrast,', method="spearman", use="pairwise")
+    r_half_',time_window,'ci_',contrast,' <- ci_cor(df_even_',time_window,'_',component,'$',contrast,', df_odd_',time_window,'_',component,'$',contrast,', method="spearman", type = "bootstrap", R=1000)
+    r_sb_',time_window,'_cilower_',contrast,' <<- (2*r_half_',time_window,'ci_',contrast,'$interval[1])/(1+r_half_',time_window,'ci_',contrast,'$interval[1])
+    r_sb_',time_window,'_ciupper_',contrast,' <<- (2*r_half_',time_window,'ci_',contrast,'$interval[2])/(1+r_half_',time_window,'ci_',contrast,'$interval[2])
+    r_sb_',time_window,'_',contrast,' <<- (2*r_half_',time_window,'',contrast,')/(1+r_half_',time_window,'',contrast,')
+    ')))
+}
+}
+
+compute_split_half("50150","fz")
+compute_split_half("150275","cz")
+compute_split_half("275425","pz")
+
+spearman_brown <- data.frame(Time_windows=c("Cz 50-150ms","Cz 150-275ms","Cz 275-425ms"))
+spearman_brown$Acc_Acc <- c(r_sb_50150_Acc_Acc,r_sb_150275_Acc_Acc,r_sb_275425_Acc_Acc)
+spearman_brown$Acc_Rej <- c(r_sb_50150_Acc_Rej,r_sb_150275_Acc_Rej,r_sb_275425_Acc_Rej)
+spearman_brown$Rej_Acc <- c(r_sb_50150_Rej_Acc,r_sb_150275_Rej_Acc,r_sb_275425_Rej_Acc)
+spearman_brown$Rej_Rej <- c(r_sb_50150_Rej_Rej,r_sb_150275_Rej_Rej,r_sb_275425_Rej_Rej)
+spearman_brown$AA_AR <- c(r_sb_50150_AA_AR,r_sb_150275_AA_AR,r_sb_275425_AA_AR)
+spearman_brown$AR_AA <- c(r_sb_50150_AR_AA,r_sb_150275_AR_AA,r_sb_275425_AR_AA)
+spearman_brown[,2:ncol(spearman_brown)] <- round(spearman_brown[,2:ncol(spearman_brown)],2)
+```
+
+# Save files
+```{r}
+save(df_150275,
+     df_50150,
+     df_275425,
+     file=here::here("./data/BUDS_data02_ERP.RData"))
+
+save(df_even_50150_fz, df_even_150275_cz, df_even_275425_pz, file=here::here("./data/BUDS_split_half_even.RData"))
+save(df_odd_50150_fz, df_odd_150275_cz, df_odd_275425_pz, file=here::here("./data/BUDS_split_half_odd.RData"))
+
+write.csv(spearman_brown, here::here("tables/spearman_brown.csv"))
 ```
