@@ -13,7 +13,7 @@ toc: yes
 ---
 
 # About
-This script filter and scores the self-report data from BUDS study: Bullying, Unsupportive family/peers, Discrimination, and Social feedback study using data from PREDICT project collaboration between Northwestern (PI: Shankman) and Columbia (PI: Auerbach).
+This script cleans EMA data and merges it with ERP and self-report data from PREDICT project collaboration between Northwestern (PI: Shankman) and Columbia (PI: Auerbach).
 
 # Get Setup
 ## Clear everything & set width
@@ -52,6 +52,7 @@ knitr::opts_chunk$set(set.seed(312), echo=FALSE, results='hide', message=FALSE, 
   library(workflowr)  #helps with workflow
 
 select <- dplyr::select
+here <- here::here
 ```
 
 ## Get the Working Directory
@@ -64,8 +65,11 @@ Remember to immediately rename and remove. Avoid overwriting old data.
 ```{r, eval=F}
 subjects <- c(1000,
 1001,
+1002,
 1004,
 1006,
+1008,
+1009,
 1010,
 1012,
 1014,
@@ -86,6 +90,7 @@ subjects <- c(1000,
 1037,
 1039,
 1040,
+1041,
 1043,
 1044,
 1046,
@@ -112,6 +117,7 @@ subjects <- c(1000,
 1070,
 1071,
 1072,
+1073,
 1074,
 1075,
 1077,
@@ -131,6 +137,7 @@ subjects <- c(1000,
 1094,
 1095,
 1096,
+1097,
 1098,
 1099,
 1100,
@@ -146,8 +153,10 @@ subjects <- c(1000,
 1110,
 1111,
 1112,
+1113,
 1114,
 1115,
+1116,
 1117,
 1118,
 1119,
@@ -161,6 +170,7 @@ subjects <- c(1000,
 9001,
 9003,
 9004,
+9005,
 9006,
 9007,
 9008,
@@ -194,10 +204,12 @@ subjects <- c(1000,
 9046,
 9048,
 9049,
+9050,
 9051,
 9052,
 9053,
 9055,
+9056,
 9057,
 9059,
 9060,
@@ -231,7 +243,8 @@ subjects <- c(1000,
 9097,
 9098,
 9099,
-9100)
+9100
+)
 
 # df_ema_daily <- read.csv(here::here("./data/PREDICT_daily_merged_all.csv"), header=TRUE)
 # df_ema <- read.csv(here::here("./data/PREDICT_EMA_merged_all.csv"), header=TRUE)
@@ -239,10 +252,10 @@ subjects <- c(1000,
 
 ## Load ERP data
 ```{r}
-load(here::here("./data/BUDS_df_ERP.RData"))
+load(here::here("./data/BUDS_do01.RData"))
 ```
 
-# EMA
+# EMA (intensive assessments)
 ```{r}
 df_ema_daily_raw <- read.csv(here::here("./data/PREDICT_daily_merged_all.csv"), header=TRUE)
 df_ema <- read.csv(here::here("./data/PREDICT_EMA_merged_all.csv"), header=TRUE)
@@ -270,7 +283,7 @@ daily <- df_ema_daily_raw %>%
   filter(complete.cases(daily))
 ```
 
-### Intensives: Lilian's cleaning code
+### Lilian's cleaning code
 ```{r}
 ema <- df_ema
 # check whether overlapping times
@@ -326,6 +339,9 @@ check = baseline %>% dplyr::count(subject_id, date, block) %>% arrange(-n)
 # remove people with < 3 responses
 resp.rate = baseline %>% dplyr::count(subject_id)
 remove = resp.rate %>% filter(n < 3)
+subjects_with_less_than_3_responses <- resp.rate[(resp.rate$n<3),"subject_id"]
+write.csv(subjects_with_less_than_3_responses, file=here::here("./data/number_with_less_than_3_EMA_responses.csv"))
+
 baseline = baseline %>% 
   filter(!(subject_id %in% remove$subject_id)) %>%
   mutate(pa = rowMeans(.[, c("happy", "excited", "supported")], na.rm = F),
@@ -442,11 +458,7 @@ tableone::CreateTableOne(vars = c('nSurveysTotal', 'ComplianceRate', 'nSurveys_d
 
 ## Prediction of mean levels
 ### Merge data
-#### Intensives
 ```{r}
-# df_50150_cz_long_ema <- full_join(df_50150_cz_long_strain, baseline, by="ID", relationship="many-to-many")
-# df_150275_cz_long_ema <- full_join(df_150275_cz_long_strain, baseline, by="ID", relationship="many-to-many")
-# df_275425_cz_long_ema <- full_join(df_275425_cz_long_strain, baseline, by="ID", relationship="many-to-many")
 baseline <- baseline %>% select(-site)
 
 # Function to remove duplicated ID values (just select the first row, center covariates, 
@@ -461,19 +473,35 @@ data %>%
   right_join(baseline, by="ID", relationship="many-to-many")
 }
 
-df_50150_cz_ema <- residualizing(df_50150_cz_strain)
-df_150275_cz_ema <- residualizing(df_150275_cz_strain)
-df_275425_cz_ema <- residualizing(df_275425_cz_strain)
+df_50150_fz_ema <- residualizing(df_50150_fz)
+df_150275_cz_ema <- residualizing(df_150275_cz)
+df_275425_pz_ema <- residualizing(df_275425_pz)
 ```
+
+## Clean ema data and calculate NA cubed
+```{r}
+# Clean ema datasets
+df_150275_cz_ema <- df_150275_cz_ema %>%
+  group_by(ID,daysFrom,slot) %>%
+  arrange(tm_start) %>%
+  filter(row_number()==1) %>%
+  arrange(ID,daysFrom,tm_start) %>%
+  mutate(na_cubert = na^(1/3),
+         na_cubert_z = scale(na_cubert, center=T, scale=T))
+
+df_275425_pz_ema <- df_275425_pz_ema %>%
+  group_by(ID,daysFrom,slot) %>%
+  arrange(tm_start) %>%
+  filter(row_number()==1) %>%
+  arrange(ID,daysFrom,tm_start) %>%
+  mutate(na_cubert = na^(1/3),
+         na_cubert_z = scale(na_cubert, center=T, scale=T))
+```
+
 
 # Save files
 ```{r}
-for (d in c(50150, 150275, 275425)) {
-  print(eval(parse(text=paste0('
-  save(df_',d,'_cz,
-  df_',d,'_cz_strain, 
-  df_',d,'_cz_ema, 
-  file=here::here("./data/df_',d,'.RData"))
-  '))))
-}
+save(df_50150_fz, df_50150_fz_ema, 
+     df_150275_cz, df_150275_cz_ema,
+     df_275425_pz, df_275425_pz_ema, file=here::here("./data/BUDS_do02.RData"))
 ```
