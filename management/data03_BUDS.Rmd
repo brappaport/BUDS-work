@@ -1,5 +1,5 @@
 ---
-title: "Data prep script 3: Importing and combining ERP data with self-reported data"
+title: "Data prep script 3: Importing ADI and self-report data"
 author: "Brent Rappaport"
 date: "`r format(Sys.time(),  '%Y-%m-%d')`"
 output:
@@ -13,10 +13,9 @@ toc: yes
 ---
 
 # About
-This script filter and scores the self-report data from BUDS study, a study of social feedback and SES using data from PREDICT project collaboration between Northwestern (PI: Shankman) and Columbia (PI: Auerbach).
+This script imports and cleans ADI (Area Deprivation Index) and self-report data from PREDICT project collaboration between Northwestern (PI: Shankman) and Columbia (PI: Auerbach).
 
 # Get Setup
-## Clear everything & set width
 ```{r}
 knitr::opts_chunk$set(set.seed(312), echo=FALSE, results='hide', message=FALSE, warning=FALSE, error=FALSE)
     options(width=80) #Set width
@@ -41,395 +40,157 @@ knitr::opts_chunk$set(set.seed(312), echo=FALSE, results='hide', message=FALSE, 
   library(lavaan)     #SEM
   library(papaja)
   library(pscl)       # for zero inflated models
-  library(lme4)
-  library(lmerTest)
-  library(bbmle)
-  library(marginaleffects)
   library(confintr)
   library(bestNormalize) # for normalizing data
   library(tidyverse)  #plotting/cleaning, etc.
+  library(ggpubr)
   library(workflowr)  #helps with workflow
 
 select <- dplyr::select
-```
+here <- here::here
 
-## Get the Working Directory
-```{r}
 here::i_am("./management/data03_BUDS.Rmd")
-# Set import directory
-erp_data_dir <- here::here("data/eeg_processing/")
 ```
 
-## Subjects
-```{r}
-subjects <- c(1000,
-1001,
-1002,
-1004,
-1006,
-1008,
-1009,
-1010,
-1012,
-1014,
-1017,
-1021,
-1022,
-1023,
-1024,
-1025,
-1026,
-1027,
-1029,
-1030,
-1031,
-1033,
-1035,
-1036,
-1037,
-1039,
-1040,
-1041,
-1043,
-1044,
-1046,
-1047,
-1048,
-1049,
-1050,
-1052,
-1053,
-1054,
-1055,
-1057,
-1058,
-1059,
-1060,
-1061,
-1063,
-1064,
-1065,
-1066,
-1067,
-1068,
-1069,
-1070,
-1071,
-1072,
-1073,
-1074,
-1075,
-1077,
-1078,
-1079,
-1080,
-1081,
-1082,
-1084,
-1085,
-1086,
-1087,
-1088,
-1089,
-1090,
-1091,
-1094,
-1095,
-1096,
-1097,
-1098,
-1099,
-1100,
-1101,
-1102,
-1103,
-1104,
-1105,
-1106,
-1107,
-1108,
-1109,
-1110,
-1111,
-1112,
-1113,
-1114,
-1115,
-1116,
-1117,
-1118,
-1119,
-1120,
-1121,
-1122,
-1123,
-1124,
-1125,
-1126,
-9001,
-9003,
-9004,
-9005,
-9006,
-9007,
-9008,
-9010,
-9013,
-9014,
-9015,
-9017,
-9018,
-9019,
-9020,
-9021,
-9022,
-9024,
-9026,
-9027,
-9028,
-9030,
-9031,
-9033,
-9034,
-9035,
-9037,
-9038,
-9039,
-9040,
-9042,
-9043,
-9044,
-9045,
-9046,
-9048,
-9049,
-9050,
-9051,
-9052,
-9053,
-9055,
-9056,
-9057,
-9059,
-9060,
-9061,
-9062,
-9063,
-9067,
-9068,
-9069,
-9070,
-9072,
-9075,
-9076,
-9077,
-9078,
-9079,
-9080,
-9081,
-9082,
-9083,
-9084,
-9085,
-9087,
-9088,
-9089,
-9091,
-9092,
-9093,
-9094,
-9096,
-9097,
-9098,
-9099,
-9100
-)
-
-segments <- read.csv(paste0(erp_data_dir, "SegmentCount/summary_erp_bin_RewP.csv"))
-
-subjects_150275 <- segments %>%
-  dplyr::filter(Acc_Acc < 13 | Acc_Rej < 11) %>%
-  select(subject)
-subjects_150275 <- setdiff(subjects, subjects_150275$subject)
-
-subjects_275425 <- segments %>%
-  dplyr::filter(Acc_Acc < 12 | Acc_Rej < 11) %>%
-  select(subject)
-subjects_275425 <- setdiff(subjects, subjects_275425$subject)
-
-# unique(c(subjects_150275$subject,subjects_275425$subject))
-# segments[segments$subject==1025,]
-```
-
-
-## Load ERP data
-Remember to immediately rename and remove. Avoid overwriting old data.
-```{r, eval=FALSE}
-channels_oldmontage <- c("Fp1", "Fz", "F3", "F7", "FT9", "FC5", "FC1", 
-              "C3", "TP9", "CP5", "CP1", 
-              "Pz", "P3", "P7", "CPz", "Oz", "POz", "P4", "P8", "TP10", 
-              "CP6", "CP2", "Cz", "C4", "AFz", 
-              "FT10", "FC6", "FC2", "F4", "F8", "Fp2", "FCz")
-channels <- c("Fp1", "Fz", "F3", "F7", "FT9", "PO7", "FC1", 
-              "C3", "TP9", "CP5", "CP1", 
-              "Pz", "P3", "P7", "CPz", "Oz", "POz", "P4", "P8", "TP10", 
-              "CP6", "CP2", "Cz", "C4", "AFz", 
-              "FT10", "PO8", "FC2", "F4", "F8", "Fp2", "FCz")
-time_windows <- c("50150", "150275", "275425")
-
-for ( t in time_windows) {
-  eval(parse(text=paste0('df_',t,' <- as.data.frame(NA)')))
-  for (s in subjects) {
-    tryCatch({
-    ifelse(s < 1009 | (s > 9000 & s < 9006),
-         eval(parse(text=paste0(
-     'df_',s,'_',t,' <- as.data.frame(read.csv(here::here(paste0(erp_data_dir,"Results/subj_erp_Feedback/',s,'_component_',t,'.csv")), header=FALSE))
-     colnames(df_',s,'_',t,') <- c("Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All")
-     df_',s,'_',t,'$ID <- rep(',s,', 32)
-     df_',s,'_',t,'$Channel <- channels_oldmontage
-     df_',t,' <- bind_rows(df_',t,',df_',s,'_',t,')
-     print(paste0("Done with subject ", s))'
-     )))
-     ,
-   eval(parse(text=paste0(
-     'df_',s,'_',t,' <- as.data.frame(read.csv(here::here(paste0(erp_data_dir,"Results/subj_erp_Feedback/',s,'_component_',t,'.csv")), header=FALSE))
-     colnames(df_',s,'_',t,') <- c("Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All")
-     df_',s,'_',t,'$ID <- rep(',s,', 32)
-     df_',s,'_',t,'$Channel <- channels
-     df_',t,' <- bind_rows(df_',t,',df_',s,'_',t,')
-     print(paste0("Done with subject ", s))'
-     )))
-    )
-    }, error=function(e){cat("ERROR : For subject ",s, "; ", conditionMessage(e), "\n")})
-  }
-}
-
-# Load Even and Odd trials
-for (t in time_windows) {
-  eval(parse(text=paste0('df_even_',t,' <- as.data.frame(NA)')))
-  eval(parse(text=paste0('df_odd_',t,' <- as.data.frame(NA)')))
-  print(paste0("***********Loading data from time window ",t," now***********"))
-  for (s in subjects) {
-    tryCatch({
-   eval(parse(text=paste0('
-     print(paste0("Load subject ",s,"_even data now"))
-     df_even_',s,'_',t,' <- as.data.frame(
-     read.delim(here::here(paste0(erp_data_dir,"Results/subj_erp_Feedback/split_half/even/',s,'_component_',t,'.txt")), 
-                header=TRUE))
-     df_even_',s,'_',t,'$ID <- rep(',s,', 1)
-     df_even_',t,' <- bind_rows(df_even_',t,',df_even_',s,'_',t,')'
-     )))
-   eval(parse(text=paste0('
-   print(paste0("Load subject ",s,"_odd data now"))
-     df_odd_',s,'_',t,' <- as.data.frame(read.delim(here::here(paste0(erp_data_dir,"Results/subj_erp_Feedback/split_half/odd/',s,'_component_',t,'.txt")), header=TRUE))
-     df_odd_',s,'_',t,'$ID <- rep(',s,', 1)
-     df_odd_',t,' <- bind_rows(df_odd_',t,',df_odd_',s,'_',t,')'
-     )))
-    }, error=function(e){cat("ERROR : For subject ",s, "; ", conditionMessage(e), "\n")})
-  }
-}
-
-df_150275 <- filter(df_150275, ID %in% subjects_150275)
-df_even_150275 <- filter(df_even_150275, ID %in% subjects_150275)
-df_odd_150275 <- filter(df_odd_150275, ID %in% subjects_150275)
-
-df_275425 <- filter(df_275425, ID %in% subjects_275425)
-df_even_275425 <- filter(df_even_275425, ID %in% subjects_275425)
-df_odd_275425 <- filter(df_odd_275425, ID %in% subjects_275425)
-
-# load(file=here::here("./data/ERP_data.RData"))
-save(df_50150, df_150275, df_275425,
-     df_even_50150, df_even_150275, df_even_275425,
-     df_odd_50150, df_odd_150275, df_odd_275425,
-     file=here::here("./data/ERP_data.RData"))
-```
-
-#### Single trial ERP data
-```{r, eval=FALSE}
-files_artifacts  <- list.files(path=here::here(paste0(erp_data_dir, "Events/feedback/")), 
-                     pattern='\\_event_all.csv',
-                     full.names=TRUE)
-df_artifacts <- lapply(files_artifacts, read.csv, header = TRUE) %>%
-  do.call(rbind , .) %>%
-     filter(bindescr!="") %>%
-     mutate(ID = subject,
-            trial = epochN) %>%
-     select(ID,artifactFlag,trial,bindescr)
-
-files_50150  <- list.files(path="/projects/p31735/BUDS/eeg_processing/Scripts/trial_level_data/Cz",
-                     pattern='\\_Cz_50150_TrialLevelMeanAmplitude.csv',
-                     full.names=TRUE)
-df_50150 <- lapply(files_50150, read.csv, header = TRUE) %>%
-       do.call(rbind, .) %>%
-       right_join(df_artifacts, by=c("ID","trial"))
-
-files_150275  <- list.files(path="/projects/p31735/BUDS/eeg_processing/Scripts/trial_level_data/Cz",
-                     pattern='\\_Cz_150275_TrialLevelMeanAmplitude.csv',
-                     full.names=TRUE)
-df_150275 <- lapply(files_150275, read.csv, header = TRUE) %>%
-       do.call(rbind, .) %>%
-       right_join(df_artifacts, by=c("ID","trial"))
-
-files_275425  <- list.files(path="/projects/p31735/BUDS/eeg_processing/Scripts/trial_level_data/Cz", 
-                     pattern='\\_Cz_275425_TrialLevelMeanAmplitude.csv',
-                     full.names=TRUE)
-df_275425 <- lapply(files_275425, read.csv, header = TRUE) %>%
-       do.call(rbind, .) %>%
-       right_join(df_artifacts, by=c("ID","trial"))
-
-write.csv(df_50150, "./data/trial_Cz_50150ms.csv")
-write.csv(df_150275, "./data/trial_Cz_150275ms.csv")
-write.csv(df_275425, "./data/trial_Cz_275425ms.csv")
-
-write.csv(filter(df_50150,artifactFlag==0), "./data/trial_Cz_50150ms_clean.csv")
-write.csv(filter(df_150275,artifactFlag==0), "./data/trial_Cz_150275ms_clean.csv")
-write.csv(filter(df_275425,artifactFlag==0), "./data/trial_Cz_275425ms_clean.csv")
-```
-
-## Load ERP data
+# Load ERP data
 ```{r}
 load(here::here("./data/ERP_data.RData"))
 # load(here::here("./data/November_ERP_data.RData"))
 ```
 
-## Load self-report data
-```{r}
-load(here::here("data/BUDS_cleaning05.RData"))
-BUDS_cleaning05$ID <- as.integer(as.character(BUDS_cleaning05$id_1_i))
-BUDS_cleaning05 <- BUDS_cleaning05 %>%
-  filter(!is.na(ID))
+# Import ADI
+```{r, include=F}
+# Import address info and sort by row number, to tie to subject number
+geocode_data <- read.csv(here::here("../_rawdata/GeocodeResults.csv"), header=F, colClasses='character') %>%
+  mutate(V1=as.integer(as.character(V1))) %>%
+  arrange(V1)
+
+# Concatenate to make FIPS
+geocode_data$FIPS <- as.numeric(as.character((paste0(geocode_data$V9,geocode_data$V10,geocode_data$V11,substr(geocode_data$V12,1,1)))))
+
+# Import subject ID 
+subj_rownumber <- openxlsx::read.xlsx(here::here("../_rawdata/Address/PREDICT_ids.xlsx"))
+geocode_data2 <- full_join(subj_rownumber,geocode_data, by="V1")
+adi_codes <- read.csv(here::here("./data/ADI/national/US_2021_ADI_Census_Block_Group_v4_0_1.csv"))
+
+geocode_data_with_adi <- left_join(geocode_data2, adi_codes, by="FIPS")
+geocode_data_with_adi$ADI_NATRANK <- as.numeric(as.character(geocode_data_with_adi$ADI_NATRANK))
 ```
 
-# Participant self-reported race
+### Manually enter ADI values
+For those missing it (based on surrounding neighborhoods)
+Drawn from https://www.neighborhoodatlas.medicine.wisc.edu/mapping
 ```{r}
-# Import raw data files
-nw_demo1 <- read.csv(here::here("../_rawdata/demo/nw/SP Demographics Child+Parent+18 Merged_9001-9042.csv"), colClasses="character", header=TRUE)[-c(1:2),] %>%
-    dplyr::select(c(id_1_i, demo_child_gender, demo_child_sex, demo_child_race, demo_child_hispanic, demo_child_sex_or))
-nw_demo2 <- read.csv(here::here("../_rawdata/demo/nw/SP Demographics 11.4.21_May 18, 2023_9042-9110.csv"), colClasses="character", header=TRUE)[-c(1:2),] %>%
-    dplyr::select(c(id_1_i, demo_child_gender, demo_child_sex, demo_child_race, demo_child_hispanic, demo_child_sex_or))
+# geocode_data_with_adi[geocode_data_with_adi$ID==1008,"ADI_NATRANK"] <- 1 # but on college campus
+geocode_data_with_adi[geocode_data_with_adi$ID==1009,"ADI_NATRANK"] <- 1 # but on college campus, though this address was their family address before college per Lili
+geocode_data_with_adi[geocode_data_with_adi$ID==1010,"ADI_NATRANK"] <- 24
+geocode_data_with_adi[geocode_data_with_adi$ID==1043,"ADI_NATRANK"] <- 6 # this is a very small side street that only exist in one tract
+geocode_data_with_adi[geocode_data_with_adi$ID==1060,"ADI_NATRANK"] <- 4
+geocode_data_with_adi[geocode_data_with_adi$ID==1071,"ADI_NATRANK"] <- 31
+geocode_data_with_adi[geocode_data_with_adi$ID==1074,"ADI_NATRANK"] <- 49
+geocode_data_with_adi[geocode_data_with_adi$ID==1108,"ADI_NATRANK"] <- 11
+geocode_data_with_adi[geocode_data_with_adi$ID==1111,"ADI_NATRANK"] <- 7
+geocode_data_with_adi[geocode_data_with_adi$ID==1112,"ADI_NATRANK"] <- (9+4)/2
+geocode_data_with_adi[geocode_data_with_adi$ID==1114,"ADI_NATRANK"] <- (9+4)/2 # international student who's original home is in Columbia
+geocode_data_with_adi[geocode_data_with_adi$ID==1117,"ADI_NATRANK"] <- (5+4+21)/3
+geocode_data_with_adi[geocode_data_with_adi$ID==1122,"ADI_NATRANK"] <- 23
 
+geocode_data_with_adi[geocode_data_with_adi$ID==9005,"ADI_NATRANK"] <- 13
+geocode_data_with_adi[geocode_data_with_adi$ID==9006,"ADI_NATRANK"] <- 22
+geocode_data_with_adi[geocode_data_with_adi$ID==9010,"ADI_NATRANK"] <- 46
+geocode_data_with_adi[geocode_data_with_adi$ID==9039,"ADI_NATRANK"] <- 44
+geocode_data_with_adi[geocode_data_with_adi$ID==9044,"ADI_NATRANK"] <- (21+29)/2 # but on college campus
+geocode_data_with_adi[geocode_data_with_adi$ID==9052,"ADI_NATRANK"] <- 29
+geocode_data_with_adi[geocode_data_with_adi$ID==9056,"ADI_NATRANK"] <- 7 # previously NA
+geocode_data_with_adi[geocode_data_with_adi$ID==9059,"ADI_NATRANK"] <- (21+29)/2 # but on college campus
+geocode_data_with_adi[geocode_data_with_adi$ID==9060,"ADI_NATRANK"] <- 57 # on on college campus but previous address was in Mexico
+geocode_data_with_adi[geocode_data_with_adi$ID==9069,"ADI_NATRANK"] <- 3
+geocode_data_with_adi[geocode_data_with_adi$ID==9082,"ADI_NATRANK"] <- 54
+geocode_data_with_adi[geocode_data_with_adi$ID==9091,"ADI_NATRANK"] <- 21
+geocode_data_with_adi[geocode_data_with_adi$ID==9127,"ADI_NATRANK"] <- 63 # current address is on college campus, however this reflects participant family's address before college
+geocode_data_with_adi[geocode_data_with_adi$ID==9128,"ADI_NATRANK"] <- 73 # current address is on college campus, however this reflects participant family's address before college
+
+# 9027 and 9026 are siblings, so we are assuming that they live in the same address and thus have the same ADI
+geocode_data_with_adi[geocode_data_with_adi$ID==9027,"ADI_NATRANK"] <- geocode_data_with_adi[geocode_data_with_adi$ID==9026,"ADI_NATRANK"]
+```
+
+## REVERSE SCORE ADI
+```{r}
+geocode_data_with_adi$ADI_NATRANK <- 100-geocode_data_with_adi$ADI_NATRANK
+```
+
+```{r Number missing ADI, eval=FALSE}
+missing <- geocode_data_with_adi[,c("ID","ADI_NATRANK")] %>%
+  filter(is.na(ADI_NATRANK) | ADI_NATRANK=="GQ") %>%
+  select(ID)
+sum(is.na(df_150275_cz$ADI_NATRANK))
+sum(!is.na(df_150275_cz$ADI_NATRANK))
+
+address <- left_join(geocode_data2, adi_codes, by="FIPS")
+address[address$ID==1062,c("V2","ADI_NATRANK")]
+address[address$ID==9009,c("V2","ADI_NATRANK")]
+
+# Subjects over 18
+load(file=here::here("./data/over_18_150275.RData"))
+load(file=here::here("./data/over_18_275425.RData"))
+over_18 <- address %>%
+  filter(ID %in% over_18_150275$ID) %>%
+  select(ID, V2)
+```
+
+# STRAIN
+```{r}
+load(here("data/BUDS_cleaning02_with_strain.RData")); BUDS_cleaning03_with_strain <- BUDS_cleaning02_with_strain
+rm(BUDS_cleaning02_with_strain)
+```
+
+# Score self-report data
+```{r}
+load(here("data/BUDS_cleaning02.RData")); BUDS_cleaning03 <- BUDS_cleaning02
+rm(BUDS_cleaning02)
+```
+
+## Race
+```{r}
+demo_vars <- c("id_1_i","demo_child_gender","demo_child_sex","demo_child_race","demo_child_hispanic","demo_child_sex_or")
+
+# Import raw demographic data
+nw_demo1 <- read.csv(here::here("../_rawdata/demo/nw/SP Demographics Child+Parent+18 Merged_9001-9042.csv"),
+                     colClasses="character", header=TRUE) %>%
+    dplyr::select(all_of(demo_vars))
+nw_demo2 <- read.csv(here::here("../_rawdata/demo/nw/SP Demographics 11.4.21_May 18, 2023_9042-9110.csv"),
+                     colClasses="character", header=TRUE) %>%
+    dplyr::select(all_of(demo_vars))
+ 
+# Merge two NW files together 
 nw_demo <- nw_demo1 %>%
-  full_join(nw_demo2) %>% # merge two NW files together
-  filter(complete.cases(demo_child_race)) # only keep participants with race data
+  full_join(nw_demo2)
+
+# Which subjects have more than 1 row of data?
+nw_demo[duplicated(nw_demo$id_1_i),"id_1_i"]
+
+# Fill in missing values for this subject
+nw_demo[nw_demo$id_1_i==9020,] <- nw_demo[nw_demo$id_1_i==9020,][2,]
+# Remove duplicate row
+nw_demo <- nw_demo %>% distinct(id_1_i, .keep_all = TRUE)
 
 cu_demo1 <- read.csv(here::here("../_rawdata/demo/cu/SP_Demographics (4.13.21)_November 1, 2021_12.34.csv"), colClasses="character", header=TRUE)[-c(1:2),] %>%
-  filter(complete.cases(demo_child_race)) %>% # only keep participants with race data
-  dplyr::select(c(id_1_i, demo_child_gender, demo_child_sex, demo_child_race, demo_child_hispanic, demo_child_sex_or))
+  dplyr::select(all_of(demo_vars))
 cu_demo2 <- read.csv(here::here("../_rawdata/demo/cu/SP_Demographics (9.22.21)_July 18, 2023_08.08.csv"), colClasses="character", header=TRUE)[-c(1:2),] %>%
-  filter(complete.cases(demo_child_race)) %>% # only keep participants with race data
-  dplyr::select(c(id_1_i, demo_child_gender, demo_child_sex, demo_child_race, demo_child_hispanic, demo_child_sex_or))
+  dplyr::select(all_of(demo_vars))
 
 cu_demo <- cu_demo1 %>%
-  full_join(cu_demo2) %>% # merge two NW files together
-  filter(complete.cases(demo_child_race)) # only keep participants with race data
+  full_join(cu_demo2) # merge two NW files together
 
 # Convert ID variables to integers (as.character assures that values are not changed)
 nw_demo <- nw_demo %>%
   mutate(ID = as.integer(as.character(id_1_i))) %>%
-  dplyr::select(-id_1_i)
+  dplyr::select(-id_1_i) %>%
+  filter(complete.cases(ID))
 cu_demo <- cu_demo %>%
   mutate(ID = as.integer(as.character(id_1_i))) %>%
-  dplyr::select(-id_1_i)
+  dplyr::select(-id_1_i) %>%
+  filter(complete.cases(ID))
 
 # Test whether there are any duplicate IDs
 nw_demo[duplicated(nw_demo$ID)==TRUE,"ID"]
@@ -438,7 +199,7 @@ cu_demo[duplicated(cu_demo$ID)==TRUE,"ID"]
 cu_demo <- cu_demo %>%
   distinct(ID, .keep_all=TRUE)
 
-BUDS_cleaning05_demo <- rbind(cu_demo, nw_demo) %>%
+BUDS_cleaning04_demo <- rbind(cu_demo, nw_demo) %>%
   mutate(demo_child_gender = case_match(demo_child_gender,
                                         "1" ~ "Male", "2" ~ "Female", 
                                       "3" ~ "Trans male", "4" ~ "Trans female", 
@@ -468,19 +229,48 @@ BUDS_cleaning05_demo <- rbind(cu_demo, nw_demo) %>%
                                           "0" ~ "No", "1" ~ "Yes")) %>%
   mutate(White_nonwhite = case_match(demo_child_race, c("White") ~ "White",
          c("More than one race", "Asian", "Black or African American", "American Indian/Alaska Native", "Native Hawaiian or Other Pacific Islander") ~ "Non_white")) %>%
-  dplyr::select(c(ID, demo_child_gender, demo_child_sex, demo_child_race, demo_child_hispanic, White_nonwhite))
+  dplyr::select(c(ID, demo_child_gender, demo_child_sex, demo_child_race, demo_child_hispanic, White_nonwhite)) %>%
+  filter(complete.cases(demo_child_sex))
 
-contrasts(BUDS_cleaning05_demo$demo_child_sex) = contr.sum(2)
+contrasts(BUDS_cleaning04_demo$demo_child_sex) = contr.sum(2)
 ```
 
-# Create IDAS score
-## Baseline
+## ADDI
 ```{r}
-BUDS_cleaning05_idas <- as.data.frame(BUDS_cleaning05)[-c(1:2),] %>%
+# ADDI
+## Make variable list
+addi_vars <- c("addi_1b_i","addi_2b_i","addi_3b_i","addi_4b_i","addi_5b_i","addi_6b_i","addi_7b_i","addi_8b_i","addi_9b_i","addi_10b_i", "addi_11b_i","addi_12b_i","addi_13b_i","addi_14b_i","addi_15b_i")
+addi_vars_correct <- paste0(addi_vars,"_correct")
+
+BUDS_cleaning04 <- BUDS_cleaning03  %>%
+  mutate(across(all_of(addi_vars), ~ case_when(
+    . == "Not at all" ~ 1, . == "Slightly" ~ 2, . == "Moderately" ~ 3, . == "Considerably" ~ 4, . == "Extremely" ~ 5,
+    . == "1" ~ 1, . == "2" ~ 2, . == "3" ~ 3, . == "4" ~ 4, . == "5" ~ 5,
+    TRUE ~ as.numeric(.)
+  ), .names = "{.col}_correct"))
+
+BUDS_cleaning04$addi_total <- rowSums(BUDS_cleaning04[,addi_vars_correct], na.rm=TRUE)
+table(BUDS_cleaning04$addi_total>0)
+
+## score
+BUDS_cleaning04$addi_total <- rowSums(BUDS_cleaning04[,addi_vars_correct], na.rm=TRUE)
+BUDS_cleaning04$addi_total_no6 <- rowSums(BUDS_cleaning04[,addi_vars_correct[addi_vars_correct != "addi_6b_i_correct"]], na.rm=TRUE)
+
+# BUDS_cleaning04$addi_total_c <- scale(BUDS_cleaning04$addi_total, scale=FALSE, center=TRUE)
+# BUDS_cleaning04$addi_total_z <- scale(BUDS_cleaning04$addi_total, scale=TRUE, center=TRUE)
+BUDS_cleaning04$addi_01 <- ifelse(BUDS_cleaning04$addi_total>0, 1, 0)
+BUDS_cleaning04$addi_educ <- rowSums(BUDS_cleaning04[,addi_vars_correct[c(1,2,3,6)]], na.rm=TRUE)
+BUDS_cleaning04$addi_instit <- rowSums(BUDS_cleaning04[,addi_vars_correct[c(7,9,10,13,14)]], na.rm=TRUE)
+BUDS_cleaning04$addi_peer <- rowSums(BUDS_cleaning04[,addi_vars_correct[c(4,5,8,11,15)]], na.rm=TRUE)
+```
+
+## IDAS
+```{r}
+BUDS_cleaning04_idas <- as.data.frame(BUDS_cleaning04) %>%
   select(ID,contains("idas")) %>%
   mutate_all(as.character())
-idas <- colnames(BUDS_cleaning05_idas[,-1])
-BUDS_cleaning05_idas_num <- BUDS_cleaning05_idas %>%
+idas <- colnames(BUDS_cleaning04_idas[,-1])
+BUDS_cleaning04_idas_num <- BUDS_cleaning04_idas %>%
   dplyr::mutate(across(all_of(c(idas)), ~ dplyr::case_match(as.character(.), "1" ~ 1, "2" ~ 2, "3" ~ 3, "4" ~ 4, "5" ~ 5,
                                                        "Not at all" ~ 1,
                                                        "A little bit" ~ 2,
@@ -494,359 +284,40 @@ idas_panic <- c("idas_7_i","idas_16_i","idas_32_i","idas_39_i","idas_45_i","idas
 idas_sa <- c("idas_15_i","idas_18_i","idas_20_i","idas_41_i","idas_47_i","idas_99_i")
 # idas_claus <- c("idas_74_i","idas_80_i","idas_84_i","idas_90_i","idas_94_i")
 
-BUDS_cleaning05_idas_num$idas_27r = 6 - BUDS_cleaning05_idas_num$idas_27_i
-BUDS_cleaning05_idas_num$idas_64r = 6 - BUDS_cleaning05_idas_num$idas_64_i
-BUDS_cleaning05_idas_num$IDAS_depression = rowMeans(BUDS_cleaning05_idas_num[,idas_dep], na.rm=F)
-BUDS_cleaning05_idas_num$IDAS_wellbeing = rowMeans(BUDS_cleaning05_idas_num[,idas_wb], na.rm=F)
-BUDS_cleaning05_idas_num$IDAS_panic = rowMeans(BUDS_cleaning05_idas_num[,idas_panic], na.rm=F)
-BUDS_cleaning05_idas_num$IDAS_sa = rowMeans(BUDS_cleaning05_idas_num[,idas_sa], na.rm=F)
-BUDS_cleaning05_idas_num$IDAS_anxiety = rowMeans(BUDS_cleaning05_idas_num[,c(idas_panic,idas_sa)], na.rm=F)
+BUDS_cleaning04_idas_num$idas_27r = 6 - BUDS_cleaning04_idas_num$idas_27_i
+BUDS_cleaning04_idas_num$idas_64r = 6 - BUDS_cleaning04_idas_num$idas_64_i
+BUDS_cleaning04_idas_num$IDAS_depression = rowMeans(BUDS_cleaning04_idas_num[,idas_dep], na.rm=T)
+BUDS_cleaning04_idas_num$IDAS_wellbeing = rowMeans(BUDS_cleaning04_idas_num[,idas_wb], na.rm=T)
+BUDS_cleaning04_idas_num$IDAS_panic = rowMeans(BUDS_cleaning04_idas_num[,idas_panic], na.rm=T)
+BUDS_cleaning04_idas_num$IDAS_sa = rowMeans(BUDS_cleaning04_idas_num[,idas_sa], na.rm=T)
+BUDS_cleaning04_idas_num$IDAS_anxiety = rowMeans(BUDS_cleaning04_idas_num[,c(idas_panic,idas_sa)], na.rm=T)
 
-cor.test(BUDS_cleaning05_idas_num$IDAS_panic, BUDS_cleaning05_idas_num$IDAS_sa)
-
-library(ggpubr)
-shapiro.test(BUDS_cleaning05_idas_num$IDAS_depression)
-BUDS_cleaning05_idas_num$IDAS_depression_sqrt <- sqrt(BUDS_cleaning05_idas_num$IDAS_depression)
-BUDS_cleaning05_idas_num$IDAS_depression_log <- log(BUDS_cleaning05_idas_num$IDAS_depression)
-BUDS_cleaning05_idas_num$IDAS_depression_rec <- 1/(BUDS_cleaning05_idas_num$IDAS_depression)
-
-ggdensity(BUDS_cleaning05_idas_num, x = "IDAS_depression", fill = "lightgray", title = "IDAS_depression") +
-  scale_x_continuous(limits = c(-1, 6)) +
-  stat_overlay_normal_density(color = "red", linetype = "dashed")
-
-shapiro.test(BUDS_cleaning05_idas_num$IDAS_wellbeing)
-ggdensity(BUDS_cleaning05_idas_num, x = "IDAS_wellbeing", fill = "lightgray", title = "IDAS_wellbeing") +
-  scale_x_continuous(limits = c(-1, 6)) +
-  stat_overlay_normal_density(color = "red", linetype = "dashed")
+cor.test(BUDS_cleaning04_idas_num$IDAS_panic, BUDS_cleaning04_idas_num$IDAS_sa)
+shapiro.test(BUDS_cleaning04_idas_num$IDAS_depression)
+BUDS_cleaning04_idas_num$IDAS_depression_sqrt <- sqrt(BUDS_cleaning04_idas_num$IDAS_depression)
+BUDS_cleaning04_idas_num$IDAS_depression_log <- log(BUDS_cleaning04_idas_num$IDAS_depression)
+BUDS_cleaning04_idas_num$IDAS_depression_rec <- 1/(BUDS_cleaning04_idas_num$IDAS_depression)
 ```
 
-# Merge self-report and ERP data
 ```{r}
-merge_self_report_with_erp <- function(data, electrode, self_report_data, demo_data, idas_data) {
-  data %>%
-  filter(Channel %in% electrode) %>%
-  group_by(ID) %>%
-  reframe(Acc_All = mean(Acc_All),
-         Rej_All = mean(Rej_All),
-         Acc_Acc = mean(Acc_Acc),
-         Acc_Rej = mean(Acc_Rej),
-         Rej_Acc = mean(Rej_Acc),
-         Rej_Rej = mean(Rej_Rej)) %>%
-  full_join(self_report_data, by="ID") %>%
-  full_join(demo_data, by="ID") %>%
-  dplyr::select(-contains(idas)) %>%
-  left_join(idas_data, by="ID", relationship =
-  "many-to-many") %>%
-  filter(!is.na(Acc_All)) %>%
-  ungroup() %>%
-  mutate(Acc_All_z = scale(Acc_All, center=T, scale=T),
-         Rej_All_z = scale(Rej_All, center=T, scale=T),
-         Acc_Acc_z = scale(Acc_Acc, center=T, scale=T),
-         Acc_Rej_z = scale(Acc_Rej, center=T, scale=T),
-         Rej_Rej_z = scale(Rej_Rej, center=T, scale=T),
-         Rej_Acc_z = scale(Rej_Acc, center=T, scale=T),
-         
-         A_all = stdres(lm(Acc_All ~ Rej_All, .)),
-         AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, .)),
-         AA_AR_diff = Acc_Acc - Acc_Rej,
-         RA_RR = stdres(lm(Rej_Acc ~ Rej_Rej, .)),
-         AA_RA = stdres(lm(Acc_Acc ~ Rej_Acc, .)),
-         R_all = stdres(lm(Rej_All ~ Acc_All, .)),
-         AR_AA = stdres(lm(Acc_Rej ~ Acc_Acc, .)),
-         RR_RA = stdres(lm(Rej_Rej ~ Rej_Acc, .)),
-         AA_AR_c = scale(AA_AR, center=T, scale=F),
-         AA_AR_z = scale(AA_AR, center=T, scale=T),
-         AR_AA_c = scale(AR_AA, center=T, scale=F),
-         AR_AA_z = scale(AR_AA, center=T, scale=T),
-         RA_RR_z = scale(RA_RR, center=T, scale=T),
-         RR_RA_z = scale(RR_RA, center=T, scale=T)) %>%
-  # remove duplicated ID values, just select the first row
-  group_by(ID) %>%
-  arrange(ID) %>%
-  filter(row_number()==1) %>%
-  ungroup() %>%
-  # center covariates
-  mutate(site = case_match(as.character(id_2_i), "CUMC" ~ "Columbia",
-                                   "2" ~ "Northwestern",
-                                   NA ~ NA),
-         # Age_c = scale(Age, center=T, scale=F),
-         # StressCT_c = scale(Age, center=T, scale=F),
-         # StressTH_c = scale(StressTH, center=T, scale=F),
-         IDAS_depression_c = scale(IDAS_depression, center=T, scale=F),
-         IDAS_anxiety_c = scale(IDAS_anxiety, center=T, scale=F))
-}
+BUDS_cleaning03_with_strain  <- BUDS_cleaning03_with_strain %>%
+  select(ID,(which(names(.) == "Age")):ncol(.))
 
-df_275425_cz <- merge_self_report_with_erp(data=df_275425, electrode=c("Cz"), 
-                                           self_report_data=BUDS_cleaning05, 
-                                           demo_data=BUDS_cleaning05_demo, 
-                                           idas_data=BUDS_cleaning05_idas_num)
+BUDS_cleaning04_addi <- BUDS_cleaning04 %>%
+  select(ID, starts_with("addi_"))
 
-df_150275_cz <- merge_self_report_with_erp(data=df_150275, electrode=c("Cz"), 
-                                           self_report_data=BUDS_cleaning05,
-                                           demo_data=BUDS_cleaning05_demo,
-                                           idas_data=BUDS_cleaning05_idas_num) %>%
-  group_by(ID) %>%
-  arrange(ID) %>%
-  filter(row_number()==1)
+filter(as.data.frame(table(BUDS_cleaning04_demo$ID)),Freq>1)
 
-df_50150_cz <- merge_self_report_with_erp(data=df_50150, electrode=c("Cz"), 
-                                           self_report_data=BUDS_cleaning05,
-                                          demo_data=BUDS_cleaning05_demo,
-                                          idas_data=BUDS_cleaning05_idas_num) %>%
-  group_by(ID) %>%
-  arrange(ID) %>%
-  filter(row_number()==1)
+BUDS_cleaning05 <- BUDS_cleaning04_demo %>%
+  full_join(geocode_data_with_adi, by="ID") %>%
+  full_join(BUDS_cleaning04_idas_num, by="ID") %>%
+  full_join(BUDS_cleaning04_addi, by="ID") %>%
+  full_join(BUDS_cleaning03_with_strain, by="ID")
+
+filter(as.data.frame(table(BUDS_cleaning05$ID)),Freq>1)
+BUDS_cleaning05$ID <- as.numeric(as.character(BUDS_cleaning05$ID))
 ```
 
-## Split-half
-### Even
 ```{r}
-df_even_50150_cz <- df_even_50150 %>%
-  dplyr::select(ID, contains("_Cz"))
-colnames(df_even_50150_cz) <- c("ID","Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All")
-df_even_50150_cz <- df_even_50150_cz[,1:7] %>%
-  full_join(BUDS_cleaning05, by="ID") %>%
-  filter(!is.na(Acc_All)) %>%
-  mutate(A_all = stdres(lm(Acc_All ~ Rej_All, .)),
-         AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, .)),
-         AR_AA = stdres(lm(Acc_Rej ~ Acc_Acc, .)))
-
-df_even_150275_cz <- df_even_150275 %>%
-  dplyr::select(ID, contains("_Cz"))
-colnames(df_even_150275_cz) <- c("ID","Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All")
-df_even_150275_cz <- df_even_150275_cz[,1:7] %>%
-  full_join(BUDS_cleaning05, by="ID") %>%
-  filter(!is.na(Acc_All)) %>%
-  mutate(A_all = stdres(lm(Acc_All ~ Rej_All, .)),
-         AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, .)),
-         AR_AA = stdres(lm(Acc_Rej ~ Acc_Acc, .)))
-
-df_even_275425_cz <- df_even_275425 %>%
-  dplyr::select(ID, contains("_Cz"))
-colnames(df_even_275425_cz) <- c("ID","Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All")
-df_even_275425_cz <- df_even_275425_cz[,1:7] %>%
-  full_join(BUDS_cleaning05, by="ID") %>%
-  filter(!is.na(Acc_All)) %>%
-  mutate(A_all = stdres(lm(Acc_All ~ Rej_All, .)),
-         AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, .)),
-         AR_AA = stdres(lm(Acc_Rej ~ Acc_Acc, .)))
-```
-
-### Odd
-```{r}
-df_odd_50150_cz <- df_odd_50150 %>%
-  dplyr::select(ID, contains("_Cz"))
-colnames(df_odd_50150_cz) <- c("ID","Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All")
-df_odd_50150_cz <- df_odd_50150_cz[,1:7] %>%
-  full_join(BUDS_cleaning05, by="ID") %>%
-  filter(!is.na(Acc_All)) %>%
-  mutate(A_all = stdres(lm(Acc_All ~ Rej_All, .)),
-         AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, .)),
-         AR_AA = stdres(lm(Acc_Rej ~ Acc_Acc, .)))
-
-df_odd_150275_cz <- df_odd_150275 %>%
-  dplyr::select(ID, contains("_Cz"))
-colnames(df_odd_150275_cz) <- c("ID","Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All")
-df_odd_150275_cz <- df_odd_150275_cz[,1:7] %>%
-  full_join(BUDS_cleaning05, by="ID") %>%
-  filter(!is.na(Acc_All)) %>%
-  mutate(A_all = stdres(lm(Acc_All ~ Rej_All, .)),
-         AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, .)),
-         AR_AA = stdres(lm(Acc_Rej ~ Acc_Acc, .)))
-
-df_odd_275425_cz <- df_odd_275425 %>%
-  dplyr::select(ID, contains("_Cz"))
-colnames(df_odd_275425_cz) <- c("ID","Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All")
-df_odd_275425_cz <- df_odd_275425_cz[,1:7] %>%
-  full_join(BUDS_cleaning05, by="ID") %>%
-  filter(!is.na(Acc_All)) %>%
-  mutate(A_all = stdres(lm(Acc_All ~ Rej_All, .)),
-         AA_AR = stdres(lm(Acc_Acc ~ Acc_Rej, .)),
-         AR_AA = stdres(lm(Acc_Rej ~ Acc_Acc, .)))
-```
-
-# Import Area Deprivation Index data
-```{r, include=F}
-# Import address info and sort by row number, to tie to subject number
-geocode_data <- read.csv(here::here("../_rawdata/GeocodeResults.csv"), header=F, colClasses='character') %>%
-  mutate(V1=as.integer(as.character(V1))) %>%
-  arrange(V1)
-  # dplyr::slice(length(V1), 1:length(V1))
-# geocode_data[1,1] <- 1
-# Concatenate to make FIPS
-geocode_data$FIPS <- as.numeric(as.character((paste0(geocode_data$V9,geocode_data$V10,geocode_data$V11,substr(geocode_data$V12,1,1)))))
-
-# Import subject ID 
-subj_rownumber <- openxlsx::read.xlsx(here::here("../_rawdata/Address/PREDICT_ids.xlsx"))
-geocode_data2 <- full_join(subj_rownumber,geocode_data, by="V1")
-adi_codes <- read.csv(here::here("./data/ADI/national/US_2021_ADI_Census_Block_Group_v4_0_1.csv"))
-
-geocode_data_with_adi <- left_join(geocode_data2, adi_codes, by="FIPS")
-geocode_data_with_adi$ADI_NATRANK <- as.numeric(as.character(geocode_data_with_adi$ADI_NATRANK))
-```
-### Manually enter ADI values for those missing it (based on surrounding neighborhoods)
-Drawn from https://www.neighborhoodatlas.medicine.wisc.edu/mapping
-```{r}
-geocode_data_with_adi[geocode_data_with_adi$ID==1008,"ADI_NATRANK"] <- 1 # but on college campus
-geocode_data_with_adi[geocode_data_with_adi$ID==1009,"ADI_NATRANK"] <- 1 # but on college campus, though this address was their family address before college per Lili
-geocode_data_with_adi[geocode_data_with_adi$ID==1010,"ADI_NATRANK"] <- 24
-geocode_data_with_adi[geocode_data_with_adi$ID==1043,"ADI_NATRANK"] <- 6 # this is a very small side street that only exist in one tract
-geocode_data_with_adi[geocode_data_with_adi$ID==1060,"ADI_NATRANK"] <- 4
-geocode_data_with_adi[geocode_data_with_adi$ID==1071,"ADI_NATRANK"] <- 31
-geocode_data_with_adi[geocode_data_with_adi$ID==1074,"ADI_NATRANK"] <- 49
-geocode_data_with_adi[geocode_data_with_adi$ID==1108,"ADI_NATRANK"] <- 11
-geocode_data_with_adi[geocode_data_with_adi$ID==1111,"ADI_NATRANK"] <- 7
-geocode_data_with_adi[geocode_data_with_adi$ID==1112,"ADI_NATRANK"] <- (9+4)/2
-geocode_data_with_adi[geocode_data_with_adi$ID==1114,"ADI_NATRANK"] <- (9+4)/2 # international student who's original home is in Columbia
-geocode_data_with_adi[geocode_data_with_adi$ID==1117,"ADI_NATRANK"] <- (5+4+21)/3
-geocode_data_with_adi[geocode_data_with_adi$ID==1122,"ADI_NATRANK"] <- 23
-
-geocode_data_with_adi[geocode_data_with_adi$ID==9005,"ADI_NATRANK"] <- 13
-geocode_data_with_adi[geocode_data_with_adi$ID==9006,"ADI_NATRANK"] <- 22
-geocode_data_with_adi[geocode_data_with_adi$ID==9010,"ADI_NATRANK"] <- 46
-geocode_data_with_adi[geocode_data_with_adi$ID==9039,"ADI_NATRANK"] <- 44 # previously 28 but on college campus
-geocode_data_with_adi[geocode_data_with_adi$ID==9044,"ADI_NATRANK"] <- (21+29)/2 # but on college campus
-geocode_data_with_adi[geocode_data_with_adi$ID==9052,"ADI_NATRANK"] <- 29
-geocode_data_with_adi[geocode_data_with_adi$ID==9056,"ADI_NATRANK"] <- 7 # previously NA but on college campus
-geocode_data_with_adi[geocode_data_with_adi$ID==9059,"ADI_NATRANK"] <- (21+29)/2 # but on college campus
-geocode_data_with_adi[geocode_data_with_adi$ID==9060,"ADI_NATRANK"] <- 57 # but on on college campus but previous address was in Mexico
-geocode_data_with_adi[geocode_data_with_adi$ID==9069,"ADI_NATRANK"] <- 3
-geocode_data_with_adi[geocode_data_with_adi$ID==9082,"ADI_NATRANK"] <- 54
-geocode_data_with_adi[geocode_data_with_adi$ID==9091,"ADI_NATRANK"] <- 21 # previously 28 but on college campus
-geocode_data_with_adi[geocode_data_with_adi$ID==9127,"ADI_NATRANK"] <- 63 # current address is on college campus, this reflects participant family's address before college
-geocode_data_with_adi[geocode_data_with_adi$ID==9128,"ADI_NATRANK"] <- 73 # current address is on college campus, this reflects participant family's address before college
-
-# 9027 and 9026 are siblings, so we are assuming that they live in the same address and thus have the same ADI
-geocode_data_with_adi[geocode_data_with_adi$ID==9027,"ADI_NATRANK"] <- geocode_data_with_adi[geocode_data_with_adi$ID==9026,"ADI_NATRANK"]
-```
-
-## REVERSE SCORE ADI
-```{r}
-geocode_data_with_adi$ADI_NATRANK <- 100-geocode_data_with_adi$ADI_NATRANK
-```
-
-#### Number missing ADI
-```{r, eval=FALSE}
-missing <- geocode_data_with_adi[,c("ID","ADI_NATRANK")] %>%
-  filter(is.na(ADI_NATRANK) | ADI_NATRANK=="GQ") %>%
-  select(ID)
-sum(is.na(df_150275_cz$ADI_NATRANK))
-sum(!is.na(df_150275_cz$ADI_NATRANK))
-
-address <- left_join(geocode_data2, adi_codes, by="FIPS")
-address[address$ID==1062,c("V2","ADI_NATRANK")]
-address[address$ID==9009,c("V2","ADI_NATRANK")]
-
-# Subjects over 18
-load(file=here::here("./data/over_18_150275.RData"))
-load(file=here::here("./data/over_18_275425.RData"))
-over_18 <- address %>%
-  filter(ID %in% over_18_150275$ID) %>%
-  select(ID, V2)
-```
-
-### Merging ADI data with datasets
-```{r}
-geocode_data_with_adi_log <- geocode_data_with_adi %>%
-  mutate(ADI_NATRANK_log = log(ADI_NATRANK)) %>%
-  dplyr::select(c(ID,ADI_NATRANK,ADI_NATRANK_log))
-
-df_275425_cz <- left_join(df_275425_cz, geocode_data_with_adi_log, by="ID") %>%
-  filter(complete.cases(AA_AR))
-df_275425_cz$ADI_NATRANK_c = scale(center=TRUE, scale=FALSE, df_275425_cz$ADI_NATRANK)
-df_275425_cz$ADI_NATRANK_z = scale(center=TRUE, scale=TRUE, df_275425_cz$ADI_NATRANK)
-
-df_150275_cz <- left_join(df_150275_cz, geocode_data_with_adi_log, by="ID") %>%
-  filter(complete.cases(AA_AR))
-df_150275_cz$ADI_NATRANK_c = scale(center=TRUE, scale=FALSE, df_150275_cz$ADI_NATRANK)
-df_150275_cz$ADI_NATRANK_z = scale(center=TRUE, scale=TRUE, df_150275_cz$ADI_NATRANK)
-
-df_50150_cz <- left_join(df_50150_cz, geocode_data_with_adi_log, by="ID") %>%
-  filter(complete.cases(AA_AR))
-df_50150_cz$ADI_NATRANK_c = scale(center=TRUE, scale=FALSE, df_50150_cz$ADI_NATRANK)
-df_50150_cz$ADI_NATRANK_z = scale(center=TRUE, scale=TRUE, df_50150_cz$ADI_NATRANK)
-```
-
-# STRAIN
-```{r}
-load(here::here("data/BUDS_cleaning02_with_strain.RData"))
-BUDS_cleaning02_with_strain$ID <- as.integer(as.character(BUDS_cleaning02_with_strain$id_1_i))
-
-df_275425_cz_strain <- df_275425_cz %>%
-  full_join(BUDS_cleaning02_with_strain, by="ID") %>%
-  filter(complete.cases(Acc_Acc)) %>%
-  mutate(Age_c = scale(Age, center=T, scale=F),
-         StressCT_c = scale(StressCT, center=T, scale=F),
-         StressTH_c = scale(StressTH, center=T, scale=F)) %>%
-  group_by(ID) %>%
-  arrange(ID) %>%
-  filter(row_number()==1) %>%
-  ungroup()
-
-df_150275_cz_strain <- df_150275_cz %>%
-  full_join(BUDS_cleaning02_with_strain, by="ID") %>%
-    filter(complete.cases(Acc_Acc)) %>%
-  group_by(ID) %>%
-  arrange(ID) %>%
-  filter(row_number()==1) %>%
-  ungroup() %>%
-  mutate(Age_c = scale(Age, center=T, scale=F),
-         StressCT_c = scale(StressCT, center=T, scale=F),
-         StressTH_c = scale(StressTH, center=T, scale=F))
-
-df_50150_cz_strain <- df_50150_cz %>%
-  full_join(BUDS_cleaning02_with_strain, by="ID") %>%
-  group_by(ID) %>%
-  arrange(ID) %>%
-  filter(row_number()==1) %>%
-  ungroup() %>%
-  mutate(Age_c = scale(Age, center=T, scale=F),
-         StressCT_c = scale(StressCT, center=T, scale=F),
-         StressTH_c = scale(StressTH, center=T, scale=F))
-```
-
-# Split-half
-```{r}
-compute_split_half <- function(time_window) {
-  for (contrast in c("Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej","Acc_All","Rej_All","A_all","AA_AR","AR_AA")){
-    eval(parse(text=paste0('
-    r_half_',time_window,'',contrast,' <- cor(df_even_',time_window,'_cz$',contrast,', df_odd_',time_window,'_cz$',contrast,', method="spearman", use="pairwise")
-    r_half_',time_window,'ci_',contrast,' <- ci_cor(df_even_',time_window,'_cz$',contrast,', df_odd_',time_window,'_cz$',contrast,', method="spearman", type = "bootstrap", R=1000)
-    r_sb_',time_window,'_cilower_',contrast,' <<- (2*r_half_',time_window,'ci_',contrast,'$interval[1])/(1+r_half_',time_window,'ci_',contrast,'$interval[1])
-    r_sb_',time_window,'_ciupper_',contrast,' <<- (2*r_half_',time_window,'ci_',contrast,'$interval[2])/(1+r_half_',time_window,'ci_',contrast,'$interval[2])
-    r_sb_',time_window,'_',contrast,' <<- (2*r_half_',time_window,'',contrast,')/(1+r_half_',time_window,'',contrast,')
-    ')))
-}
-}
-
-compute_split_half("50150")
-compute_split_half("150275")
-compute_split_half("275425")
-
-spearman_brown <- data.frame(Time_windows=c("Cz 50-150ms","Cz 150-275ms","Cz 275-425ms"))
-spearman_brown$Acc_Acc <- c(r_sb_50150_Acc_Acc,r_sb_150275_Acc_Acc,r_sb_275425_Acc_Acc)
-spearman_brown$Acc_Rej <- c(r_sb_50150_Acc_Rej,r_sb_150275_Acc_Rej,r_sb_275425_Acc_Rej)
-spearman_brown$Rej_Acc <- c(r_sb_50150_Rej_Acc,r_sb_150275_Rej_Acc,r_sb_275425_Rej_Acc)
-spearman_brown$Rej_Rej <- c(r_sb_50150_Rej_Rej,r_sb_150275_Rej_Rej,r_sb_275425_Rej_Rej)
-spearman_brown$AA_AR <- c(r_sb_50150_AA_AR,r_sb_150275_AA_AR,r_sb_275425_AA_AR)
-spearman_brown$AR_AA <- c(r_sb_50150_AR_AA,r_sb_150275_AR_AA,r_sb_275425_AR_AA)
-spearman_brown[,2:ncol(spearman_brown)] <- round(spearman_brown[,2:ncol(spearman_brown)],2)
-```
-
-# Save files
-```{r}
-save(df_150275_cz, #df_150275_cz_long,
-     df_50150_cz,# df_50150_cz_long,
-     df_275425_cz, #df_275425_cz_long,
-     df_150275_cz_strain, #df_150275_cz_long_strain,
-     df_50150_cz_strain, #df_50150_cz_long_strain,
-     df_275425_cz_strain, #df_275425_cz_long_strain,
-     file=here::here("./data/BUDS_df_ERP.RData"))
-
-save(geocode_data_with_adi, file=here::here("./data/geocode_data_with_adi.RData"))
-
-save(df_even_50150_cz, df_even_150275_cz, df_even_275425_cz, file=here::here("./data/BUDS_split_half_even.RData"))
-save(df_odd_50150_cz, df_odd_150275_cz, df_odd_275425_cz, file=here::here("./data/BUDS_split_half_odd.RData"))
-
-write.csv(spearman_brown, here::here("tables/spearman_brown.csv"))
+save(BUDS_cleaning05, file="./data/BUDS_cleaning05.RData")
 ```
