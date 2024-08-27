@@ -469,20 +469,6 @@ m_p300_rej_dec_ss <- emtrends(m_p300_rej_dec, pairwise ~ADI_NATRANK_z, var="AR_A
 
 Follow-up simple slope analyses controlling for self-reported deception were consistent with results: no simple slopes were significant for the SES x RewP~resid~ interaction ($p\ge$ `r round(min(m_rewp_acc_dec_ss$emtrends[,6]),2)`), but were significant for the SES x P300~resid~ such that lower SES was associated with a more negative relationship between P300~resid~ to *acceptance* and subsequent negative affect (slope = `r round(m_p300_acc_dec_ss$emtrends[2,2],2)`, *p*=`r round(m_p300_acc_dec_ss$emtrends[2,6],2)`), and positive relationship between P300~resid~ to *rejection* and subsequent negative affect (slope = `r round(m_p300_rej_dec_ss$emtrends[2,2],2)`, *p*=`r round(m_p300_rej_dec_ss$emtrends[2,6],2)`).
 
-## Discrimination distress
-```{r}
-# RewP
-model_150275_addi_dec <- lm(AA_AR_z ~ addi_total_z + Age_c + demo_child_sex + SP_debriefing_deceived_f + site, df_150275_cz_dec)
-model_150275_addi_ar_dec <- lm(AR_AA_z ~ addi_total_z + Age_c + demo_child_sex + SP_debriefing_deceived_f + site, df_150275_cz_dec)
-# P300
-model_275425_addi_dec <- lm(AA_AR_z ~ addi_total_z + Age_c + demo_child_sex + SP_debriefing_deceived_f + site, data = df_275425_pz_dec)
-model_275425_addi_ar_dec <- lm(AR_AA_z ~ addi_total_z + Age_c + demo_child_sex + SP_debriefing_deceived_f + site, data = df_275425_pz_dec)
-
-model_275425_addi_ar_adi_dec <- lm(AR_AA_z ~ addi_total_z + ADI_NATRANK_z + Age_c + demo_child_sex + SP_debriefing_deceived_f + site, data = df_275425_pz_dec)
-```
-
-When covarying for self-reported deception, greater self-reported discrimination distress continued to be significantly related to heightened P300~resid~ (`r  apa_print(model_275425_addi_ar_dec)$full_result$addi_total_z`) to rejection, even over-and-above SES (`r  apa_print(model_275425_addi_ar_adi_dec)$full_result$addi_total_z`).
-
 # Covarying for positive affect
 ## SES moderates association between RewP~resid~/P300~resid~ and negative affect
 ```{r}
