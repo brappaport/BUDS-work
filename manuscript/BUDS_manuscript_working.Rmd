@@ -22,7 +22,6 @@ author:
   - name    : "Allison M. Letkiewicz"
     affiliation : "1"
     role:
-      - "Methodology"
       - "Writing - Review & Editing"
   - name    : "Lilian Y. Li"
     affiliation : "1"
@@ -41,26 +40,26 @@ author:
     affiliation : "2"
     role:
     - "Writing - Review & Editing"
-  - name    : "Randy P. Auerbach"
-    affiliation : "2"
+  - name          : "Randy Auerbach"
+    affiliation   : "2"
     role:
-    - "Conceptualization"
-    - "Funding acquisition"
-    - "Investigation"
-    - "Methodology"
-    - "Resources"
-    - "Supervision"
-    - "Writing - Review & Editing"
-  - name    : "Stewart A. Shankman"
-    affiliation : "1"
+      - "Conceptualization"
+      - "Fundind acquisition"
+      - "Investigation"
+      - "Methodology"
+      - "Resources"
+      - "Supervision"
+      - "Writing - Review & Editing"
+  - name          : "Stewart A. Shankman"
+    affiliation   : "1"
     role:
-    - "Conceptualization"
-    - "Funding acquisition"
-    - "Investigation"
-    - "Methodology"
-    - "Resources"
-    - "Supervision"
-    - "Writing - Review & Editing"
+      - "Conceptualization"
+      - "Fundind acquisition"
+      - "Investigation"
+      - "Methodology"
+      - "Resources"
+      - "Supervision"
+      - "Writing - Review & Editing"
 
 affiliation:
   - id    : "1"
@@ -149,6 +148,8 @@ knitr::opts_chunk$set(set.seed(312), warning=FALSE, message=FALSE, include=FALSE
 
 here <- here::here
 here::i_am("BUDS_manuscript_working.Rmd")
+
+filter <- dplyr::filter
 
 r_refs("BUDS.bib")
 ```
@@ -334,7 +335,7 @@ too_few_trials <- function(data, acceptance_trials, rejection_trials) {
 # too_few_trials(df_275425_pz, 15, 13)
 ```
 
-172 participants completed the task. Dependability analyses were used to determine the minimum number of clean trials needed to achieve at least 0.70 dependability for the RewP and P300 (the N1 did not achieve 0.70 at any number of trials, see Dependability in Results below). `r n2w(length(filter(segments, Acc_Acc < 13 | Acc_Rej < 11)$subject),cap=TRUE)` subjects were excluded for having too few clean trials for the RewP and `r length(filter(segments, Acc_Acc < 15 | Acc_Rej < 13)$subject)` for the P300 following artifact rejection (at least 13 high-value acceptance and 11 high-value rejection trials for the RewP, and at least 15 high-value acceptance and 13 high-value rejection trials for the P300). This resulted in a sample of N=`r sum(complete.cases(df_50150_fz$Acc_All),na.rm=T)` with useable N100 data, N=`r sum(complete.cases(df_150275_cz$Acc_All),na.rm=T)` with useable RewP data, and N= `r sum(complete.cases(df_275425_pz$Acc_All),na.rm=T)` with useable P300 data.
+172 participants completed the task. Dependability analyses were used to determine the minimum number of clean trials needed to achieve at least 0.70 dependability for the RewP and P300 (the N1 did not achieve 0.70 at any number of trials, see Dependability in Results below). `r n2w(length(dplyr::filter(segments_df, Acc_Acc_seg < 13 | Acc_Rej_seg < 11)$ID),cap=TRUE)` subjects were excluded for having too few clean trials for the RewP and `r length(dplyr::filter(segments_df, Acc_Acc_seg < 15 | Acc_Rej_seg < 13)$ID)` for the P300 following artifact rejection (at least 13 high-value acceptance and 11 high-value rejection trials for the RewP, and at least 15 high-value acceptance and 13 high-value rejection trials for the P300). This resulted in a sample of N=`r sum(complete.cases(df_50150_fz$Acc_All),na.rm=T)` with usable N100 data, N=`r sum(complete.cases(df_150275_cz$Acc_All),na.rm=T)` with usable RewP data, and N= `r sum(complete.cases(df_275425_pz$Acc_All),na.rm=T)` with usable P300 data.
 
 ### Ecological momentary assessment (EMA)
 
@@ -342,7 +343,7 @@ too_few_trials <- function(data, acceptance_trials, rejection_trials) {
 subjects_with_less_than_3_responses <- read.csv(file=here::here("../data/number_with_less_than_3_EMA_responses.csv"))
 ```
 
-Ecological momentary assessment data was collected using the Effortless Assessment of Risk States (EARS) app [@lindEffortlessAssessmentRisk2018; @lindReintroducingEffortlessAssessment2023] for seven days after consenting into the study. Participants received three notifications each day (between 6:30am-8:30am, 3:00pm-5:00pm, and 7:00-10:00pm) to rate their current mood. They rated how happy, excited, supported, angry, anxious, sad, and rejected they felt, on scales from 0 (*not at all*)-100 (*extremely*). The first three were averaged into a positive affect composite, and the latter four in a negative affect composite, and list-wise deletion was used (e.g., if "sad" was skipped, their negative affect composite score was missing for that time point). Participants were compensated $1 for every completed set of questions for a maximum of \$3 per day and \$21 total. `r n2w(length(subjects_with_less_than_3_responses$subject_id), cap=TRUE)\` participants were excluded for having made too few EMA responses (\<3).
+Ecological momentary assessment data was collected using the Effortless Assessment of Risk States (EARS) app [@lindEffortlessAssessmentRisk2018; @lindReintroducingEffortlessAssessment2023] for seven days after consenting into the study. Participants received three notifications each day (between 6:30am-8:30am, 3:00pm-5:00pm, and 7:00-10:00pm) to rate their current mood. They rated how happy, excited, supported, angry, anxious, sad, and rejected they felt, on scales from 0 (*not at all*)-100 (*extremely*). The first three were averaged into a positive affect composite, and the latter four in a negative affect composite, and list-wise deletion was used (e.g., if "sad" was skipped, their negative affect composite score was missing for that time point). Participants were compensated $1 for every completed set of questions for a maximum of \$3 per day and \$21 total. `r n2w(length(subjects_with_less_than_3_responses$subject_id), cap=TRUE)` participants were excluded for having made too few EMA responses (\<3).
 
 ## Measures
 
@@ -489,7 +490,7 @@ Omnibus MLMs showed that Peer value interacted with Feedback type to predict ERP
 
 ### Internal consistency
 
-The RewP and P300 demonstrated acceptable levels of internal consistency across peer-value (high, low) and feedback conditions (acceptance, rejection), with split-half reliability (*r*) \> `r min(spearman_brown[2:3,3:6])`, with particularly high reliability for the high-value peers conditions (acceptance and rejection *r* = `r spearman_brown[2:3,3]` and `r spearman_brown[2:3,4]`; see Supplement). The N100 did not achieve acceptable internal consistency (*r*=`r min(spearman_brown[1,3:6])`-`r max(spearman_brown[1,3:6])`). Split-half reliability was considerably lower for the residualized scores, but remained comparable to other studies (RewP~resid~ *r*\>`r min(spearman_brown[2,7:8])`, P300~resid~ *r*\>`r min(spearman_brown[3,7:8])`) [@rappaportBehavioralPsychiatricCorrelates2024a; @ethridgePsychometricPropertiesNeural2018; @levinsonReliabilityElectrocorticalResponse2017]. See Supplement for full results.
+The RewP and P300 demonstrated acceptable levels of internal consistency across peer-value (high, low) and feedback conditions (acceptance, rejection), with split-half reliability (*r*) \> `r min(spearman_brown[2:3,3:6])`, with particularly high reliability for the high-value peers conditions (acceptance and rejection *r* = `r spearman_brown[2:3,3]` and `r spearman_brown[2:3,4]`). The N100 did not achieve acceptable internal consistency (*r*=`r min(spearman_brown[1,3:6])`-`r max(spearman_brown[1,3:6])`). Split-half reliability was considerably lower for the residualized scores, but remained comparable to other studies (RewP~resid~ *r*\>`r min(spearman_brown[2,7:8])`, P300~resid~ *r*\>`r min(spearman_brown[3,7:8])`) [@rappaportBehavioralPsychiatricCorrelates2024a; @ethridgePsychometricPropertiesNeural2018; @levinsonReliabilityElectrocorticalResponse2017]. See Supplement for full results.
 
 ### Dependability
 
@@ -545,7 +546,7 @@ We found support for aim 1: SES was significantly related to brain responses to 
 ##### Negative affect
 
 ```{r}
-model_150275_ema_na <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + site + (1 | ID),
+model_150275_ema_na <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + (1 | site) + (1 | ID),
                 zi = ~ .,
   data = df_150275_cz_ema,
   family=gaussian, REML=TRUE)
@@ -560,30 +561,7 @@ model_275425_ema_na <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_
   data = df_275425_pz_ema,
   family=gaussian, REML=TRUE)
 
-model_275425_ema_na_AR <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AR_AA_z + Age_c + demo_child_sex + (1 | site) + (1 | ID),
-                                   zi = ~ .,
-  data = df_275425_pz_ema,
-  family=gaussian, REML=TRUE)
-
-# COVARYING for PA
-# model_150275_ema_na_ar_pa <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AR_AA_z + Age_c + demo_child_sex + pa + site + (1 | ID),
-#                 zi = ~ .,
-#   data = df_150275_cz_ema,
-#   family=gaussian, REML=TRUE)
-
-# DOESN'T CONVERGE
-# model_275425_ema_na_pa <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + pa + site + (1 | ID),
-#                                    zi = ~ .,
-#   data = df_275425_pz_ema,
-#   family=gaussian, REML=TRUE)
-
-# DOESN'T CONVERGE
-# model_150275_ema_na_pa <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + pa + site + (1 | ID),
-#                 zi = ~ .,
-#   data = df_150275_cz_ema,
-#   family=gaussian, REML=TRUE)
-
-model_275425_ema_na_AR_pa <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AR_AA_z + Age_c + demo_child_sex + pa + site + (1 | ID),
+model_275425_ema_na_ar <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AR_AA_z + Age_c + demo_child_sex + (1 | site) + (1 | ID),
                                    zi = ~ .,
   data = df_275425_pz_ema,
   family=gaussian, REML=TRUE)
@@ -631,17 +609,9 @@ p300_na_stat <- c(tidy(model_275425_ema_na) %>%
                        mutate(lower = round(`2.5 %`,2), upper=round(`97.5 %`,2)) %>%
                        select(lower,upper))
 
-p300_na_ar_stat <- c(tidy(model_275425_ema_na_AR) %>% 
+p300_na_ar_stat <- c(tidy(model_275425_ema_na_ar) %>% 
                        filter(effect == "fixed", component == "cond", term == "ADI_NATRANK_z:AR_AA_z"),
-                     as.data.frame(confint(model_275425_ema_na_AR)) %>% 
-                       rownames_to_column("row_name") %>% 
-                       filter(row_name == "cond.ADI_NATRANK_z:AR_AA_z") %>% 
-                       mutate(lower = round(`2.5 %`,2), upper=round(`97.5 %`,2)) %>% 
-                       select(lower,upper))
-
-p300_na_ar_pa_stat <- c(tidy(model_275425_ema_na_AR_pa) %>% 
-                       filter(effect == "fixed", component == "cond", term == "ADI_NATRANK_z:AR_AA_z"),
-                     as.data.frame(confint(model_275425_ema_na_AR_pa)) %>% 
+                     as.data.frame(confint(model_275425_ema_na_ar)) %>% 
                        rownames_to_column("row_name") %>% 
                        filter(row_name == "cond.ADI_NATRANK_z:AR_AA_z") %>% 
                        mutate(lower = round(`2.5 %`,2), upper=round(`97.5 %`,2)) %>% 
@@ -680,48 +650,40 @@ p300_pa_ar_stat <- c(tidy(model_275425_ema_pa_ar) %>%
                        select(lower,upper))
 ```
 
-We also found support for aim 2: SES significantly moderated the relationship between EMA-assessed negative affect and RewP~resid~ to acceptance ($\beta$=`r rewp_na_stat$estimate`, 95% CI=[`r paste0(rewp_na_stat$lower,", ", rewp_na_stat$upper)`], *p*=`r round(rewp_na_stat$p.value,3)`), but not RewP~resid~ to rejection ($\beta$=`r round(rewp_na_ar_stat$estimate,3)`, *p*=`r round(rewp_na_ar_stat$p.value,3)`). SES also moderated the relationship between negative affect and the P300~resid~ to acceptance ($\beta$=`r p300_na_stat$estimate`, 95% CI=[`r paste0(p300_na_stat$lower,", ",p300_na_stat$upper)`], *p*=`r round(p300_na_stat$p.value,3)`) and the P300~resid~ to rejection ($\beta$=`r p300_na_ar_stat$estimate`, 95% CI=[`r paste0(p300_na_ar_stat$lower,", ",p300_na_ar_stat$upper)`], *p*=`r round(p300_na_ar_stat$p.value,3)`); see Figure 3). These interactions remained significant even when accounting for EMA-assessed positive affect as a fixed effect covariate[^3], as well as when covarying for deception (see Supplement).
+We also found support for aim 2: SES significantly moderated the relationship between EMA-assessed negative affect and RewP~resid~ to acceptance ($\beta$=`r rewp_na_stat$estimate`, 95% CI=[`r paste0(rewp_na_stat$lower,", ", rewp_na_stat$upper)`], *p*=`r round(rewp_na_stat$p.value,3)`), but not RewP~resid~ to rejection ($\beta$=`r round(rewp_na_ar_stat$estimate,3)`, *p*=`r round(rewp_na_ar_stat$p.value,3)`). SES also moderated the relationship between negative affect and the P300~resid~ to acceptance ($\beta$=`r p300_na_stat$estimate`, 95% CI=[`r paste0(p300_na_stat$lower,", ",p300_na_stat$upper)`], *p*=`r round(p300_na_stat$p.value,3)`) and the P300~resid~ to rejection ($\beta$=`r p300_na_ar_stat$estimate`, 95% CI=[`r paste0(p300_na_ar_stat$lower,", ",p300_na_ar_stat$upper)`], *p*=`r round(p300_na_ar_stat$p.value,3)`); see Figure 3). SES continued to moderate the relationship between negative affect and the P300~resid~ to rejection even when covarying for EMA-assessed positive affect as a fixed effect covariate[^3], as well as when covarying for deception (see Supplement).
 
-[^3]: Models accounting for positive affect included site as a fixed effect covariate instead of as a random intercept.
+[^3]: Models covarying for EMA reported positive affect did not converge for models testing SES moderating relationship between negative affect and RewP\~resid\~ or P300\~resid\~ to acceptance
 
 ```{r}
 ## REWP
 ######## ACC > REJ ######## 
 mean_ses <- mean(df_150275_cz_ema$ADI_NATRANK_z, na.rm=TRUE)
 sd_ses <- sd(df_150275_cz_ema$ADI_NATRANK_z, na.rm=TRUE)
-SESa <- mean_ses + sd_ses
-SESb <- mean_ses - sd_ses
-SES_list <- list(ADI_NATRANK_z=round(c(SESa,SESb),2)) 
+SES_list <- list(ADI_NATRANK_z=round(c(mean_ses + sd_ses,mean_ses - sd_ses),2)) 
 
-m_rewp_acc <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + site + (1 | ID),
+m_rewp_acc <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + (1 | site) + (1 | ID),
         zi = ~ .,
   data = df_150275_cz_ema,
   family=gaussian, REML=TRUE)
 
 m_rewp_acc_ss <- emtrends(m_rewp_acc, pairwise ~ADI_NATRANK_z, var="AA_AR_z",at=SES_list, adjust="none")|> test()
-# With covariates
-# m_rewp_acc_cov_ss <- emtrends(model_150275_ema_na_cov, pairwise ~ADI_NATRANK_c, var="AA_AR_c",at=SES_list, adjust="none")|> test()
 
 ## P300
 mean_ses <- mean(df_275425_pz_ema$ADI_NATRANK_z, na.rm=TRUE)
 sd_ses <- sd(df_275425_pz_ema$ADI_NATRANK_z, na.rm=TRUE)
-SESa <- mean_ses + sd_ses
-SESb <- mean_ses - sd_ses
-SES_list <- list(ADI_NATRANK_z=round(c(SESa,SESb),2)) 
+SES_list <- list(ADI_NATRANK_z=round(c(mean_ses + sd_ses,mean_ses - sd_ses),2)) 
 ######## ACC > REJ ######## 
 m_p300_acc <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + (1 | site) + (1 | ID),
         zi = ~ .,
   data = df_275425_pz_ema,
   family=gaussian, REML=TRUE)
-# glmmTMB:::Anova.glmmTMB(m_p300_rej)
 
 m_p300_acc_ss <- emtrends(m_p300_acc, pairwise ~ADI_NATRANK_z, var="AA_AR_z",at=SES_list, adjust="none")|> test()
 ######## REJ > ACC ######## 
-m_p300_rej <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AR_AA_z + Age_c + demo_child_sex + pa + (1 | site) + (1 | ID),
+m_p300_rej <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AR_AA_z + Age_c + demo_child_sex + (1 | site) + (1 | ID),
         zi = ~ .,
   data = df_275425_pz_ema,
   family=gaussian, REML=TRUE)
-# glmmTMB:::Anova.glmmTMB(m_p300_rej)
 
 m_p300_rej_ss <- emtrends(m_p300_rej, pairwise ~ADI_NATRANK_z, var="AR_AA_z",at=SES_list, adjust="none")|> test()
 ```
@@ -733,7 +695,6 @@ Follow-up simple slope analyses showed that while no simple slopes were signific
 SES did not moderate the relationship between positive affect and RewP~resid~ to acceptance ($\beta$=`r rewp_pa_stat$estimate`, 95% CI=[`r paste0(rewp_pa_stat$lower,", ", rewp_pa_stat$upper)`], *p*=`r rewp_pa_stat$p.value`) or rejection ($\beta$=`r rewp_pa_ar_stat$estimate`, 95% CI=[`r paste0(rewp_pa_ar_stat$lower,", ", rewp_pa_ar_stat$upper)`], *p*=`r rewp_pa_ar_stat$p.value`), nor between positive affect and P300~resid~ to acceptance ($\beta$=`r p300_pa_stat$estimate`, 95% CI=[`r paste0(p300_pa_stat$lower,", ", p300_pa_stat$upper)`], *p*=`r p300_pa_stat$p.value`) or rejection ($\beta$=`r p300_pa_ar_stat$estimate`, 95% CI=[`r paste0(p300_pa_ar_stat$lower,", ", p300_pa_ar_stat$upper)`], *p*=`r p300_pa_ar_stat$p.value`).
 
 ### Discrimination distress
-
 ```{r, eval=FALSE}
 paste0("N = ",sum(complete.cases(df_150275_cz$AA_AR) & complete.cases(df_150275_cz$addi_total_z)))
 paste0("r RewP and ADDI: ", round(corr.test(df_150275_cz$AA_AR, df_150275_cz$addi_total_z)$r,2))
@@ -754,6 +715,8 @@ model_275425_addi_ar_adi <- lm(AR_AA_z ~ addi_total_z + ADI_NATRANK_z + Age_c + 
 
 df_150275_cz_complete <- filter(df_150275_cz, complete.cases(AA_AR))
 n_reported_disc <- paste0(sum(df_150275_cz_complete$addi_total>0, na.rm=TRUE),", ",round(sum(df_150275_cz_complete$addi_total>0, na.rm=TRUE)/sum(complete.cases(df_150275_cz_complete$addi_total))*100,2),"%")
+
+hist(df_275425_pz$addi_total)
 ```
 
 Greater self-reported discrimination distress was significantly related to heightened P300~resid~ (`r  apa_print(model_275425_addi_ar)$full_result$addi_total_z`) to rejection, even over-and-above SES (`r  apa_print(model_275425_addi_ar_adi)$full_result$addi_total_z`). However, these results are considered preliminary since only a sub-sample of participants reported having experienced *any* form of discrimination (`r n_reported_disc`).
@@ -794,7 +757,7 @@ model_275425_race_ar <- lm(AR_AA_z ~ demo_child_minority + site, df_275425_pz_ra
 Finally, we examined whether RewP~resid~ or P300~resid~ differed by Hispanic ethnicity or participant reported race, given that racial/ethnic minority youth are at greater likelihood of being discriminated against. We did not find significant differences for Hispanic ethnicity in the RewP~resid~ to acceptance or rejection (*p*=`r round(tidy(model_150275_hisp)[2,5],2)`, `r round(tidy(model_150275_hisp_ar)[2,5],2)`, respectively), nor P300~resid~ (*p*=`r round(tidy(model_275425_hisp)[2,5],2)`, `r round(tidy(model_275425_hisp_ar)[2,5],2)`). We also did not find significant differences between white and non-white participants for the RewP~resid~ to acceptance or rejection (*p*=`r round(tidy(model_150275_race)[2,5],2)`, `r round(tidy(model_150275_race_ar)[2,5],2)`, respectively), nor P300~resid~ (*p*=`r round(tidy(model_275425_race)[2,5],2)`, `r round(tidy(model_275425_race_ar)[2,5],2)`, respectively).
 
 ```{r, eval=FALSE}
-performance::check_model(model_275425_ema_na_AR, data=df_275425_pz_ema, plot = TRUE)
+performance::check_model(model_275425_ema_na_ar, data=df_275425_pz_ema, plot = TRUE)
 ```
 
 # Discussion
