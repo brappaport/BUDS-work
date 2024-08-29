@@ -1,5 +1,5 @@
 ---
-title             : "Socioeconomic status and adolescent brain responses to peer feedback: Testing the impact on negative affect"
+title             : "Supplemental for Socioeconomic status and adolescent brain responses to peer feedback: Testing the impact on negative affect"
 shorttitle    : "SES & brain responses to peer feedback"
 
 author: 
@@ -68,14 +68,15 @@ affiliation:
 
 
 bibliography      : "BUDS.bib"
-floatsintext      : no
+floatsintext      : yes
 linenumbers       : no
 draft             : no
 mask              : no
 figurelist        : no
 tablelist         : no
 footnotelist      : no
-csl               : "`r system.file('rmd', 'apa7.csl', package = 'papaja')`"
+
+csl     : 'biological-psychiatry.csl'
 documentclass     : "apa7"
 output            : papaja::apa6_pdf
 editor_options: 
@@ -83,25 +84,29 @@ editor_options:
     wrap: sentence
     
 header-includes:
-    - \raggedbottom
+  - \usepackage{setspace}
+  - \AtBeginEnvironment{tabular}{\singlespacing}
+  - \AtBeginEnvironment{lltable}{\singlespacing}
+  - \addtolength{\tabcolsep}{6pt}
+  - \AtBeginEnvironment{tablenotes}{\doublespacing}
+  - \captionsetup[table]{font={stretch=1.5}}
+  - \captionsetup[figure]{font={stretch=1.5}}
+  
+  - \raggedbottom
 ---
 
 ```{r analysis-preferences}
-knitr::opts_chunk$set(set.seed(312), warning=FALSE, message=FALSE, include=FALSE, cache=TRUE)
-    options(width=80, Ncpus = 6, mc.cores=6, max.print=1000000, scipen = 999) #Set width, multiple cores, and not to use scientific notation
-    rm(list=ls())     #Remove everything from environment
-    cat("\014")       #Clear Console
+knitr::opts_chunk$set(set.seed(312), warning=FALSE, message=FALSE, include=FALSE, papaja.title_page = FALSE) # default chunk options
+options(width=80, Ncpus = 6, mc.cores=6, max.print=1000000, scipen = 999) # RStudio console options: set width, multiple cores, and do not use scientific notation
+rm(list=ls())     #Remove everything from environment
+cat("\014")       #Clear Console
 
-  # library(knitr)      #allows rmarkdown files
   library(haven)      #helps import stata
-  library(expss)      #labeling variables/values
-  library(broom)      #nice statistical output
   library(here)       #nice file paths
   library(psych)      #used for statistical analyses
   library(Hmisc)
   library(purrr)
   library(haven)      #to import SPSS files
-  library(MASS)       #to create residualized scores
 # Models
   library(lmerTest)
   library(glmmTMB)
@@ -110,20 +115,16 @@ knitr::opts_chunk$set(set.seed(312), warning=FALSE, message=FALSE, include=FALSE
   library(ggpubr)
   library(ggeffects)
   library(sjPlot)
-  library(sjPlot)
-  library(marginaleffects)
   library(interactions)
   library(emmeans) # testing simple slopes
     
   library(eegUtils)
   library(gridExtra)
     
-  library(datawizard)
-  library(performance)
   library(Rmisc)
-  library(vtable)
   library(grid)
   library(broom.mixed)
+
 # General tools
   library(tidyverse)  #plotting/cleaning, etc.
   library(papaja)
@@ -234,13 +235,16 @@ plot_stats <- function(model, var) {
 ```
 
 # Methods and Materials
+
 ## Participants
-Informed assent and consent were obtained from the adolescent and parent, respectively, and adolescents 18 years or older provided consent. General inclusion criteria included: (a) Tanner Stage $\ge$ 3 (Tanner & Davies, 1985), (b) parental and child fluency in English, (c) Wechsler Abbreviated Scale of Intelligence-II (WASI-II) > 85 (Wechsler, 2011), (d) ownership of a personal smartphone (android or iOS), and (e) right-handedness. General exclusion criteria included: (a) history of head injury or neurological disorders, (b) current moderate or severe substance use disorder, and (c) lifetime history of bipolar or psychotic disorders, oppositional defiant disorder, conduct disorder, organic mental disorder, or developmental disorder. 
 
-## ERP task effects
-```{r, include=TRUE, fig.cap="Topographic maps of N1, RewP, and P300 to high-value peer acceptance, high-value peer rejection, high-value peer acceptance relative to high-value peer rejection."}
+Informed assent and consent were obtained from the adolescent and parent, respectively, and adolescents 18 years or older provided consent.
+General inclusion criteria included: (a) Tanner Stage $\ge$ 3 (Tanner & Davies, 1985), (b) parental and child fluency in English, (c) Wechsler Abbreviated Scale of Intelligence-II (WASI-II) \> 85 (Wechsler, 2011), (d) ownership of a personal smartphone (android or iOS), and (e) right-handedness.
+General exclusion criteria included: (a) history of head injury or neurological disorders, (b) current moderate or severe substance use disorder, and (c) lifetime history of bipolar or psychotic disorders, oppositional defiant disorder, conduct disorder, organic mental disorder, or developmental disorder.
 
-chanlocs <- electrode_locations(read.csv(here('../data/topo_plots/chanlocs32.csv')), montage="biosemi64")
+```{r, include=TRUE, dpi=400, fig.cap="Topographic maps of N1, RewP, and P300 to high-value peer acceptance, high-value peer rejection, high-value peer acceptance relative to high-value peer rejection."}
+
+chanlocs <- eegUtils::electrode_locations(read.csv(here::here('../data/topo_plots/chanlocs32.csv')), montage="biosemi64")
 ga_acc <- read.delim(here('../data/topo_plots/ga_highvalue_acceptance_AA (Acc-Acc).txt'))%>%
   pivot_longer(cols=c(-time),
                values_to ="amplitude", names_to="electrode")
@@ -251,7 +255,7 @@ ga_diff <- read.delim(here('../data/topo_plots/ga_highvalue_acc_rej_difference_B
   pivot_longer(cols=c(-time),
                values_to ="amplitude", names_to="electrode")
 
-scaling_factor=0.7
+scaling_factor=0.45
 # Create grobs for the column titles
 title_n1 <- textGrob("N1", gp=gpar(fontsize=14, fontface="bold"))
 title_rewp <- textGrob("RewP", gp=gpar(fontsize=14, fontface="bold"))
@@ -265,15 +269,49 @@ chanlocs <- chanlocs %>%
   mutate(electrode = case_match(electrode, "Poz" ~ "POz",
                           .default=electrode))
 
-plot1 <- topoplot(ga_acc, time_lim=c(50,150), chanLocs=chanlocs, contour=FALSE, interp_limit="skirt", chan_marker="name", scaling=scaling_factor)
-plot2 <- topoplot(ga_rej,time_lim=c(50,150), chanLocs=chanlocs, contour=FALSE, interp_limit="skirt", chan_marker="name", scaling=scaling_factor)
-plot3 <- topoplot(ga_diff,time_lim=c(50,150), chanLocs=chanlocs, contour=FALSE, interp_limit="skirt", chan_marker="name", scaling=scaling_factor)
-plot4 <- topoplot(ga_acc,time_lim=c(150,275), chanLocs=chanlocs, contour=FALSE, interp_limit="skirt", chan_marker="name", scaling=scaling_factor)
-plot5 <- topoplot(ga_rej,time_lim=c(150,275), chanLocs=chanlocs, contour=FALSE, interp_limit="skirt", chan_marker="name", scaling=scaling_factor)
-plot6 <- topoplot(ga_diff,time_lim=c(150,275), chanLocs=chanlocs, contour=FALSE, interp_limit="skirt", chan_marker="name", scaling=scaling_factor)
-plot7 <- topoplot(ga_acc,time_lim=c(275,425), chanLocs=chanlocs, contour=FALSE, interp_limit="skirt", chan_marker="name", scaling=scaling_factor)
-plot8 <- topoplot(ga_rej,time_lim=c(275,425), chanLocs=chanlocs, contour=FALSE, interp_limit="skirt", chan_marker="name", scaling=scaling_factor)
-plot9 <- topoplot(ga_diff,time_lim=c(275,425), chanLocs=chanlocs, contour=FALSE, interp_limit="skirt", chan_marker="name", scaling=scaling_factor)
+chanlocs2 <- chanlocs %>%
+  mutate(electrode = ifelse(chanlocs$electrode %in% c("Pz", "Cz", "Fz"), 
+                             chanlocs$electrode, 
+                             NA))
+
+plot1 <- topoplot(ga_acc, time_lim=c(50,150), chanLocs=chanlocs, contour=TRUE, interp_limit="skirt", chan_marker="none", scaling=scaling_factor, fill_title="", verbose=FALSE) +
+ annotate("text", x=1, y=45, label = "Fz", color = "black", size=3) +
+ annotate("text", x=1, y=0, label = "Cz", color = "black", size=3) +
+  annotate("text", x=1, y=-45, label = "Pz", color = "black", size=3)
+plot2 <- topoplot(ga_acc,time_lim=c(150,275), chanLocs=chanlocs, contour=TRUE, interp_limit="skirt", chan_marker="none", scaling=scaling_factor, fill_title="", verbose=FALSE) +
+ annotate("text", x=1, y=45, label = "Fz", color = "black", size=3) +
+ annotate("text", x=1, y=0, label = "Cz", color = "black", size=3) +
+  annotate("text", x=1, y=-45, label = "Pz", color = "black", size=3)
+plot3 <- topoplot(ga_acc,time_lim=c(275,425), chanLocs=chanlocs, contour=TRUE, interp_limit="skirt", chan_marker="none", scaling=scaling_factor, verbose=FALSE) +
+ annotate("text", x=1, y=45, label = "Fz", color = "black", size=3) +
+ annotate("text", x=1, y=0, label = "Cz", color = "black", size=3) +
+  annotate("text", x=1, y=-45, label = "Pz", color = "black", size=3)
+
+plot4 <- topoplot(ga_rej, time_lim=c(50,150), chanLocs=chanlocs, contour=TRUE, interp_limit="skirt", chan_marker="none", scaling=scaling_factor, fill_title="", verbose=FALSE) +
+ annotate("text", x=1, y=45, label = "Fz", color = "black", size=3) +
+ annotate("text", x=1, y=0, label = "Cz", color = "black", size=3) +
+  annotate("text", x=1, y=-45, label = "Pz", color = "black", size=3)
+plot5 <- topoplot(ga_rej,time_lim=c(150,275), chanLocs=chanlocs, contour=TRUE, interp_limit="skirt", chan_marker="none", scaling=scaling_factor, fill_title="", verbose=FALSE) +
+ annotate("text", x=1, y=45, label = "Fz", color = "black", size=3) +
+ annotate("text", x=1, y=0, label = "Cz", color = "black", size=3) +
+  annotate("text", x=1, y=-45, label = "Pz", color = "black", size=3)
+plot6 <- topoplot(ga_rej,time_lim=c(275,425), chanLocs=chanlocs, contour=TRUE, interp_limit="skirt", chan_marker="none", scaling=scaling_factor, verbose=FALSE) +
+ annotate("text", x=1, y=45, label = "Fz", color = "black", size=3) +
+ annotate("text", x=1, y=0, label = "Cz", color = "black", size=3) +
+  annotate("text", x=1, y=-45, label = "Pz", color = "black", size=3)
+
+plot7 <- topoplot(ga_diff, time_lim=c(50,150), chanLocs=chanlocs, contour=TRUE, interp_limit="skirt", chan_marker="none", scaling=scaling_factor, fill_title="", verbose=FALSE) +
+ annotate("text", x=1, y=45, label = "Fz", color = "black", size=3) +
+ annotate("text", x=1, y=0, label = "Cz", color = "black", size=3) +
+  annotate("text", x=1, y=-45, label = "Pz", color = "black", size=3)
+plot8 <- topoplot(ga_diff,time_lim=c(150,275), chanLocs=chanlocs, contour=TRUE, interp_limit="skirt", chan_marker="none", scaling=scaling_factor, fill_title="", verbose=FALSE) +
+ annotate("text", x=1, y=45, label = "Fz", color = "black", size=3) +
+ annotate("text", x=1, y=0, label = "Cz", color = "black", size=3) +
+  annotate("text", x=1, y=-45, label = "Pz", color = "black", size=3)
+plot9 <- topoplot(ga_diff,time_lim=c(275,425), chanLocs=chanlocs, contour=TRUE, interp_limit="skirt", chan_marker="none", scaling=scaling_factor, verbose=FALSE) +
+ annotate("text", x=1, y=45, label = "Fz", color = "black", size=3) +
+ annotate("text", x=1, y=0, label = "Cz", color = "black", size=3) +
+  annotate("text", x=1, y=-45, label = "Pz", color = "black", size=3)
 
 blank <- textGrob("")
 grid.arrange(blank, title_n1, title_rewp, title_p300,
@@ -286,34 +324,33 @@ grid.arrange(blank, title_n1, title_rewp, title_p300,
 )
 ```
 
-
 # Results
+
 ## Behavioral ratings
-### Post-task ratings
-```{r}
+
+```{r, eval=FALSE}
 post_task_table <- st(dplyr::select(df_BUDS_rating_it_pt, SP_debriefing_interested:SP_debriefing_nervous,SP_debriefing_socialmediause),
                       out="return")[,-c(5:8)] %>%
   mutate(Measure=c("Interested","Happy","Upset","Angry","Nervous","Social Media Use")) %>%
   dplyr::select(-Variable, -N) %>%
   dplyr::select(Measure, everything())
 ```
-```{r, results='asis', include=TRUE}
-apa_table(post_task_table)
-```
 
-Of note, for low-value peers, participants rated being rejected as feeling *better* than being accepted. Although seemingly counter-intuitive, previous work suggests that this is likely reflects participants feeling good that they were "right"---that they rejected the person who rejected them---and feeling guilty when they were "wrong"---rejected someone who accepted them [@distefanoComparisonElectrocorticalResponse2018].
+Of note, for low-value peers, participants rated being rejected as feeling *better* than being accepted.
+Although seemingly counter-intuitive, previous work suggests that this is likely reflects participants feeling good that they were "right"---that they rejected the person who rejected them---and feeling guilty when they were "wrong"---rejected someone who accepted them [@distefanoComparisonElectrocorticalResponse2018].
 
-# Internal consistency
 ```{r, results='asis', include=TRUE}
 spearman_brown <- spearman_brown[,-1]
 spearman_brown[,1] <- c("N1", "RewP", "P300")
 colnames(spearman_brown) <- c("ERP Component","HV Acceptance","HV Rejection","LV Acceptance","LV Rejection","HV Acceptance > \nHV Rejection","HV Rejection > \nHV Acceptance")
+spearman_brown <- t(spearman_brown)
+colnames(spearman_brown) <- spearman_brown[1,]
+spearman_brown <- spearman_brown[-1,]
 
 apa_table(spearman_brown,
-          note="HV= High-value peer, LV= Low-value peer")
+          note="HV= High-value peer, LV= Low-value peer",
+          caption="Spearman Brown coefficients of split-half reliability for each ERP components")
 ```
-
-# Dependability
 
 ```{r, results='asis', include=TRUE}
 dependability <- data.frame(Condition = c("HV Acceptance","HV Rejection","LV Acceptance","LV Rejection"),
@@ -324,15 +361,19 @@ dependability <- data.frame(Condition = c("HV Acceptance","HV Rejection","LV Acc
 
 apa_table(dependability,
   col_spanners=list(
-    "Minimum trials to achieve 70% depedability" = c(2, 3),
+    "Trials for 70\\% dependability" = c(2, 3),
     "Overall dependability" = c(4, 5)),
-  caption="Dependability of RewP and P300. N1 did not achieve acceptance (70%) dependaility at any number of trials (up to 25). HV = high-value peer, LV = low-value peer."
+  col.names = c("Condition","RewP","P300","RewP","P300"),
+  caption="Number of trials needed to achieve at least 70% dependability, and overall dependability of RewP and P300 up to 25 trials each. N1 did not achieve acceptance (70%) dependability at any number of trials (up to 25). HV = high-value peer, LV = low-value peer.",
+  align = c("p{3.5cm}", rep("p{2cm}", 4))
 )
 ```
 
-# Covaring for belief in deception
-## SES associations with RewP~resid~ and P300~resid~
-```{r, eval=T}
+## Covaring for belief in deception
+
+### SES associations with RewP~resid~ and P300~resid~
+
+```{r, eval=TRUE}
 load(file=here("../data/BUDS_behavior.RData"))
 
 df_150275_cz_dec <- df_150275_cz_rating %>%
@@ -342,8 +383,6 @@ df_150275_cz_dec <- df_150275_cz_rating %>%
 df_275425_pz_dec <- df_275425_pz_rating %>%
   select(ID, SP_debriefing_deceived_f) %>%
   full_join(df_275425_pz, by="ID")
-
-df_275425_pz_dec[is.na(df_275425_pz_dec$SP_debriefing_deceived_f),"ID"]
 
 ses_lm_dec <- function(data, y) {
   y <- enquo(y)
@@ -355,6 +394,7 @@ ses_lm_dec <- function(data, y) {
 rewp_aaar_model <- ses_lm_dec(df_150275_cz_dec, AA_AR_z)
 p3_aaar_model <- ses_lm_dec(df_275425_pz_dec, AA_AR_z)
 ```
+
 When covarying for self-reported deception, SES was still significantly, positively related to RewP~resid~ and P300~resid~ to acceptance (`r apa_print(rewp_aaar_model)$full_result$ADI_NATRANK_z`, `r apa_print(p3_aaar_model)$full_result$ADI_NATRANK_z`, respectively).
 
 ```{r}
@@ -373,7 +413,7 @@ df_275425_pz_ema_dec <- df_275425_pz_ema %>%
   full_join(df_275425_pz_rating, by="ID")
 ```
 
-## SES moderates association between RewP~resid~/P300~resid~ and negative affect
+### SES moderates association between RewP~resid~/P300~resid~ and negative affect
 
 ```{r}
 model_150275_ema_na_dec <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + SP_debriefing_deceived_f + (1 | site) + (1 | ID),
@@ -386,7 +426,7 @@ model_150275_ema_na_ar_dec <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AR_AA_z + Age_c 
   data = df_150275_cz_ema_dec,
   family=gaussian, REML=TRUE)
 
-model_275425_ema_na_dec <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + SP_debriefing_deceived_f + (1 | site) + (1 | ID),
+model_275425_ema_na_dec <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + SP_debriefing_deceived_f + site + (1 | ID),
                                    zi = ~ .,
   data = df_275425_pz_ema_dec,
   family=gaussian, REML=TRUE)
@@ -431,7 +471,10 @@ p300_na_ar_stat_dec <- c(broom.mixed::tidy(model_275425_ema_na_ar_dec) %>%
                        select(lower,upper))
 ```
 
-When covarying for self-reported deception, SES no longer significantly moderated the relationship between EMA-assessed negative affect and RewP~resid~ to acceptance ($\beta$=`r rewp_na_stat_dec$estimate`, 95% CI=[`r paste0(rewp_na_stat_dec$lower,", ", rewp_na_stat_dec$upper)`], *p*=`r round(rewp_na_stat_dec$p.value,3)`), nor RewP~resid~ to rejection ($\beta$=`r round(rewp_na_ar_stat_dec$estimate,3)`, *p*=`r round(rewp_na_ar_stat_dec$p.value,3)`). SES continued to moderate the relationship between negative affect and the P300~resid~ to acceptance ($\beta$=`r p300_na_stat_dec$estimate`, 95% CI=[`r paste0(p300_na_stat_dec$lower,", ",p300_na_stat_dec$upper)`], *p*=`r round(p300_na_stat_dec$p.value,3)`) but not P300~resid~ to rejection ($\beta$=`r p300_na_ar_stat_dec$estimate`, 95% CI=[`r paste0(p300_na_ar_stat_dec$lower,", ",p300_na_ar_stat_dec$upper)`], *p*=`r round(p300_na_ar_stat_dec$p.value,3)`); see Figure 3).
+When covarying for self-reported deception, SES continued to significantly moderate the relationship between EMA-assessed negative affect and RewP~resid~ to acceptance ($\beta$=`r rewp_na_stat_dec$estimate`, 95% CI=[`r paste0(rewp_na_stat_dec$lower,", ", rewp_na_stat_dec$upper)`], *p*=`r round(rewp_na_stat_dec$p.value,3)`).
+SES continued to moderate the relationship between negative affect and the P300~resid~ to acceptance[^1] ($\beta$=`r p300_na_stat_dec$estimate`, 95% CI=[`r paste0(p300_na_stat_dec$lower,", ",p300_na_stat_dec$upper)`], *p*=`r round(p300_na_stat_dec$p.value,3)`) and P300~resid~ to rejection ($\beta$=`r p300_na_ar_stat_dec$estimate`, 95% CI=[`r paste0(p300_na_ar_stat_dec$lower,", ",p300_na_ar_stat_dec$upper)`], *p*=`r round(p300_na_ar_stat_dec$p.value,3)`); see Figure 3).
+
+[^1]: With site included as a fixed effect covariate. The model did not converge with site included as a random intercept.
 
 ```{r}
 ## REWP
@@ -465,12 +508,14 @@ m_p300_rej_dec <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AR_AA_z + Age_c + demo_child
   family=gaussian, REML=TRUE)
 
 m_p300_rej_dec_ss <- emtrends(m_p300_rej_dec, pairwise ~ADI_NATRANK_z, var="AR_AA_z",at=SES_list, adjust="none")|> test()
+
+# Follow-up simple slope analyses controlling for self-reported deception were consistent with results: no simple slopes were significant for the SES x RewPresid interaction ($p\ge$ r round(min(m_rewp_acc_dec_ss$emtrends[,6]),2)), but were significant for the SES x P300resid such that lower SES was associated with a more negative relationship between P300resid to acceptance and subsequent negative affect (slope = r round(m_p300_acc_dec_ss$emtrends[2,2],2), p=r round(m_p300_acc_dec_ss$emtrends[2,6],2)), and positive relationship between P300resid to rejection and subsequent negative affect (slope = r round(m_p300_rej_dec_ss$emtrends[2,2],2), p=r round(m_p300_rej_dec_ss$emtrends[2,6],2)). 
 ```
 
-Follow-up simple slope analyses controlling for self-reported deception were consistent with results: no simple slopes were significant for the SES x RewP~resid~ interaction ($p\ge$ `r round(min(m_rewp_acc_dec_ss$emtrends[,6]),2)`), but were significant for the SES x P300~resid~ such that lower SES was associated with a more negative relationship between P300~resid~ to *acceptance* and subsequent negative affect (slope = `r round(m_p300_acc_dec_ss$emtrends[2,2],2)`, *p*=`r round(m_p300_acc_dec_ss$emtrends[2,6],2)`), and positive relationship between P300~resid~ to *rejection* and subsequent negative affect (slope = `r round(m_p300_rej_dec_ss$emtrends[2,2],2)`, *p*=`r round(m_p300_rej_dec_ss$emtrends[2,6],2)`).
+## Covarying for positive affect
 
-# Covarying for positive affect
-## SES moderates association between RewP~resid~/P300~resid~ and negative affect
+### SES moderates association between RewP~resid~/P300~resid~ and negative affect
+
 ```{r}
 # DOESN'T CONVERGE
 # model_150275_ema_na_pa <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + pa + (1 | site) + (1 | ID),
@@ -503,9 +548,8 @@ p300_na_ar_pa_stat <- c(broom.mixed::tidy(model_275425_ema_na_ar_pa) %>%
                        select(lower,upper))
 ```
 
-Models covarying for EMA reported positive affect do not converge for models testing SES moderating relationship between negative affect and RewP~resid~ or P300~resid~ to acceptance. However, SES continued to moderate the relationship between negative affect and the P300~resid~ to rejection ($\beta$=`r p300_na_ar_pa_stat$estimate`, 95% CI=[`r paste0(p300_na_ar_pa_stat$lower,", ",p300_na_ar_pa_stat$upper)`], *p*=`r round(p300_na_ar_pa_stat$p.value,3)`).
-
-\newpage
+Models covarying for EMA reported positive affect do not converge for models testing SES moderating relationship between negative affect and RewP~resid~ or P300~resid~ to acceptance.
+However, SES continued to moderate the relationship between negative affect and the P300~resid~ to rejection ($\beta$=`r p300_na_ar_pa_stat$estimate`, 95% CI=[`r paste0(p300_na_ar_pa_stat$lower,", ",p300_na_ar_pa_stat$upper)`], *p*=`r round(p300_na_ar_pa_stat$p.value,3)`).
 
 # References
 
