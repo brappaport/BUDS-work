@@ -434,7 +434,7 @@ compute_split_half("50150","fz")
 compute_split_half("150275","cz")
 compute_split_half("275425","pz")
 
-spearman_brown <- data.frame(Time_windows=c("Cz 50-150ms","Cz 150-275ms","Cz 275-425ms"))
+spearman_brown <- data.frame(Time_windows=c("Fz 50-150ms","Cz 150-275ms","Pz 275-425ms"))
 spearman_brown$Acc_Acc <- c(r_sb_50150_Acc_Acc,r_sb_150275_Acc_Acc,r_sb_275425_Acc_Acc)
 spearman_brown$Acc_Rej <- c(r_sb_50150_Acc_Rej,r_sb_150275_Acc_Rej,r_sb_275425_Acc_Rej)
 spearman_brown$Rej_Acc <- c(r_sb_50150_Rej_Acc,r_sb_150275_Rej_Acc,r_sb_275425_Rej_Acc)
