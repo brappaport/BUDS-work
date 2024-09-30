@@ -40,10 +40,16 @@ manuscript/BUDS_tables_and_figures_working_files/
 manuscript/BUDS_tables_and_figures_working_cache/
 manuscript/BUDS_manuscript_working_files/
 manuscript/BUDS_manuscript_working_cache/
+manuscript/*.log
+manuscript/*.tex
+manuscript/*.ttt
+manuscript/*.fff
 data/eeg_processing/
 data/EMA/
 data/outdated/
 James_eeg_processing_scripts/
 data/
 data/*.RData
+
+management/*.R
 
