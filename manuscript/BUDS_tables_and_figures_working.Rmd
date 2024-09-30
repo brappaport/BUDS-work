@@ -97,8 +97,9 @@ header-includes:
   - \AtBeginDocument{\let\maketitle\relax} # no title page
   
   - \raggedbottom
-  # - \usepackage{helvet}
-  # - \renewcommand{\familydefault}{\sfdefault}
+  - \usepackage{helvet}
+  - \renewcommand{\rmdefault}{phv} % Use Helvetica for serif
+  - \renewcommand{\sfdefault}{phv} % Use Helvetica for sans-serif
 ---
 
 ```{r analysis-preferences}
@@ -360,8 +361,8 @@ demo_table2$Statistic <- gsub("χ2", "$\\chi^2$", demo_table2$Statistic)
 
 ```{r, include=TRUE, results="asis"}
 apa_table(demo_table2,
-          caption="Demographics of samples and covariates",
-          note=paste0("NYC = New York, NY, ",demo_table$caption),
+          caption="Demographics of samples and descriptive statistics of measures of interest, and covariates.",
+          note=paste0(demo_table$caption, ", NYC = New York, NY."),
           align = c("p{8cm}", "p{2.5cm}", "p{2.5cm}","p{2cm}","p{1.5cm}"),
           stub_indents=list(`Sex-assigned-at-birth`=c(3:4), `Self-identified race`=c(6:12)),
           font_size="small",
@@ -376,7 +377,6 @@ Cz_ga_aa_ar_plot <- ggplot(data=filter(df_ga_Cz_long, Condition=="Acc_Acc" | Con
   scale_x_continuous(breaks = seq(-200, 1000, by = 200)) +
   scale_y_continuous(breaks = seq(-5, 10, by = 2.5)) +
   coord_cartesian(xlim=c(-200,1000), ylim=c(-5,10)) +
-  annotate("rect", xmin=50, xmax=150, ymin=-5, ymax=Inf, alpha=0.2, fill="purple") +
   annotate("rect", xmin=150, xmax=275, ymin=-5, ymax=Inf, alpha=0.2, fill="orange") +
   annotate("rect", xmin=275, xmax=425, ymin=-5, ymax=Inf, alpha=0.2, fill="blue") +
   geom_rect(aes(xmin=0, xmax=0, ymin=-5, ymax=12), color="black") +
@@ -385,8 +385,8 @@ Cz_ga_aa_ar_plot <- ggplot(data=filter(df_ga_Cz_long, Condition=="Acc_Acc" | Con
        values=c("Acc_Acc"="green", "AA_AR"="black", "Acc_Rej"="red"), 
        labels=c("Acceptance","Rejection","Difference"), name=NULL) +
   labs(x="Time (ms)", y="Cz (µV)") +
-  theme_apa() + theme(legend.position="top")+ 
-  theme(legend.position="right", text=element_text(size=18))
+  theme_apa() + theme(legend.position="bottom")+ 
+  theme(text=element_text(size=18))
 ```
 
 ```{r}
@@ -399,7 +399,7 @@ rating_plot <- ggplot(in_task_rating_summary_stats, aes(y=rating, x=Voting, fill
   scale_fill_manual(values = c("green", "red"), name = "Feedback") +
   theme_apa() +
   theme(legend.position = "none") +
-  labs(x="Peer value", y="In task rating")
+  labs(x="Peer value", y="In-task rating")
 ```
 
 ```{r Load task image}
@@ -410,7 +410,7 @@ img_plot <- ggplot() +
   theme(plot.margin = margin(t=0, l=0, r=0, b=0, unit = "cm"))
 ```
 
-```{r, include=TRUE, results="asis", fig.cap = "A) Example of trial from chatroom task. B) Grand average ERP for acceptance and rejection feedback from high-value peers. Colored sections of the graph represent time windows where ERP components were extracted at Cz electrode: N100 = purple, RewP = orange, P3 = blue. C) Mean in-task, post-feedback emotional ratings across all trials and participants by Feedback (acceptance, rejection) and Value (high, low).", fig.height=8.5, fig.width=7}
+```{r, include=TRUE, results="asis", fig.cap = "A) Example of trial from chatroom task. B) Grand average ERP for acceptance and rejection feedback from high-value peers. Colored sections of the graph represent time windows where ERP components were extracted at Cz electrode: RewP = orange, P300 = blue. C) Mean in-task, post-feedback emotional ratings across all trials and participants by Feedback (acceptance, rejection) and Value (high, low).", fig.height=8.5, fig.width=7}
 # Combine image of task, grand average waveform, and behavioral ratings into one plot
 figure_1 <- cowplot::plot_grid(img_plot, Cz_ga_aa_ar_plot, rating_plot,
           labels = c("A","B","C"),
@@ -478,7 +478,7 @@ scatterplot_275425_adi <- ggplot(df_275425_pz, aes(x=ADI_NATRANK, y=AA_AR_z)) +
   geom_point(colour="black") +
   stat_smooth(method="lm", se=TRUE) +
   theme_apa() +
-  labs(x="SES (national percentile)", y=expression("P3"[resid])) +
+  labs(x="SES (national percentile)", y=expression("P300"[resid])) +
   theme()
 ```
 
@@ -506,7 +506,7 @@ model_275425_ema_pa <- glmmTMB(pa ~ ADI_NATRANK_z*AA_AR_z + Age_z + demo_child_s
 plot_150275_adi_na <- ggpredict(model_150275_ema_na, terms = c("AA_AR_z","ADI_NATRANK_z"))%>% 
   plot() + 
   theme_apa() +
-  labs(x=expression("Acceptance RewP"[resid]), y="Mean negative affect (cubed root)", color="SES", linetype="SES", title="") +
+  labs(x=expression("RewP"[resid]), y="Negative affect (cubed root)", color="SES", linetype="SES", title="") +
   scale_color_manual(values=c('orange','white','darkblue'), labels=c('-SD', 'Mean','+SD')) + 
   scale_fill_manual(values=c('orange','white','darkblue')) +
   theme(legend.position = "none", plot.title=element_blank())
@@ -514,7 +514,7 @@ plot_150275_adi_na <- ggpredict(model_150275_ema_na, terms = c("AA_AR_z","ADI_NA
 plot_275425_adi_na <- ggpredict(model_275425_ema_na, terms = c("AA_AR_z","ADI_NATRANK_z")) %>%
   plot() + 
   theme_apa() +
-  labs(x=expression("Acceptance P3"[resid]), y="Mean negative affect (cubed root)", color="SES", linetype="SES", title="") +
+  labs(x=expression("P300"[resid]), y="Negative affect (cubed root)", color="SES", linetype="SES", title="") +
   scale_color_manual(values=c('orange','white','darkblue'), labels=c('-SD', '+SD')) + 
   scale_fill_manual(values=c('orange','white','darkblue')) +
   theme(legend.position = "none", element_text(), plot.title=element_blank())
@@ -572,7 +572,7 @@ m_p300_acc <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_z + demo_child_sex
 m_p300_acc_ss <- emtrends(m_p300_acc, pairwise ~ADI_NATRANK_z, var="AA_AR_z",at=SES_list, adjust="none")|> test()
 ```
 
-```{r, include=TRUE, results='asis', fig.cap = 'Relationship between SES and brain responses to acceptance (relative to rejection) for RewP~resid~ and P3~resid~ ERP components.', fig.height=7, fig.width=5}
+```{r, include=TRUE, results='asis', fig.cap = 'Relationship between SES and brain responses to acceptance (relative to rejection) for RewP~resid~ and P300~resid~ ERP components.', fig.height=7, fig.width=5}
 
 adi_plots_scatter <- ggarrange(scatterplot_150275_adi + 
                                        rremove("xlab") + rremove("x.text") + 
@@ -605,7 +605,7 @@ adi_plots_scatter
 # ggsave("../figures/adi_plots_na.png", adi_plots_na, width=11, height=7)
 ```
 
-```{r, include=TRUE, results='asis', fig.height=7, fig.width=5, fig.cap=paste("Interactions for which SES significantly moderated association between brain responses to acceptance and negative affect. Orange lines = -1 standard deviation below the mean SES; Blue lines = +1 standard deviation above the mean. RewP to acceptance: ",paste0('b= ',round3(rewp_na_stat$estimate),', p= ',round3(rewp_na_stat$p.value)),"; No simple slopes significant. P3 to acceptance: ",paste0('b= ',round3(p300_na_stat$estimate),', p= ',round3(p300_na_stat$p.value)),"; Simple slope significant for SES -1 SD. Note: All plots use residualized scores, such that 'Acceptance RewP' indicates responses to acceptance residualized for rejection")}
+```{r, include=TRUE, results='asis', fig.height=7, fig.width=5, fig.cap=paste("Interactions for which SES significantly moderated association between brain responses to acceptance and negative affect. Orange lines = -1 standard deviation below the mean SES; Blue lines = +1 standard deviation above the mean. SES x RewP~resid~ interaction: ",paste0('beta= ',round3(rewp_na_stat$estimate),', p= ',round3(rewp_na_stat$p.value)),"; no simple slopes significant. SES x P300~resid~ interaction: ",paste0('beta= ',round3(p300_na_stat$estimate),', p= ',round3(p300_na_stat$p.value)),"; simple slope significant for SES -1 SD.")}
 model_150275_ema_na_stats <- filter(tidy(model_150275_ema_na),term=="ADI_NATRANK_z:AA_AR_z" & component=="cond")
 model_275425_ema_na_stats <- filter(tidy(model_275425_ema_na),term=="ADI_NATRANK_z:AA_AR_z" & component=="cond")
 
@@ -630,9 +630,9 @@ adi_plots_na <- ggarrange(plot_150275_adi_na + coord_cartesian(xlim=c(-4,3), yli
     # labels = c("A","B"),
     # label.x = c(rep(.04,4)),
     # label.y = c(rep(1,4)),
-    heights = c(4, 4, 4),
+    heights = c(4, 4),
     common.legend = FALSE, legend = "none",
-    ncol = 1, nrow = 3,
+    ncol = 1, nrow = 2,
     align="v")
 adi_plots_na <- annotate_figure(adi_plots_na, left=text_grob("Mean negative affect (cubed root)", rot=90, color = "black", size=14))
 
@@ -641,7 +641,7 @@ adi_plots_na
 
 ```{r include=TRUE, results='asis'}
 model_150275_ema_na_table <- tidy(model_150275_ema_na,component="cond", conf.int=TRUE) %>%
-  mutate(ci = paste0(sprintf("%.3f",conf.low),", ",sprintf("%.3f",conf.high))) %>% # make 95% CI variable
+  mutate(ci = paste0("[",sprintf("%.3f",conf.low),", ",sprintf("%.3f",conf.high),"]")) %>% # make 95% CI variable
   select(term,estimate,ci,p.value) %>%
   filter(row_number() <= n()-2) %>% # remove random effects
   mutate(term=c("Intercept","SES","RewP\\textsubscript{resid}",
@@ -649,7 +649,7 @@ model_150275_ema_na_table <- tidy(model_150275_ema_na,component="cond", conf.int
          p.value = ifelse(p.value < 0.001, "<0.001", as.character(sprintf("%.3f",p.value))))
 
 model_275425_ema_na_table <- tidy(model_275425_ema_na,component="cond", conf.int=TRUE) %>%
-  mutate(ci = paste0(sprintf("%.3f",conf.low),", ",sprintf("%.3f",conf.high))) %>% # make 95% CI variable
+  mutate(ci = paste0("[",sprintf("%.3f",conf.low),", ",sprintf("%.3f",conf.high),"]")) %>% # make 95% CI variable
   select(term,estimate,ci,p.value) %>%
   filter(row_number() <= n()-2) %>% # remove random effects
   mutate(term=c("Intercept","SES","P300\\textsubscript{resid}",
@@ -660,7 +660,7 @@ apa_table(list(`RewP\\textsubscript{resid}`=model_150275_ema_na_table,
                `P300\\textsubscript{resid}`=model_275425_ema_na_table),
           col.names=c("Predictor", "$\\beta$","95\\% CI","\\textit{p} value"),
           digits=3, escape=FALSE,
-          caption="Fixed effects from MLM models predicting EMA reported negative affect")
+          caption="Fixed effects from MLM models predicting EMA reported negative affect.")
 ```
 
 ```{r}
