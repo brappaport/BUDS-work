@@ -336,9 +336,9 @@ baseline = baseline %>%
 
 check = baseline %>% dplyr::count(subject_id, date, block) %>% arrange(-n)
 
-# remove people with < 3 responses
+# remove people with < 4 responses
 resp.rate = baseline %>% dplyr::count(subject_id)
-remove = resp.rate %>% filter(n < 3)
+remove = resp.rate %>% filter(n < 4)
 subjects_with_less_than_3_responses <- resp.rate[(resp.rate$n<3),"subject_id"]
 write.csv(subjects_with_less_than_3_responses, file=here::here("./data/number_with_less_than_3_EMA_responses.csv"))
 
