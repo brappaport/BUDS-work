@@ -85,6 +85,7 @@ mask          : no
 figurelist    : no
 tablelist     : no
 footnotelist  : no
+classoption   : "man, donotrepeattitle"
 csl     : 'biological-psychiatry.csl'
 # csl     : 'apa7.csl'
 documentclass   : "apa7"
@@ -104,8 +105,10 @@ header-includes:
   - \captionsetup[figure]{font={stretch=1.5}}
   
   - \raggedbottom
-  # - \usepackage{helvet}
-  # - \renewcommand{\familydefault}{\sfdefault}
+  
+  - \usepackage{helvet}
+  - \renewcommand{\rmdefault}{phv} % Use Helvetica for serif
+  - \renewcommand{\sfdefault}{phv} % Use Helvetica for sans-serif
 ---
 
 ```{r analysis-preferences}
@@ -453,7 +456,7 @@ Omnibus MLMs showed a significant Peer value x Feedback type interaction (`r apa
 
 [^1]: This somewhat surprising/counter intuitive finding is discussed further in the Supplement.
 
-Residualized scores assessing ratings to acceptance relative to ratings to rejection were not significantly associated with SES (`r apa_printlm(ratings_ses_model_AA_AR)$full_result$ADI_NATRANK_z`), nor were ratings to rejection relative to ratings to acceptance (`r apa_printlm(ratings_ses_model_AR_AA)$full_result$ADI_NATRANK_z`). SES also did not moderate the association between emotional ratings to feedback and EMA negative affect (Rating to acceptance~resid~: *p*=`r round(model_behavioral_rating_ses_ema_na_ar_p$p.value,2)`, Rating to rejection~resid~: *p*=`r round(model_behavioral_rating_ses_ema_na_ra_p$p.value,2)`), or EMA positive affect (Rating to rejection~resid~: *p*=`r round(model_behavioral_rating_ses_ema_pa_ra_p$p.value,2)`). However, SES moderated the association between emotional ratings to acceptance feedback and EMA positive affect at trend level (Rating to acceptance~resid~: *p*=`r round(model_behavioral_rating_ses_ema_pa_ar_p$p.value,2)`).
+Residualized scores assessing ratings to acceptance relative to ratings to rejection were not significantly associated with SES (`r apa_printlm(ratings_ses_model_AA_AR)$full_result$ADI_NATRANK_z`), nor were ratings to rejection relative to ratings to acceptance (`r apa_printlm(ratings_ses_model_AR_AA)$full_result$ADI_NATRANK_z`). SES also did not moderate the association between emotional ratings to feedback and EMA negative affect (Rating to acceptance~resid~: *p*=`r round(model_behavioral_rating_ses_ema_na_ar_p$p.value,2)`, Rating to rejection~resid~: *p*=`r round(model_behavioral_rating_ses_ema_na_ra_p$p.value,2)`)).
 
 **Belief in deception**
 
@@ -483,12 +486,9 @@ erp_to_long <- function(data) {
   data %>%
   pivot_longer(cols=c("Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej"), names_sep = "_", names_to = c("Voting","Feedback"), values_to = "ERP")
 }
-
-df_50150_fz_long <- erp_to_long(df_50150_fz)
 df_150275_cz_long <- erp_to_long(df_150275_cz)
 df_275425_pz_long <- erp_to_long(df_275425_pz)
 
-n1_fv_mlm <- lmer(formula = ERP ~ Feedback*Voting + site + (1 | ID), REML=TRUE, data = df_50150_fz_long)
 rewp_fv_mlm <- lmer(formula = ERP ~ Feedback*Voting + site + (1 | ID), REML=TRUE, data = df_150275_cz_long)
 p300_fv_mlm <- lmer(formula = ERP ~ Feedback*Voting + site + (1 | ID), REML=TRUE, data = df_275425_pz_long)
 ```
@@ -511,7 +511,7 @@ In dependability analyses, the RewP and P3 achieved acceptable dependability ($\
 ses_lm <- function(data, y) {
   y <- enquo(y)
 
-  model_formula <- formula(paste0(quo_name(y), "~ ADI_NATRANK_z + site + Age_c + demo_child_sex + StressCT + StressTH + IDAS_depression + IDAS_anxiety"))
+  model_formula <- formula(paste0(quo_name(y), "~ ADI_NATRANK_z + site + Age_c + demo_child_sex + StressCT + StressTH + IDAS_depression_z + IDAS_anxiety"))
   lm(model_formula, data = data)
 }
 ```
@@ -546,47 +546,29 @@ p300_low_value_ses_pvalues <- c(as.numeric(apa_print(p300_rarr_model)$table$p.va
   as.numeric(apa_print(p300_rarr_model)$table$p.value[2]),as.numeric(apa_print(p300_rrra_model)$table$p.value[2]))
 ```
 
-We found support for aim 1: SES was significantly related to brain responses to different kinds of peer feedback (see Figure 2). Specifically, lower SES was significantly related to a more blunted RewP~resid~ and P3~resid~ to acceptance from high-value peers (i.e., peers the participant was interested in). These findings remained significant over-and-above site, demographic factors (e.g., age, sex assigned at birth), lifetime stressors (total stressful life events, severity of stressful life events), and self-reported psychopathology (self-reported depression, self-reported anxiety). SES was not related to RewP~resid~ nor P3~resid~ to rejection (`r apa_printlm(rewp_araa_model)$full_result$ADI_NATRANK_z`; `r apa_printlm(p300_araa_model)$full_result$ADI_NATRANK_z`, respectively). Additionally, SES was not related to RewP~resid~ or P3~resid~ to acceptance or rejection from *low-value* peers (i.e., peers the participant was not interested in, $p \ge$ `r round(min(rewp_low_value_ses_pvalues,p300_low_value_ses_pvalues),2)`). Results are consistent when also covarying for self-reported deception (see Supplement).
+We found support for aim 1: SES was significantly related to brain responses to different kinds of peer feedback (see Figure 2). Specifically, lower SES was significantly related to a more blunted RewP~resid~ and P3~resid~ to acceptance from high-value peers (i.e., peers the participant was interested in). These findings remained significant over-and-above site, demographic factors (e.g., age, sex assigned at birth), lifetime stressors (total stressful life events, severity of stressful life events), and self-reported psychopathology (self-reported depression, self-reported anxiety). SES was not related to RewP~resid~ nor P300~resid~ to rejection (`r apa_printlm(rewp_araa_model)$full_result$ADI_NATRANK_z`; `r apa_printlm(p300_araa_model)$full_result$ADI_NATRANK_z`, respectively). Additionally, SES was not related to RewP~resid~ or P3~resid~ to acceptance or rejection from *low-value* peers (i.e., peers the participant was not interested in, $p \ge$ `r round(min(rewp_low_value_ses_pvalues,p300_low_value_ses_pvalues),2)`). Results are consistent when also covarying for self-reported deception (see Supplement).
 
 ***SES moderates association between RewP~resid~/P3~resid~ and affect***
 
 ```{r}
-model_150275_ema_na <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + site + (1 | ID),
+model_150275_ema_na <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_z + demo_child_sex + IDAS_depression_z + IDAS_anxiety_z + StressCT_z + StressTH_z + site + (1 | ID),
                 zi = ~ .,
   data = df_150275_cz_ema,
   family=gaussian, REML=TRUE)
 
-# model_150275_ema_na_ar <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AR_AA_z + Age_c + demo_child_sex + site + (1 | ID),
-#                 zi = ~ .,
-#   data = df_150275_cz_ema,
-#   family=gaussian, REML=TRUE)
-
-model_275425_ema_na <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + site + (1 | ID),
+model_275425_ema_na <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + IDAS_depression_z + IDAS_anxiety_z + StressCT_z + StressTH_z + site + (1 | ID),
                                    zi = ~ .,
   data = df_275425_pz_ema,
   family=gaussian, REML=TRUE)
-
-# model_275425_ema_na_ar <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AR_AA_z + Age_c + demo_child_sex + site + (1 | ID),
-#                                    zi = ~ .,
-#   data = df_275425_pz_ema,
-#   family=gaussian, REML=TRUE)
 
 # Positive affect
 model_150275_ema_pa <- glmmTMB(pa ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + site + (1 | ID),
   data = df_150275_cz_ema,
   family=gaussian, REML=TRUE)
 
-# model_150275_ema_pa_ar <- glmmTMB(pa ~ ADI_NATRANK_z*AR_AA_z + Age_c + demo_child_sex + site + (1 | ID),
-#   data = df_150275_cz_ema,
-#   family=gaussian, REML=TRUE)
-
 model_275425_ema_pa <- glmmTMB(pa ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + site + (1 | ID),
   data = df_275425_pz_ema,
   family=gaussian, REML=TRUE)
-
-# model_275425_ema_pa_ar <- glmmTMB(pa ~ ADI_NATRANK_z*AR_AA_z + Age_c + demo_child_sex + site + (1 | ID),
-#   data = df_275425_pz_ema,
-#   family=gaussian, REML=TRUE)
 ```
 
 ```{r}
@@ -629,36 +611,28 @@ We also found support for aim 2: SES significantly moderated the relationship be
 
 ```{r}
 ## REWP
-######## ACC > REJ ######## 
 mean_ses <- mean(df_150275_cz_ema$ADI_NATRANK_z, na.rm=TRUE)
 sd_ses <- sd(df_150275_cz_ema$ADI_NATRANK_z, na.rm=TRUE)
 SES_list <- list(ADI_NATRANK_z=round(c(mean_ses + sd_ses,mean_ses - sd_ses),2)) 
 
-m_rewp_acc <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + site + (1 | ID),
+m_rewp_acc <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_z + demo_child_sex + site + (1 | ID),
         zi = ~ .,
   data = df_150275_cz_ema,
   family=gaussian, REML=TRUE)
 
 m_rewp_acc_ss <- emtrends(m_rewp_acc, pairwise ~ADI_NATRANK_z, var="AA_AR_z",at=SES_list, adjust="none")|> test()
 
-## P3
+## P300
 mean_ses <- mean(df_275425_pz_ema$ADI_NATRANK_z, na.rm=TRUE)
 sd_ses <- sd(df_275425_pz_ema$ADI_NATRANK_z, na.rm=TRUE)
 SES_list <- list(ADI_NATRANK_z=round(c(mean_ses + sd_ses,mean_ses - sd_ses),2)) 
-######## ACC > REJ ######## 
-m_p300_acc <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + site + (1 | ID),
+
+m_p300_acc <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + IDAS_depression_z + IDAS_anxiety_z + StressCT_z + StressTH_z + site + (1 | ID),
         zi = ~ .,
   data = df_275425_pz_ema,
   family=gaussian, REML=TRUE)
 
 m_p300_acc_ss <- emtrends(m_p300_acc, pairwise ~ADI_NATRANK_z, var="AA_AR_z",at=SES_list, adjust="none")|> test()
-######## REJ > ACC ######## 
-# m_p300_rej <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AR_AA_z + Age_c + demo_child_sex + site + (1 | ID),
-#         zi = ~ .,
-#   data = df_275425_pz_ema,
-#   family=gaussian, REML=TRUE)
-# 
-# m_p300_rej_ss <- emtrends(m_p300_rej, pairwise ~ADI_NATRANK_z, var="AR_AA_z",at=SES_list, adjust="none")|> test()
 ```
 
 Follow-up simple slope analyses showed that while no simple slopes were significant for the SES x RewP~resid~ interaction (*p* = `r round(min(m_rewp_acc_ss$emtrends[,6]),2)`), there were significant simple slopes for the SES x P3~resid~ such that lower SES was associated with a more negative relationship between P3~resid~ to *acceptance* and subsequent negative affect (slope = `r round(m_p300_acc_ss$emtrends[2,2],2)`, *p*=`r format.pval(m_p300_acc_ss$emtrends[2,6],eps=0.001)`), and positive relationship between P3~resid~ to *rejection* and subsequent negative affect (slope = `r m_p300_rej_ss$emtrends[2,2]`, *p*=`r format.pval(m_p300_rej_ss$emtrends[2,6],eps=0.001)`). That is, individuals with lower SES who had blunted acceptance sensitivity or heightened rejection sensitivity exhibited greater negative affect outside of the lab.
@@ -734,8 +708,8 @@ summary(lm(AR_AA_z ~ group, df_150275_cz_groups))
 summary(lm(AA_AR_z ~ lifetime_mdd, df_150275_cz_groups))
 summary(lm(AR_AA_z ~ lifetime_mdd, df_150275_cz_groups))
 
-summary(lm(AA_AR_z ~ IDAS_depression, df_150275_cz_groups))
-summary(lm(AR_AA_z ~ IDAS_depression, df_150275_cz_groups))
+summary(lm(AA_AR_z ~ IDAS_depression_z, df_150275_cz_groups))
+summary(lm(AR_AA_z ~ IDAS_depression_z, df_150275_cz_groups))
 summary(lm(AA_AR_z ~ IDAS_anxiety, df_150275_cz_groups))
 summary(lm(AR_AA_z ~ IDAS_anxiety, df_150275_cz_groups))
 summary(lm(AA_AR_z ~ IDAS_wellbeing, df_150275_cz_groups))
@@ -746,8 +720,8 @@ summary(lm(AR_AA_z ~ group, df_275425_pz_groups))
 summary(lm(AA_AR_z ~ lifetime_mdd, df_275425_pz_groups))
 summary(lm(AR_AA_z ~ lifetime_mdd, df_275425_pz_groups))
 
-summary(lm(AA_AR_z ~ IDAS_depression, filter(df_275425_pz_groups, group!="HC")))
-summary(lm(AR_AA_z ~ IDAS_depression, filter(df_275425_pz_groups, group!="HC")))
+summary(lm(AA_AR_z ~ IDAS_depression_z, filter(df_275425_pz_groups, group!="HC")))
+summary(lm(AR_AA_z ~ IDAS_depression_z, filter(df_275425_pz_groups, group!="HC")))
 
 summary(lm(AA_AR_z ~ IDAS_wellbeing, df_275425_pz_groups))
 summary(lm(AR_AA_z ~ IDAS_wellbeing, df_275425_pz_groups))
@@ -756,15 +730,15 @@ summary(lm(AR_AA_z ~ IDAS_wellbeing, filter(df_275425_pz_groups, group!="HC")))
 
 anova(lm(AR_AA_z ~ group, df_275425_pz_groups))
 anova(lm(AR_AA_z ~ lifetime_mdd, df_275425_pz_groups))
-summary(lm(AR_AA_z ~ scale(IDAS_depression, center=TRUE, scale=TRUE), df_275425_pz_groups))
-summary(lm(AR_AA_z ~ scale(IDAS_depression, center=TRUE, scale=TRUE), filter(df_275425_pz_groups, group=="remMDD")))
-summary(lm(AR_AA_z ~ scale(IDAS_depression, center=TRUE, scale=TRUE) + Age + demo_child_sex, filter(df_275425_pz_groups, group!="HC")))
-summary(lm(AR_AA_z ~ scale(IDAS_depression, center=TRUE, scale=TRUE) + Age + demo_child_sex, filter(df_275425_pz_groups, group=="remMDD")))
+summary(lm(AR_AA_z ~ scale(IDAS_depression_z, center=TRUE, scale=TRUE), df_275425_pz_groups))
+summary(lm(AR_AA_z ~ scale(IDAS_depression_z, center=TRUE, scale=TRUE), filter(df_275425_pz_groups, group=="remMDD")))
+summary(lm(AR_AA_z ~ scale(IDAS_depression_z, center=TRUE, scale=TRUE) + Age + demo_child_sex, filter(df_275425_pz_groups, group!="HC")))
+summary(lm(AR_AA_z ~ scale(IDAS_depression_z, center=TRUE, scale=TRUE) + Age + demo_child_sex, filter(df_275425_pz_groups, group=="remMDD")))
 
-summary(lm(AA_AR_z ~ group + scale(IDAS_depression, center=TRUE, scale=TRUE) + Age + demo_child_sex, filter(df_150275_cz_groups, group!="MDD")))
-summary(lm(AR_AA_z ~ group + scale(IDAS_depression, center=TRUE, scale=TRUE) + Age + demo_child_sex, filter(df_150275_cz_groups, group!="MDD")))
-summary(lm(AA_AR_z ~ group + scale(IDAS_depression, center=TRUE, scale=TRUE) + Age + demo_child_sex, filter(df_275425_pz_groups, group!="MDD")))
-summary(lm(AR_AA_z ~ group + scale(IDAS_depression, center=TRUE, scale=TRUE) + Age + demo_child_sex, filter(df_275425_pz_groups, group!="MDD")))
+summary(lm(AA_AR_z ~ group + scale(IDAS_depression_z, center=TRUE, scale=TRUE) + Age + demo_child_sex, filter(df_150275_cz_groups, group!="MDD")))
+summary(lm(AR_AA_z ~ group + scale(IDAS_depression_z, center=TRUE, scale=TRUE) + Age + demo_child_sex, filter(df_150275_cz_groups, group!="MDD")))
+summary(lm(AA_AR_z ~ group + scale(IDAS_depression_z, center=TRUE, scale=TRUE) + Age + demo_child_sex, filter(df_275425_pz_groups, group!="MDD")))
+summary(lm(AR_AA_z ~ group + scale(IDAS_depression_z, center=TRUE, scale=TRUE) + Age + demo_child_sex, filter(df_275425_pz_groups, group!="MDD")))
 
 #CDRS
 summary(lm(AA_AR_z ~ cdrs_raw_i, df_150275_cz_groups))
@@ -794,16 +768,16 @@ summary(lm(AA_AR_z ~ cdrs_t_score_12_corrected, df_275425_pz_groups))
 summary(lm(AR_AA_z ~ cdrs_t_score_12_corrected, df_275425_pz_groups))
 
 
-sum(complete.cases(filter(df_275425_pz_groups, group=="remMDD")$IDAS_depression))
+sum(complete.cases(filter(df_275425_pz_groups, group=="remMDD")$IDAS_depression_z))
 
-summary(lm(AR_AA_z ~ scale(IDAS_depression, center=TRUE, scale=TRUE) + Age + demo_child_sex, filter(df_275425_pz_groups, group!="HC")))
+summary(lm(AR_AA_z ~ scale(IDAS_depression_z, center=TRUE, scale=TRUE) + Age + demo_child_sex, filter(df_275425_pz_groups, group!="HC")))
 df_no_hc <- filter(df_275425_pz_groups, group!="HC")
-model1 <- lm(AR_AA_z ~ scale(IDAS_depression, center=TRUE, scale=TRUE) + Age + demo_child_sex, df_no_hc)
+model1 <- lm(AR_AA_z ~ scale(IDAS_depression_z, center=TRUE, scale=TRUE) + Age + demo_child_sex, df_no_hc)
 df_no_hc$fitted <- fitted(model1)
 # Load ggplot2
 library(ggplot2)
 
-# Assuming you have a data frame called 'df' with columns 'IDAS_depression' and 'AR_AA_z'
+# Assuming you have a data frame called 'df' with columns 'IDAS_depression_z' and 'AR_AA_z'
 plot1 <- ggplot(df_no_hc, aes(x = AR_AA_z, y = fitted)) +
   geom_point(color = "black", alpha = 0.6) +  # Scatter plot points
   geom_smooth(method = "lm", se = TRUE, color = "blue") +  # Add linear regression line with confidence interval
