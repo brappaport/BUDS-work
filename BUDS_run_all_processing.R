@@ -20,6 +20,6 @@ rm(list=ls()); source("management/data02_BUDS.R"); rm(list=ls())
 rm(list=ls()); source("management/data03_BUDS.R"); rm(list=ls())
 rm(list=ls()); source("management/data04_BUDS.R"); rm(list=ls())
 rm(list=ls()); source("management/data05_BUDS_EMA.R"); rm(list=ls())
-rm(list=ls()); source("management/data06_BUDS_ratings.R"); rm(list=ls())
+rm(list=ls()); source("management/data06_BUDS_ratings.R")
 
 print("Done running all BUDS processing scripts!")
