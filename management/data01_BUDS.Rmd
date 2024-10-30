@@ -68,9 +68,17 @@ BUDS_cleaning02_nw3 <- BUDS_cleaning01_nw3[-(1),]; rm("BUDS_cleaning01_nw3")
 BUDS_cleaning02_nw <- bind_rows(BUDS_cleaning02_nw1, BUDS_cleaning02_nw2, BUDS_cleaning02_nw3)
 ```
 
+# Demographic data (cleaned by Lilian)
+```{r}
+# demo_data <- readRDS(here("../_rawdata/demographics_questionnaire_5.14.24.RDS")) %>%
+#   mutate(id_1_i= as.character(subjectID)) %>%
+#   dplyr::select(id_1_i, dob, starts_with("demo_child_"), ethnicity, sex, medsCurrent, cis, gender)
+```
+
 ## Combine NW and Columbia data
 ```{r}
 BUDS_cleaning02 <- bind_rows(BUDS_cleaning03_columbia, BUDS_cleaning02_nw)
+  # left_join(demo_data, by="id_1_i")
 
 BUDS_cleaning02 <- BUDS_cleaning02 %>%
   mutate(ID = as.integer(id_1_i)) %>%
@@ -81,7 +89,8 @@ BUDS_cleaning02 <- BUDS_cleaning02 %>%
 BUDS_cleaning02[duplicated(BUDS_cleaning02$ID),"ID"]
 
  # Per Sarah Sarkes, for the STRAIN, 9042 was mis-entered as 9024 and 9067 was mis-entered as 9072, for 9024 the completion date should be 6/16/2021, and the correct date for 9042 entered as 9024 would be 11/9/2021. For 9072, the completion date should be 6/13/2022, and 9067 entered as 9072 should have the completion date of 5/21/2022.
-strain_data <- read.csv(here("../_rawdata/Columbia-NW_SocialProcesses_Lifetime_04-05-23.csv"))
+strain_data <- read.csv(here("../_rawdata/Columbia-NW_SocialProcesses_Lifetime_04-05-23.csv")) %>%
+  dplyr::select(ID, StressCT, StressTH)
 strain_data <- subset(strain_data, ID != "test" & ID != "testing" & ID != "testdata" & ID != "999" & ID != "9999")
 
 strain_data[strain_data$ID==9024,"ID"][2] <- "9042"
