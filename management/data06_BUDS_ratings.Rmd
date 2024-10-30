@@ -58,7 +58,7 @@ here <- here::here
 
 ## Load behavioral data
 Remember to immediately rename and remove. Avoid overwriting old data.
-```{r, eval=T}
+```{r, eval=FALSE}
 subjects <- c(1000,
 1001,
 1004,
@@ -111,7 +111,7 @@ subjects <- c(1000,
 1072,
 1074,
 1075,
-1077,
+# 1077,
 1078,
 1079,
 1080,
@@ -254,6 +254,11 @@ save(df_beh, file=here::here("data/df_beh.RData"))
 ```
 
 ```{r}
+load(here::here("data/df_beh.RData"))
+```
+
+
+```{r}
 df_BUDS_rating <- df_beh %>%
   dplyr::mutate(PicRating_n=as.numeric(PicRating)) %>%
   dplyr::filter(complete.cases(Event) & Event!="none") %>%
@@ -345,8 +350,8 @@ df_BUDS_rating_pt <- df_BUDS_rating_pt_nw %>%
 ## In-task ratings related to post-task ratings
 ```{r}
 df_BUDS_rating_it_pt <- df_BUDS_rating_pt %>%
-  full_join(df_BUDS_rating_it, by="ID", relationship = "many-to-many") %>%
-  select(-site)
+  distinct(ID, .keep_all = TRUE) %>% # remove handful of duplicate rows that were identical
+  full_join(df_BUDS_rating_it, by="ID", relationship = "many-to-many")
 
 # How happy were you when someone expressed interest in chatting with you?
 summary(lm(SP_debriefing_2 ~ rating, filter(df_BUDS_rating_it_pt, Condition=="Acc_Acc")))
@@ -415,6 +420,7 @@ df_275425_pz_rating <- df_275425_pz %>%
 
 # Save files
 ```{r}
+print("Save rating files!")
 save(df_BUDS_rating, df_BUDS_rating_it_pt, 
      df_50150_fz_rating, df_150275_cz_rating, df_275425_pz_rating, file=here("./data/BUDS_behavior.RData"))
 ```
