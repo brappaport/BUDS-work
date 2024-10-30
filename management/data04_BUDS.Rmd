@@ -1,0 +1,145 @@
+---
+title: "Data prep script 4: Merge ERP and self-report data"
+author: "Brent Rappaport"
+date: "`r format(Sys.time(),  '%Y-%m-%d')`"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+subtitle: Template Rmd
+editor_options:
+  chunk_output_type: console
+toc: yes
+---
+
+# About
+This script merges ERP and self-report data from PREDICT project collaboration between Northwestern (PI: Shankman) and Columbia (PI: Auerbach).
+
+# Get Setup
+## Clear everything & set width
+```{r}
+knitr::opts_chunk$set(set.seed(312), echo=FALSE, results='hide', message=FALSE, warning=FALSE, error=FALSE)
+    options(width=80) #Set width
+    rm(list=ls())     #Remove everything from environment
+    cat("\014")       #Clear Console
+```
+
+## Load Libraries
+```{r}
+  library(knitr)      #allows rmarkdown files
+  library(haven)      #helps import stata
+  library(questionr)  #allows lookfor function
+  library(broom)      #nice statistical output
+  library(here)       #nice file paths
+  library(expss)      #labeling variables/values
+  library(psych)      #used for statistical analyses
+  library(ggplot2)    #creates plots
+  library(MASS)
+  library(papaja)     #generate APA documents
+  library(Hmisc)
+  library(misty)      #ordinal Cronbach's alpha
+  library(lavaan)     #SEM
+  library(papaja)
+  library(pscl)       # for zero inflated models
+  library(lme4)
+  library(lmerTest)
+  library(bbmle)
+  library(marginaleffects)
+  library(confintr)
+  library(bestNormalize) # for normalizing data
+  library(tidyverse)  #plotting/cleaning, etc.
+  library(workflowr)  #helps with workflow
+
+select <- dplyr::select
+
+here::i_am("./management/data04_BUDS.Rmd")
+here <- here::here
+```
+
+```{r}
+load(file=here::here("./data/BUDS_cleaning05.RData"))
+load(file=here::here("./data/BUDS_data02_ERP.RData"))
+```
+
+# Functions
+```{r}
+merge_self_report_with_erp <- function(data, electrode, behavioral_data) {
+  data %>%
+  filter(Channel %in% electrode) %>%
+  group_by(ID) %>%
+  reframe(Acc_All = mean(Acc_All),
+         Rej_All = mean(Rej_All),
+         Acc_Acc = mean(Acc_Acc),
+         Acc_Rej = mean(Acc_Rej),
+         Rej_Acc = mean(Rej_Acc),
+         Rej_Rej = mean(Rej_Rej)) %>%
+
+  filter(!is.na(Acc_All)) %>%
+  ungroup() %>%
+  mutate(Acc_All_z = scale(Acc_All, center=T, scale=T),
+         Rej_All_z = scale(Rej_All, center=T, scale=T),
+         Acc_Acc_z = scale(Acc_Acc, center=T, scale=T),
+         Acc_Rej_z = scale(Acc_Rej, center=T, scale=T),
+         Rej_Rej_z = scale(Rej_Rej, center=T, scale=T),
+         Rej_Acc_z = scale(Rej_Acc, center=T, scale=T),
+         
+         A_all = residuals(lm(Acc_All ~ Rej_All, .)),
+         AA_AR = residuals(lm(Acc_Acc ~ Acc_Rej, .)),
+         AA_AR_diff = Acc_Acc - Acc_Rej,
+         RA_RR = residuals(lm(Rej_Acc ~ Rej_Rej, .)),
+         AA_RA = residuals(lm(Acc_Acc ~ Rej_Acc, .)),
+         R_all = residuals(lm(Rej_All ~ Acc_All, .)),
+         AR_AA = residuals(lm(Acc_Rej ~ Acc_Acc, .)),
+         RR_RA = residuals(lm(Rej_Rej ~ Rej_Acc, .)),
+         AA_AR_c = scale(AA_AR, center=T, scale=F),
+         AA_AR_z = scale(AA_AR, center=T, scale=T),
+         AR_AA_c = scale(AR_AA, center=T, scale=F),
+         AR_AA_z = scale(AR_AA, center=T, scale=T),
+         RA_RR_z = scale(RA_RR, center=T, scale=T),
+         RR_RA_z = scale(RR_RA, center=T, scale=T)) %>%
+  # remove duplicated ID values, just select the first row
+  group_by(ID) %>%
+  arrange(ID) %>%
+  filter(row_number()==1) %>%
+  ungroup() %>%
+  full_join(behavioral_data, by="ID") %>%
+  filter(!is.na(Acc_All)) %>%
+  # center covariates
+  mutate(site = case_when(ID<9000 ~ "Columbia",
+                          ID>8999 ~ "Northwestern",
+                          NA ~ NA),
+         ADI_NATRANK_c = scale(ADI_NATRANK, center=T, scale=F),
+         ADI_NATRANK_z = scale(ADI_NATRANK, center=T, scale=T),
+         
+         # addi_total_c = scale(addi_total, center=T, scale=F),
+         # addi_total_z = scale(addi_total, center=T, scale=T),
+         
+         Age_c = scale(demo_child_age, center=T, scale=F),
+         Age_z = scale(demo_child_age, center=T, scale=T),
+         
+         StressCT_c = scale(StressCT, center=T, scale=F),
+         StressCT_z = scale(StressCT, center=T, scale=T),
+         StressTH_c = scale(StressTH, center=T, scale=F),
+         StressTH_z = scale(StressTH, center=T, scale=T),
+         
+         IDAS_depression_c = scale(IDAS_depression, center=T, scale=F),
+         IDAS_depression_z = scale(IDAS_depression, center=T, scale=T),
+         IDAS_anxiety_c = scale(IDAS_anxiety, center=T, scale=F),
+         IDAS_anxiety_z = scale(IDAS_anxiety, center=T, scale=T))
+}
+```
+
+# Merge self-report and ERP data
+```{r}
+df_50150_fz <- merge_self_report_with_erp(data=df_50150, electrode=c("Fz"), BUDS_cleaning05)
+df_150275_cz <- merge_self_report_with_erp(data=df_150275, electrode=c("Cz"), BUDS_cleaning05)
+df_275425_pz <- merge_self_report_with_erp(data=df_275425, electrode=c("Pz"), BUDS_cleaning05)
+```
+
+# Save files
+```{r}
+save(df_50150_fz,
+     df_150275_cz,
+     df_275425_pz,
+     file=here::here("./data/BUDS_do01.RData"))
+```
