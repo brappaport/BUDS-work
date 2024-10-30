@@ -48,7 +48,7 @@ data/eeg_processing/
 data/EMA/
 data/outdated/
 James_eeg_processing_scripts/
-data/
+data/*
 data/*.RData
 
 management/*.R
