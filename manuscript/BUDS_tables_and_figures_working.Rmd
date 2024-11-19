@@ -1,71 +1,6 @@
 ---
-title     : "Socioeconomic status and adolescent brain responses to peer feedback: Testing the impact on negative affect"
+title     : "Socioeconomic status and adolescent brain responses to peer feedback: Testing impact on negative affect assessed outside of the lab"
 shorttitle    : "SES & brain responses to peer feedback"
-
-author: 
-  - name    : "Brent I. Rappaport"
-    affiliation : "1"
-    corresponding : yes  # Define only one corresponding author
-    address   : "680 N. Lakeshore Drive, Suite 1520, Chicago, IL 60611"
-    email   : "brent.rappaport@northwestern.edu"
-    role:   # Contributorship roles (e.g., CRediT, https://casrai.org/credit/)
-      - "Conceptualization"
-      - "Formal analysis"
-      - "Writing - Original Draft Preparation"
-      - "Writing - Review & Editing"
-  - name    : "James E. Glazer"
-    affiliation : "1"
-    role:
-      - "Methodology"
-      - "Writing - Review & Editing"
-  - name    : "Lilian Y. Li"
-    affiliation : "1"
-    role:
-      - "Methodology"
-      - "Writing - Review & Editing"
-  - name    : "Madeline M. McGregor"
-    affiliation : "1"
-    role:
-      - "Writing - Review & Editing"
-  - name    : "Aishwarya Sritharan"
-    affiliation : "2"
-    role:
-    - "Data curation"  
-    - "Project administration"
-  - name    : "Lili A. Massac"
-    affiliation : "2"
-    role:
-    - "Writing - Review & Editing"
-  - name    : "Katherine Durham"
-    affiliation : "2"
-    role:
-    - "Project administration"
-  - name    : "Randy P. Auerbach"
-    affiliation : "2"
-    role:
-    - "Conceptualization"
-    - "Funding acquisition"
-    - "Investigation"
-    - "Methodology"
-    - "Resources"
-    - "Supervision"
-    - "Writing - Review & Editing"
-  - name    : "Stewart A. Shankman"
-    affiliation : "1"
-    role:
-    - "Conceptualization"
-    - "Funding acquisition"
-    - "Investigation"
-    - "Methodology"
-    - "Resources"
-    - "Supervision"
-    - "Writing - Review & Editing"
-
-affiliation:
-  - id          : "1"
-    institution : "Department of Psychiatry, Feinberg School of Medicine, Northwestern University"
-  - id          : "2"
-    institution : "Department of Psychiatry, Columbia University"
 
 bibliography  : "BUDS.bib"
 floatsintext  : yes
@@ -82,6 +17,9 @@ output        : papaja::apa6_pdf
 editor_options: 
   markdown: 
   wrap: sentence
+
+params:
+  show_headers: false
   
 header-includes:
   - \usepackage{setspace}
@@ -131,7 +69,9 @@ knitr::opts_chunk$set(set.seed(312), warning=FALSE, message=FALSE, include=FALSE
   library(sjPlot)
   library(png)
   library(grid)
-  library(gtsummary)
+  library(eegUtils)
+  library(gridExtra)
+  # library(gtsummary)
 # Interactions
   library(marginaleffects)
   library(interactions)
@@ -304,6 +244,7 @@ make_long_format <- function(data, site_variable) {
 }
 ```
 
+
 ```{r demoTable}
 df_50150_fz <- df_50150_fz %>%
   filter(complete.cases(AA_AR)) %>%
@@ -311,16 +252,17 @@ df_50150_fz <- df_50150_fz %>%
                                  "Northwestern" ~ "Chicago"))
 
 demo_table <- FullTable1(df_50150_fz, strata="site",
-           vars=c("Age","ADI_NATRANK","demo_child_sex","demo_child_hispanic","demo_child_race",
+           vars=c("demo_child_age","ADI_NATRANK","demo_child_sex","demo_child_hispanic","demo_child_race",
                   "IDAS_depression","IDAS_anxiety","StressCT","StressTH"),
            factor_vars=c("demo_child_sex","demo_child_hispanic","demo_child_race"),
            var_names=c("Age","SES (percentile)","Sex","Hispanic ethnicity","Race",
                        "IDAS depression","IDAS anxiety","Lifetime number of stressors","Lifetime stressor severity"),
            round_n=2)
 
-df_50150_fz[is.na(df_50150_fz$Age),]
 
-paste0("Missing STRAIN: ",df_50150_fz[is.na(df_50150_fz$Age),"ID"])
+
+paste0("Missing STRAIN: ",df_50150_fz[is.na(df_50150_fz$StressCT),"ID"])
+paste0("Missing age: ",df_50150_fz[is.na(df_50150_fz$demo_child_age),"ID"])
 paste0("Missing sex: ",df_50150_fz[is.na(df_50150_fz$demo_child_sex),"ID"])
 paste0("Missing ethnicity: ",df_50150_fz[is.na(df_50150_fz$demo_child_hispanic),"ID"])
 paste0("Missing race: ",df_50150_fz[is.na(df_50150_fz$demo_child_race),"ID"])
@@ -361,67 +303,17 @@ demo_table2$Statistic <- gsub("χ2", "$\\chi^2$", demo_table2$Statistic)
 
 ```{r, include=TRUE, results="asis"}
 apa_table(demo_table2,
-          caption="Demographics of samples and descriptive statistics of measures of interest, and covariates.",
-          note=paste0(demo_table$caption, ", NYC = New York, NY."),
-          align = c("p{8cm}", "p{2.5cm}", "p{2.5cm}","p{2cm}","p{1.5cm}"),
+          caption="Demographics of samples and descriptive statistics of measures of interest and covariates.",
+          note=paste0(substring(demo_table$caption,7), ", NYC = New York, NY."),
+          align = c("p{6.5cm}", "p{2.5cm}", "p{2.5cm}","p{2cm}","p{1.5cm}"),
           stub_indents=list(`Sex-assigned-at-birth`=c(3:4), `Self-identified race`=c(6:12)),
           font_size="small",
           col.names = c(colnames(demo_table2)[1:3],"Statistic","Effect size"),
-          landscape=TRUE,
+          landscape=FALSE,
           escape=FALSE)
 ```
 
 ```{r}
-Cz_ga_aa_ar_plot <- ggplot(data=filter(df_ga_Cz_long, Condition=="Acc_Acc" | Condition=="Acc_Rej" | Condition=="AA_AR"), aes(x=Time, y=grand_average, color=Condition)) +
-  geom_line(linewidth=1) +
-  scale_x_continuous(breaks = seq(-200, 1000, by = 200)) +
-  scale_y_continuous(breaks = seq(-5, 10, by = 2.5)) +
-  coord_cartesian(xlim=c(-200,1000), ylim=c(-5,10)) +
-  annotate("rect", xmin=150, xmax=275, ymin=-5, ymax=Inf, alpha=0.2, fill="orange") +
-  annotate("rect", xmin=275, xmax=425, ymin=-5, ymax=Inf, alpha=0.2, fill="blue") +
-  geom_rect(aes(xmin=0, xmax=0, ymin=-5, ymax=12), color="black") +
-  geom_rect(aes(xmin=-200, xmax=1000, ymin=0, ymax=0), color="black") +
-  scale_color_manual(breaks=c("Acc_Acc","Acc_Rej","AA_AR"),
-       values=c("Acc_Acc"="green", "AA_AR"="black", "Acc_Rej"="red"), 
-       labels=c("Acceptance","Rejection","Difference"), name=NULL) +
-  labs(x="Time (ms)", y="Cz (µV)") +
-  theme_apa() + theme(legend.position="bottom")+ 
-  theme(text=element_text(size=18))
-```
-
-```{r}
-in_task_rating_summary_stats <- summarySE(df_BUDS_rating_it_pt, measurevar="rating", groupvars=c("Feedback","Voting")) %>%
-  filter(complete.cases(rating))
-in_task_rating_summary_stats$Voting <- c("Low-value", "High-value", "Low-value", "High-value")
-rating_plot <- ggplot(in_task_rating_summary_stats, aes(y=rating, x=Voting, fill=Feedback)) +
-  geom_bar(position = "dodge", stat = "identity", colour="black") +
-  geom_errorbar(aes(ymin=rating-ci, ymax=rating+ci), width=.2, position=position_dodge(.9)) +
-  scale_fill_manual(values = c("green", "red"), name = "Feedback") +
-  theme_apa() +
-  theme(legend.position = "none") +
-  labs(x="Peer value", y="In-task rating")
-```
-
-```{r Load task image}
-img_plot <- ggplot() +
-  annotation_custom(rasterGrob(png::readPNG(here("figures/chatroom_figure.png")), interpolate = TRUE), 
-                    xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf) +
-  theme_void() + # Remove axes and background
-  theme(plot.margin = margin(t=0, l=0, r=0, b=0, unit = "cm"))
-```
-
-```{r, include=TRUE, results="asis", fig.cap = "A) Example of trial from chatroom task. B) Grand average ERP for acceptance and rejection feedback from high-value peers. Colored sections of the graph represent time windows where ERP components were extracted at Cz electrode: RewP = orange, P300 = blue. C) Mean in-task, post-feedback emotional ratings across all trials and participants by Feedback (acceptance, rejection) and Value (high, low).", fig.height=8.5, fig.width=7}
-# Combine image of task, grand average waveform, and behavioral ratings into one plot
-figure_1 <- cowplot::plot_grid(img_plot, Cz_ga_aa_ar_plot, rating_plot,
-          labels = c("A","B","C"),
-          ncol = 1, nrow = 3,
-          rel_heights = c(2, 3, 2),
-          rel_widths = c(2, 2, 1))
-figure_1
-```
-
-```{r}
-n1_fv_mlm <- lmer(formula = ERP ~ Feedback*Voting + site + (1 | ID), REML=TRUE, data = df_50150_fz_long)
 rewp_fv_mlm <- lmer(formula = ERP ~ Feedback*Voting + site + (1 | ID), REML=TRUE, data = df_150275_cz_long)
 p300_fv_mlm <- lmer(formula = ERP ~ Feedback*Voting + site + (1 | ID), REML=TRUE, data = df_275425_pz_long)
 ```
@@ -430,19 +322,9 @@ p300_fv_mlm <- lmer(formula = ERP ~ Feedback*Voting + site + (1 | ID), REML=TRUE
 ses_lm <- function(data, y) {
   y <- enquo(y)
 
-  model_formula <- formula(paste0(quo_name(y), "~ ADI_NATRANK_z + site + Age + demo_child_sex + StressCT + StressTH + IDAS_depression + IDAS_anxiety"))
+  model_formula <- formula(paste0(quo_name(y), "~ ADI_NATRANK_z + site + Age_z + demo_child_sex + StressCT + StressTH + IDAS_depression + IDAS_anxiety"))
   lm(model_formula, data = data)
 }
-```
-
-```{r}
-n1_aaar_model <- ses_lm(df_50150_fz,AA_AR_z)
-n1_araa_model <- ses_lm(df_50150_fz,AR_AA_z)
-n1_rarr_model <- ses_lm(df_50150_fz,RA_RR_z)
-n1_rrra_model <- ses_lm(df_50150_fz,RR_RA_z)
-
-n1_low_value_ses_pvalues <- c(as.numeric(apa_print(n1_rarr_model)$table$p.value[2]),as.numeric(apa_print(n1_rrra_model)$table$p.value[2]),
-  as.numeric(apa_print(n1_rarr_model)$table$p.value[2]),as.numeric(apa_print(n1_rrra_model)$table$p.value[2]))
 ```
 
 ```{r}
@@ -493,15 +375,6 @@ model_275425_ema_na <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_z + demo_
   data = df_275425_pz_ema,
   family=gaussian, REML=TRUE)
 
-# Positive affect
-model_150275_ema_pa <- glmmTMB(pa ~ ADI_NATRANK_z*AA_AR_z + Age_z + demo_child_sex + site + (1 | ID),
-  data = df_150275_cz_ema,
-  family=gaussian, REML=TRUE)
-
-model_275425_ema_pa <- glmmTMB(pa ~ ADI_NATRANK_z*AA_AR_z + Age_z + demo_child_sex + site + (1 | ID),
-  data = df_275425_pz_ema,
-  family=gaussian, REML=TRUE)
-
 # PLOTS
 plot_150275_adi_na <- ggpredict(model_150275_ema_na, terms = c("AA_AR_z","ADI_NATRANK_z"))%>% 
   plot() + 
@@ -518,131 +391,12 @@ plot_275425_adi_na <- ggpredict(model_275425_ema_na, terms = c("AA_AR_z","ADI_NA
   scale_color_manual(values=c('orange','white','darkblue'), labels=c('-SD', '+SD')) + 
   scale_fill_manual(values=c('orange','white','darkblue')) +
   theme(legend.position = "none", element_text(), plot.title=element_blank())
-
-```
-
-```{r}
-rewp_na_stat <- c(tidy(model_150275_ema_na) %>% 
-                    filter(effect == "fixed", component == "cond", term == "ADI_NATRANK_z:AA_AR_z"),
-                  as.data.frame(confint(model_150275_ema_na)) %>% 
-                    rownames_to_column("row_name") %>% 
-                    filter(row_name == "cond.ADI_NATRANK_z:AA_AR_z") %>% 
-                       mutate(lower = round3(`2.5 %`), upper=round3(`97.5 %`)) %>% 
-                       select(lower,upper))
-
-p300_na_stat <- c(tidy(model_275425_ema_na) %>%
-                    filter(effect == "fixed", component == "cond", term == "ADI_NATRANK_z:AA_AR_z"),
-                  as.data.frame(confint(model_275425_ema_na)) %>%
-                    rownames_to_column("row_name") %>%
-                    filter(row_name == "cond.ADI_NATRANK_z:AA_AR_z") %>%
-                       mutate(lower = round3(`2.5 %`), upper=round3(`97.5 %`)) %>%
-                       select(lower,upper))
-```
-
-```{r}
-## REWP
-mean_ses <- mean(df_150275_cz_ema$ADI_NATRANK_z, na.rm=TRUE)
-sd_ses <- sd(df_150275_cz_ema$ADI_NATRANK_z, na.rm=TRUE)
-SESa <- mean_ses + sd_ses
-SESb <- mean_ses - sd_ses
-SES_list <- list(ADI_NATRANK_z=round(c(SESa,SESb),2)) 
-######## ACC > REJ ######## 
-m_rewp_acc <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_z + demo_child_sex + (1 | ID) + site,
-        zi = ~ .,
-  data = df_150275_cz_ema,
-  family=gaussian, REML=TRUE)
-
-m_rewp_acc_ss <- emtrends(m_rewp_acc, pairwise ~ADI_NATRANK_z, var="AA_AR_z",at=SES_list, adjust="none")|> test()
-# With covariates
-# m_rewp_acc_cov_ss <- emtrends(model_150275_ema_na_cov, pairwise ~ADI_NATRANK_c, var="AA_AR_c",at=SES_list, adjust="none")|> test()
-
-## P3
-mean_ses <- mean(df_275425_pz_ema$ADI_NATRANK_z, na.rm=TRUE)
-sd_ses <- sd(df_275425_pz_ema$ADI_NATRANK_z, na.rm=TRUE)
-SESa <- mean_ses + sd_ses
-SESb <- mean_ses - sd_ses
-SES_list <- list(ADI_NATRANK_z=round(c(SESa,SESb),2)) 
-######## ACC > REJ ######## 
-m_p300_acc <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_z + demo_child_sex + (1 | ID) + site,
-        zi = ~ .,
-  data = df_275425_pz_ema,
-  family=gaussian, REML=TRUE)
-# glmmTMB:::Anova.glmmTMB(m_p300_rej)
-
-m_p300_acc_ss <- emtrends(m_p300_acc, pairwise ~ADI_NATRANK_z, var="AA_AR_z",at=SES_list, adjust="none")|> test()
-```
-
-```{r, include=TRUE, results='asis', fig.cap = 'Relationship between SES and brain responses to acceptance (relative to rejection) for RewP~resid~ and P300~resid~ ERP components.', fig.height=7, fig.width=5}
-
-adi_plots_scatter <- ggarrange(scatterplot_150275_adi + 
-                                       rremove("xlab") + rremove("x.text") + 
-                                       coord_cartesian(xlim=c(0,100), ylim=c(-3,4)) +
-                                       theme(text = element_text(size=14)) + 
-                                       annotate("text", x=50, y=3.75, 
-    label = TeX(paste0(str_sub(apa_print(rewp_aaar_model)$full_result$ADI_NATRANK_z, 1, 36),str_sub(apa_print(rewp_aaar_model)$full_result$ADI_NATRANK_z, 54, 63))), 
-                                                color = "black", rot = 0, size=4),
-                                     scatterplot_275425_adi + 
-                                       coord_cartesian(xlim=c(0,100), ylim=c(-3,4)) +
-                                       theme(text = element_text(size=14)) + 
-                                       annotate("text", x=50, y=3.75, 
-     label = TeX(paste0(str_sub(apa_print(p3_aaar_model)$full_result$ADI_NATRANK_z, 1, 36),str_sub(apa_print(p3_aaar_model)$full_result$ADI_NATRANK_z, 54, 63))), 
-                                                color = "black", rot = 0, size=4),
-    common.legend = TRUE, legend = "bottom",
-    ncol = 1, nrow = 2,
-    align="v")
-adi_plots_scatter <- annotate_figure(adi_plots_scatter, 
-                                   left=text_grob("Mean amplitude (µV) to acceptance", color = "black", rot = 90, size=12))
-
-adi_plots_scatter
-
-# adi_plots <- cowplot::plot_grid(adi_plots_scatter, adi_plots_na,
-#           labels = c("A","B"),
-#           ncol = 2, nrow = 1,
-#           rel_heights = c(1,1),
-#           rel_width=c(2.5,3),
-#           align="v")
-# adi_plots
-# ggsave("../figures/adi_plots_na.png", adi_plots_na, width=11, height=7)
-```
-
-```{r, include=TRUE, results='asis', fig.height=7, fig.width=5, fig.cap=paste("Interactions for which SES significantly moderated association between brain responses to acceptance and negative affect. Orange lines = -1 standard deviation below the mean SES; Blue lines = +1 standard deviation above the mean. SES x RewP~resid~ interaction: ",paste0('beta= ',round3(rewp_na_stat$estimate),', p= ',round3(rewp_na_stat$p.value)),"; no simple slopes significant. SES x P300~resid~ interaction: ",paste0('beta= ',round3(p300_na_stat$estimate),', p= ',round3(p300_na_stat$p.value)),"; simple slope significant for SES -1 SD.")}
-model_150275_ema_na_stats <- filter(tidy(model_150275_ema_na),term=="ADI_NATRANK_z:AA_AR_z" & component=="cond")
-model_275425_ema_na_stats <- filter(tidy(model_275425_ema_na),term=="ADI_NATRANK_z:AA_AR_z" & component=="cond")
-
-adi_plots_na <- ggarrange(plot_150275_adi_na + coord_cartesian(xlim=c(-4,3), ylim=c(1.5,3.5)) + rremove("ylab")
-                                  + annotate("text", x=-2, y=1.75, 
-                                                label = paste0("b = ",round3(m_rewp_acc_ss$emtrends[1,2]), 
-                                                               " p = ",round3(m_rewp_acc_ss$emtrends[1,6])),
-                                                color = "darkblue", rot = 0, size=4)
-                                  + annotate("text", x=-2, y=3.25, 
-                                                label = paste0("b = ",round3(m_rewp_acc_ss$emtrends[2,2]), 
-                                                               " p = ",round3(m_rewp_acc_ss$emtrends[2,6])),
-                                                color = "orange", rot = 0, size=4),
-                          plot_275425_adi_na + coord_cartesian(xlim=c(-4,3), ylim=c(1.5,3.5)) + rremove("ylab")
-                                  + annotate("text", x=-2, y=1.75, 
-                                                label = paste0("b = ",round3(m_p300_acc_ss$emtrends[1,2]), 
-                                                               " p = ",round3(m_p300_acc_ss$emtrends[1,6])),
-                                                color = "darkblue", rot = 0, size=4)
-                                  + annotate("text", x=-2, y=3.5, 
-                                                label = paste0("b = ",round3(m_p300_acc_ss$emtrends[2,2]), 
-                                                               " p = ",round3(m_p300_acc_ss$emtrends[2,6])),
-                                                color = "orange", rot = 0, size=4),
-    # labels = c("A","B"),
-    # label.x = c(rep(.04,4)),
-    # label.y = c(rep(1,4)),
-    heights = c(4, 4),
-    common.legend = FALSE, legend = "none",
-    ncol = 1, nrow = 2,
-    align="v")
-adi_plots_na <- annotate_figure(adi_plots_na, left=text_grob("Mean negative affect (cubed root)", rot=90, color = "black", size=14))
-
-adi_plots_na
 ```
 
 ```{r include=TRUE, results='asis'}
 model_150275_ema_na_table <- tidy(model_150275_ema_na,component="cond", conf.int=TRUE) %>%
   mutate(ci = paste0("[",sprintf("%.3f",conf.low),", ",sprintf("%.3f",conf.high),"]")) %>% # make 95% CI variable
-  select(term,estimate,ci,p.value) %>%
+  dplyr::select(term,estimate,ci,p.value) %>%
   filter(row_number() <= n()-2) %>% # remove random effects
   mutate(term=c("Intercept","SES","RewP\\textsubscript{resid}",
                 "Age","Sex","Site","SES x RewP\\textsubscript{resid}"),
@@ -650,7 +404,7 @@ model_150275_ema_na_table <- tidy(model_150275_ema_na,component="cond", conf.int
 
 model_275425_ema_na_table <- tidy(model_275425_ema_na,component="cond", conf.int=TRUE) %>%
   mutate(ci = paste0("[",sprintf("%.3f",conf.low),", ",sprintf("%.3f",conf.high),"]")) %>% # make 95% CI variable
-  select(term,estimate,ci,p.value) %>%
+  dplyr::select(term,estimate,ci,p.value) %>%
   filter(row_number() <= n()-2) %>% # remove random effects
   mutate(term=c("Intercept","SES","P300\\textsubscript{resid}",
                 "Age","Sex","Site","SES x P300\\textsubscript{resid}"),
@@ -664,26 +418,246 @@ apa_table(list(`RewP\\textsubscript{resid}`=model_150275_ema_na_table,
 ```
 
 ```{r}
-model_150275_hisp <- lm(AA_AR_z ~ demo_child_hispanic + site, df_150275_cz)
-model_275425_hisp <- lm(AA_AR_z ~ demo_child_hispanic + site, df_275425_pz)
+Cz_ga_aa_ar_plot <- ggplot(data=filter(df_ga_Cz_long, Condition=="Acc_Acc" | Condition=="Acc_Rej" | Condition=="AA_AR"), aes(x=Time, y=grand_average, color=Condition)) +
+  geom_line(linewidth=1) +
+  scale_x_continuous(breaks = seq(-200, 1000, by = 200)) +
+  scale_y_continuous(breaks = seq(-5, 10, by = 5)) +
+  coord_cartesian(xlim=c(-200,1000), ylim=c(-5,10)) +
+  annotate("rect", xmin=150, xmax=275, ymin=-5, ymax=Inf, alpha=0.5, fill="gray") +
+  geom_rect(aes(xmin=0, xmax=0, ymin=-5, ymax=12), color="black") +
+  geom_rect(aes(xmin=-200, xmax=1000, ymin=0, ymax=0), color="black") +
+  scale_color_manual(breaks=c("Acc_Acc","Acc_Rej","AA_AR"),
+       values=c("Acc_Acc"="green", "AA_AR"="black", "Acc_Rej"="red"), 
+       labels=c("Acceptance","Rejection","Difference"), name=NULL) +
+  labs(x="Time (ms)", y="Cz (µV)") +
+  theme_apa() + 
+  theme(text=element_text(size=14))
 
-df_150275_cz_race <- df_150275_cz %>%
-  mutate(demo_child_race = as.factor(demo_child_race)) %>%
-  # filter(demo_child_race == "White" | demo_child_race=="Black or African American" |
-  #        demo_child_race == "Asian" | demo_child_race=="More than one race") %>%
-  mutate(demo_child_race = relevel(demo_child_race, ref = "White"),
-         demo_child_minority = case_match(demo_child_race, "White" ~ "no",
-                                          NA ~ NA,
-                                          .default = "yes"))
-df_275425_pz_race <- df_275425_pz %>%
-  mutate(demo_child_race = as.factor(demo_child_race)) %>%
-  # filter(demo_child_race == "White" | demo_child_race=="Black or African American" |
-  #        demo_child_race == "Asian" | demo_child_race=="More than one race") %>%
-  mutate(demo_child_race = relevel(demo_child_race, ref = "White"),
-         demo_child_minority = case_match(demo_child_race, "White" ~ "no",
-                                          NA ~ NA,
-                                          .default = "yes"))
+Pz_ga_aa_ar_plot <- ggplot(data=filter(df_ga_Pz_long, Condition=="Acc_Acc" | Condition=="Acc_Rej" | Condition=="AA_AR"), aes(x=Time, y=grand_average, color=Condition)) +
+  geom_line(linewidth=1) +
+  scale_x_continuous(breaks = seq(-200, 1000, by = 200)) +
+  scale_y_continuous(breaks = seq(-4, 12, by = 4)) +
+  coord_cartesian(xlim=c(-200,1000), ylim=c(-4, 12)) +
+  annotate("rect", xmin=275, xmax=425, ymin=-5, ymax=Inf, alpha=0.5, fill="gray") +
+  geom_rect(aes(xmin=0, xmax=0, ymin=-5, ymax=12), color="black") +
+  geom_rect(aes(xmin=-200, xmax=1000, ymin=0, ymax=0), color="black") +
+  scale_color_manual(breaks=c("Acc_Acc","Acc_Rej","AA_AR"),
+       values=c("Acc_Acc"="green", "AA_AR"="black", "Acc_Rej"="red"), 
+       labels=c("Acceptance","Rejection","Difference"), name=NULL) +
+  labs(x="Time (ms)", y="Pz (µV)") +
+  theme_apa() + 
+  theme(text=element_text(size=14))
+```
 
-model_150275_race <- lm(AA_AR_z ~ demo_child_minority + site, df_150275_cz_race)
-model_275425_race <- lm(AA_AR_z ~ demo_child_minority + site, df_275425_pz_race)
+```{r, include=TRUE}
+chanlocs <- eegUtils::electrode_locations(read.csv(here::here('../data/topo_plots/chanlocs32.csv')), montage="biosemi64")
+ga_acc <- read.delim(here('../data/topo_plots/ga_highvalue_acceptance_AA (Acc-Acc).txt'))%>%
+  pivot_longer(cols=c(-time),
+               values_to ="amplitude", names_to="electrode")
+ga_rej <- read.delim(here('../data/topo_plots/ga_highvalue_rejection_AR (Acc-Rej).txt'))%>%
+  pivot_longer(cols=c(-time),
+               values_to ="amplitude", names_to="electrode")
+ga_diff <- read.delim(here('../data/topo_plots/ga_highvalue_acc_rej_difference_BIN5=B1-B2.txt'))%>%
+  pivot_longer(cols=c(-time),
+               values_to ="amplitude", names_to="electrode")
+
+scaling_factor=0.45
+# Create grobs for the column titles
+
+title_rewp <- textGrob("RewP", gp=gpar(fontsize=14, fontface="bold"))
+title_p300 <- textGrob("P300", gp=gpar(fontsize=14, fontface="bold"))
+
+title_acc <- textGrob("Acceptance", gp=gpar(fontsize=14, fontface="bold"), rot=90)
+title_rej <- textGrob("Rejection", gp=gpar(fontsize=14, fontface="bold"), rot=90)
+title_diff <- textGrob("Acceptance > \nRejection", gp=gpar(fontsize=14, fontface="bold"), rot=90)
+
+chanlocs <- chanlocs %>%
+  mutate(electrode = case_match(electrode, "Poz" ~ "POz",
+                          .default=electrode))
+
+chanlocs2 <- chanlocs %>%
+  mutate(electrode = ifelse(chanlocs$electrode %in% c("Pz", "Cz"), 
+                             chanlocs$electrode, 
+                             NA))
+
+topo_plot_rewp <- topoplot(ga_diff,time_lim=c(150,275), chanLocs=chanlocs, contour=TRUE, interp_limit="skirt", chan_marker="none", scaling=scaling_factor, verbose=FALSE) +
+ annotate("text", x=1, y=45, label = "Fz", color = "black", size=3) +
+ annotate("text", x=1, y=0, label = "Cz", color = "black", size=3) +
+  annotate("text", x=1, y=-45, label = "Pz", color = "black", size=3)
+topo_plot_p3 <- topoplot(ga_diff,time_lim=c(275,425), chanLocs=chanlocs, contour=TRUE, interp_limit="skirt", chan_marker="none", scaling=scaling_factor, verbose=FALSE) +
+ annotate("text", x=1, y=45, label = "Fz", color = "black", size=3) +
+ annotate("text", x=1, y=0, label = "Cz", color = "black", size=3) +
+  annotate("text", x=1, y=-45, label = "Pz", color = "black", size=3)
+```
+
+```{r, eval=FALSE}
+in_task_rating_summary_stats <- summarySE(df_BUDS_rating_it_pt, measurevar="rating", groupvars=c("Feedback","Voting")) %>%
+  filter(complete.cases(rating))
+in_task_rating_summary_stats$Voting <- c("Low-value", "High-value", "Low-value", "High-value")
+rating_plot <- ggplot(in_task_rating_summary_stats, aes(y=rating, x=Voting, fill=Feedback)) +
+  geom_bar(position = "dodge", stat = "identity", colour="black") +
+  geom_errorbar(aes(ymin=rating-ci, ymax=rating+ci), width=.2, position=position_dodge(.9)) +
+  scale_fill_manual(values = c("green", "red"), name = "Feedback") +
+  theme_apa() +
+  theme(legend.position = "none") +
+  labs(x="Peer value", y="In-task rating")
+```
+
+```{r Load task image}
+img_plot <- ggplot() +
+  annotation_custom(rasterGrob(png::readPNG(here("figures/chatroom_figure.png")), interpolate = TRUE), 
+                    xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf) +
+  theme_void() + # Remove axes and background
+  theme(plot.margin = margin(t=0, l=0, r=0, b=0, unit = "cm"))
+```
+
+```{r, include=FALSE, results="asis", fig.cap = "A) Example of trial from chatroom task. B) Grand average ERP for acceptance and rejection feedback from high-value peers and topographic maps. Gray sections of the graph represent time windows where ERP components were extracted at Cz electrode for the RewP (top) and Pz electrode for the P300 (bottom).", fig.height=8.5, fig.width=7}
+# Combine image of task, grand average waveform, and topographic maps
+
+ga_plots <- cowplot::plot_grid(Cz_ga_aa_ar_plot + theme(legend.position="none") + xlab(""), topo_plot_rewp, 
+                               Pz_ga_aa_ar_plot + theme(legend.position="none"), topo_plot_p3,
+          ncol = 2, nrow = 2,
+          rel_heights = c(2, 2),
+          rel_widths = c(3, 2))
+
+legend_ga <- cowplot::get_legend(Cz_ga_aa_ar_plot + theme(legend.direction="horizontal"))
+
+figure_1 <- cowplot::plot_grid(img_plot, ga_plots, legend_ga,
+          labels = c("A.","B.",""),
+          label_x=0,
+          label_y=1.02,
+          ncol = 1, nrow = 3,
+          rel_heights = c(1.5, 2, 0.3),
+          rel_widths = c(2))
+
+tiff(here("figures/figure_1.tiff"), width = 7.5, height = 10, units = "in", res = 500)
+figure_1
+dev.off()
+```
+
+```{r}
+rewp_na_stat <- c(tidy(model_150275_ema_na) %>% 
+                    filter(effect == "fixed", component == "cond", term == "ADI_NATRANK_z:AA_AR_z"),
+                  as.data.frame(confint(model_150275_ema_na)) %>% 
+                    rownames_to_column("row_name") %>% 
+                    filter(row_name == "cond.ADI_NATRANK_z:AA_AR_z") %>% 
+                       mutate(lower = round3(`2.5 %`), upper=round3(`97.5 %`)) %>% 
+                       dplyr::select(lower,upper))
+
+p300_na_stat <- c(tidy(model_275425_ema_na) %>%
+                    filter(effect == "fixed", component == "cond", term == "ADI_NATRANK_z:AA_AR_z"),
+                  as.data.frame(confint(model_275425_ema_na)) %>%
+                    rownames_to_column("row_name") %>%
+                    filter(row_name == "cond.ADI_NATRANK_z:AA_AR_z") %>%
+                       mutate(lower = round3(`2.5 %`), upper=round3(`97.5 %`)) %>%
+                       dplyr::select(lower,upper))
+```
+
+```{r}
+## REWP
+mean_ses <- mean(df_150275_cz_ema$ADI_NATRANK_z, na.rm=TRUE)
+sd_ses <- sd(df_150275_cz_ema$ADI_NATRANK_z, na.rm=TRUE)
+SESa <- mean_ses + sd_ses
+SESb <- mean_ses - sd_ses
+SES_list <- list(ADI_NATRANK_z=round(c(SESa,SESb),2)) 
+######## ACC > REJ ######## 
+m_rewp_acc <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_z + demo_child_sex + site + (1 | ID),
+        zi = ~ .,
+  data = df_150275_cz_ema,
+  family=gaussian, REML=TRUE)
+
+m_rewp_acc_ss <- emtrends(m_rewp_acc, pairwise ~ADI_NATRANK_z, var="AA_AR_z",at=SES_list, adjust="none")|> test()
+
+# With covariates
+m_rewp_acc_cov <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_z + demo_child_sex + StressCT_z + StressTH_z + IDAS_depression_z + IDAS_anxiety_z + site + (1 | ID),
+        zi = ~ .,
+  data = df_150275_cz_ema,
+  family=gaussian, REML=TRUE)
+m_rewp_acc_cov_ss <- emtrends(m_rewp_acc_cov, pairwise ~ADI_NATRANK_z, var="AA_AR_z",at=SES_list, adjust="none")|> test()
+
+## P300
+mean_ses <- mean(df_275425_pz_ema$ADI_NATRANK_z, na.rm=TRUE)
+sd_ses <- sd(df_275425_pz_ema$ADI_NATRANK_z, na.rm=TRUE)
+SESa <- mean_ses + sd_ses
+SESb <- mean_ses - sd_ses
+SES_list <- list(ADI_NATRANK_z=round(c(SESa,SESb),2)) 
+######## ACC > REJ ######## 
+m_p300_acc <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_z + demo_child_sex + site + (1 | ID),
+        zi = ~ .,
+  data = df_275425_pz_ema,
+  family=gaussian, REML=TRUE)
+# glmmTMB:::Anova.glmmTMB(m_p300_rej)
+
+m_p300_acc_ss <- emtrends(m_p300_acc, pairwise ~ADI_NATRANK_z, var="AA_AR_z",at=SES_list, adjust="none")|> test()
+
+# With covariates
+m_p300_acc_cov <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_z + demo_child_sex + StressCT_z + StressTH_z + IDAS_depression_z + IDAS_anxiety_z + site + (1 | ID),
+        zi = ~ .,
+  data = df_275425_pz_ema,
+  family=gaussian, REML=TRUE)
+m_p300_acc_cov_ss <- emtrends(m_p300_acc_cov, pairwise ~ADI_NATRANK_z, var="AA_AR_z",at=SES_list, adjust="none")|> test()
+```
+
+```{r, include=FALSE, results='asis', fig.cap = 'Relationship between SES and brain responses to acceptance (relative to rejection) for RewP~resid~ and P300~resid~ ERP components.', fig.height=7, fig.width=5}
+
+adi_plots_scatter <- ggarrange(scatterplot_150275_adi + 
+                                       rremove("xlab") + rremove("x.text") + 
+                                       coord_cartesian(xlim=c(0,100), ylim=c(-3,4)) +
+                                       theme(text = element_text(size=14)) + 
+                                       annotate("text", x=50, y=3.75, 
+    label = TeX(paste0(str_sub(apa_print(rewp_aaar_model)$full_result$ADI_NATRANK_z, 1, 36),str_sub(apa_print(rewp_aaar_model, est_name="\\beta")$full_result$ADI_NATRANK_z, 58, 67))), 
+                                                color = "black", rot = 0, size=4),
+                                     scatterplot_275425_adi + 
+                                       coord_cartesian(xlim=c(0,100), ylim=c(-3,4)) +
+                                       theme(text = element_text(size=14)) + 
+                                       annotate("text", x=50, y=3.75, 
+     label = TeX(paste0(str_sub(apa_print(p3_aaar_model)$full_result$ADI_NATRANK_z, 1, 36),str_sub(apa_print(p3_aaar_model, est_name="\\beta")$full_result$ADI_NATRANK_z, 58, 67))), 
+                                                color = "black", rot = 0, size=4),
+    common.legend = TRUE, legend = "bottom",
+    ncol = 1, nrow = 2,
+    align="v")
+adi_plots_scatter <- annotate_figure(adi_plots_scatter, 
+                                   left=text_grob("Mean amplitude (µV) to acceptance", color = "black", rot = 90, size=12))
+
+tiff(here("figures/figure_2.tiff"), width = 6, height = 7.5, units = "in", res = 500)
+adi_plots_scatter; dev.off()
+```
+
+```{r, include=FALSE, results='asis', fig.height=7, fig.width=5, fig.cap=paste("Interactions for which SES significantly moderated association between brain responses to acceptance and negative affect. Orange lines = -1 standard deviation below the mean SES; Blue lines = +1 standard deviation above the mean. SES x RewP~resid~ interaction: ",paste0('beta= ',round3(rewp_na_stat$estimate),', p= ',round3(rewp_na_stat$p.value)),"; no simple slopes significant. SES x P300~resid~ interaction: ",paste0('beta= ',round3(p300_na_stat$estimate),', p= ',round3(p300_na_stat$p.value)),"; simple slope significant for SES -1 SD.")}
+model_150275_ema_na_stats <- filter(tidy(model_150275_ema_na),term=="ADI_NATRANK_z:AA_AR_z" & component=="cond")
+model_275425_ema_na_stats <- filter(tidy(model_275425_ema_na),term=="ADI_NATRANK_z:AA_AR_z" & component=="cond")
+
+adi_plots_na <- ggarrange(plot_150275_adi_na + 
+                            # coord_cartesian(xlim=c(-4,3), ylim=c(1.5,3.5)) + 
+                            rremove("ylab")
+                                  + annotate("text", x=-2, y=2.2, 
+                                                label = paste0("b = ",round3(m_rewp_acc_ss$emtrends[1,2]), 
+                                                               " p = ",round3(m_rewp_acc_ss$emtrends[1,6])),
+                                                color = "darkblue", rot = 0, size=4)
+                                  + annotate("text", x=-2, y=3.25, 
+                                                label = paste0("b = ",round3(m_rewp_acc_ss$emtrends[2,2]), 
+                                                               " p = ",round3(m_rewp_acc_ss$emtrends[2,6])),
+                                                color = "orange", rot = 0, size=4),
+                          plot_275425_adi_na + 
+                            # coord_cartesian(xlim=c(-4,3), ylim=c(1.5,3.5)) + 
+                            rremove("ylab")
+                                  + annotate("text", x=-1.25, y=2.25, 
+                                                label = paste0("b = ",round3(m_p300_acc_ss$emtrends[1,2]), 
+                                                               " p = ",round3(m_p300_acc_ss$emtrends[1,6])),
+                                                color = "darkblue", rot = 0, size=4)
+                                  + annotate("text", x=-1.25, y=3.45, 
+                                                label = paste0("b = ",round3(m_p300_acc_ss$emtrends[2,2]), 
+                                                               " p = ",round3(m_p300_acc_ss$emtrends[2,6]),"**"),
+                                                color = "orange", rot = 0, size=4),
+    # labels = c("A","B"),
+    # label.x = c(rep(.04,4)),
+    # label.y = c(rep(1,4)),
+    heights = c(4, 4),
+    common.legend = FALSE, legend = "none",
+    ncol = 1, nrow = 2,
+    align="v")
+adi_plots_na <- annotate_figure(adi_plots_na, left=text_grob("Mean negative affect (cubed root)", rot=90, color = "black", size=14))
+
+tiff(here("figures/figure_3.tiff"), width = 6, height = 7.5, units = "in", res = 500)
+adi_plots_na; dev.off()
 ```

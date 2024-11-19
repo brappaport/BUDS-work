@@ -1,5 +1,5 @@
 ---
-title     : "Socioeconomic status and adolescent brain responses to peer feedback: Testing the impact on negative affect"
+title     : "Socioeconomic status and adolescent brain responses to peer feedback: Testing impact on negative affect assessed outside of the lab"
 shorttitle    : "SES & brain responses to peer feedback"
 
 author: 
@@ -31,11 +31,13 @@ author:
     affiliation : "1"
     role:
       - "Data curation"
+      - "Project administration"
       - "Writing - original draft"
   - name    : "Sarah E. Sarkas"
     affiliation : "1"
     role:
       - "Data curation"
+      - "Project administration"
   - name    : "Aishwarya Sritharan"
     affiliation : "2"
     role:
@@ -44,6 +46,8 @@ author:
   - name    : "Lili A. Massac"
     affiliation : "2"
     role:
+      - "Data curation"
+      - "Project administration"
       - "Writing - original draft"
   - name    : "Katherine Durham"
     affiliation : "2"
@@ -53,7 +57,7 @@ author:
     affiliation   : "2"
     role:
       - "Conceptualization"
-      - "Fundind acquisition"
+      - "Funding acquisition"
       - "Investigation"
       - "Methodology"
       - "Resources"
@@ -63,7 +67,7 @@ author:
     affiliation   : "1"
     role:
       - "Conceptualization"
-      - "Fundind acquisition"
+      - "Funding acquisition"
       - "Investigation"
       - "Methodology"
       - "Resources"
@@ -72,14 +76,14 @@ author:
 
 affiliation:
   - id    : "1"
-    institution : "Department of Psychiatry, Feinberg School of Medicine, Northwestern University"
+    institution : "Stephen M. Stahl Center for Psychiatric Neuroscience, Department of Psychiatry and Behavioral Sciences, Feinberg School of Medicine, Northwestern University"
   - id    : "2"
     institution : "Department of Psychiatry, Columbia University"
 
 abstract: |
-  *Background:* Lower socioeconomic status (SES) is a potent risk factor for psychopathology in youth. Because lower SES youth experience greater prejudice, discrimination, and stigma from others, one neural mechanism that may link SES to psychopathology risk is aberrant brain responding to accepting feedback. This study will test whether SES (operationalized as neighborhood area deprivation) is: 1) related to brain responses to peer feedback, and 2) moderates the relationship between brain responses to peer feedback and affect, measured through experience momentary assessment (EMA). *Methods:* Adolescents (N=172; ages 13-18) were administered an event-related potential (ERP) task during which they received accepting or rejecting feedback from peers to probe their sensitivity to acceptance via the reward positivity (RewP) and P300 ERP components. They additionally completed a week of EMA reporting on their positive and negative affect. Results: Lower SES was related to blunted responses to acceptance (in the RewP and P300, relative to rejection). Interestingly, lower SES moderated relationships between brain responses (RewP and P300) to peer acceptance and negative affect, with adolescents with lower SES exhibiting a more negative relationship between EMA reported negative affect and brain response to acceptance than adolescents with higher SES. Conclusions: SES may be linked to psychopathology via blunted sensitivity to acceptance . These findings suggest that prevention and intervention efforts targeting sensitivity to social feedback may reduce risk for psychopathology particularly in low SES youth.
+  *Background:* Lower socioeconomic status (SES) is a potent risk factor for psychopathology in youth. Because lower SES youth experience greater prejudice, discrimination, and stigma (which collectively, reflect a lack of acceptance from others), one neural mechanism that may link SES to psychopathology risk is aberrant brain responding to accepting feedback. This study tests whether SES (operationalized as neighborhood area deprivation) is: 1) related to brain responses to peer feedback, and 2) moderates the relationship between brain responses to peer feedback and affect outside of the lab, measured through experience momentary assessment (EMA). *Methods:* Adolescents (N=172; ages 13-18 were administered an event-related potential (ERP) task during which they received accepting or rejecting feedback from peers to probe their neural response to acceptance (relative to rejection) via the reward positivity (RewP) and P300 ERP components. Participants additionally completed a week of EMA reporting on their positive and negative affect. *Results:* Lower SES was related to blunted responses to acceptance (in the RewP and P300, relative to rejection), independent of depression and anxiety symptoms. Interestingly, lower SES moderated relationships between brain responses (RewP and P300) to peer acceptance and negative affect, with adolescents with lower SES exhibiting a more negative relationship between EMA reported negative affect and brain response to acceptance than adolescents with higher SES. *Conclusions:* SES may be linked to psychopathology via blunted response to acceptance. These findings suggest that prevention and intervention efforts targeting bias to social feedback may reduce risk for psychopathology particularly in low SES youth.
   
-keywords    : "social feedback, socioeconomic status, area deprivation, negative affect"
+keywords    : "social feedback, socioeconomic status, area deprivation, negative affect, event-related potential, ecological momentary assessment"
 
 bibliography  : "BUDS.bib"
 floatsintext  : yes
@@ -176,6 +180,10 @@ spearman_brown <- read.csv(file=here("../tables/spearman_brown.csv")) # Internal
 ```
 
 ```{r Functions}
+round3 <- function(var) {
+  sprintf("%.3f",var)
+}
+
 # Make my own apa_printlm function that does not include t stats
 add_equals2 <- function(p_value) {
   for (p in p_value) {
@@ -189,7 +197,7 @@ add_equals2 <- function(p_value) {
 
 apa_printlm <- function(model) {
   glue_apa_results(broom::tidy(model, conf.int = TRUE)
-    , est_glue = "$\\beta=<<estimate>>$, 95% CI [<<conf.low>>,<<conf.high>>]"
+    , est_glue = "$\\beta$=<<estimate>>, 95% CI [<<conf.low>>,<<conf.high>>]"
     , stat_glue = "*p*<<add_equals2(p.value)>>"
     , term_names = sanitize_terms(make.names(names(coef(model))))
 )
@@ -290,39 +298,31 @@ make_long_format <- function(data, site_variable) {
 }
 ```
 
-Low socioeconomic status (SES) in adolescence is a known correlate [@mclaughlinSocioeconomicStatusAdolescent2012; @peverillSocioeconomicStatusChild2021] ) and longitudinal predictor of psychopathology and general health problems into adulthood [@ferraroChildhoodDisadvantageHealth2016; @santiagoSocioeconomicStatusNeighborhood2011]. Yet, not all adolescents who experience low SES will develop mental illness. Thus, it is imperative to identify factors which could help explain why some low SES youth develop mental illness, while others do not. This study examines whether one potential factor—neural processing of social feedback from peers - interacts with SES to influence individual affective dynamics.
+Low socioeconomic status (SES) in adolescence is a known correlate [@mclaughlinSocioeconomicStatusAdolescent2012; @peverillSocioeconomicStatusChild2021] and longitudinal predictor of psychopathology and general health problems into adulthood [@ferraroChildhoodDisadvantageHealth2016; @santiagoSocioeconomicStatusNeighborhood2011]. Yet, not all adolescents who experience low SES will develop mental illness. Thus, it is imperative to identify factors which could help explain why some low SES youth develop mental illness, while others do not. This study examines whether one potential factor—neural processing of social feedback from peers—interacts with SES to influence an individual’s affect.
 
-Fulfilling relationships in adolescence predict long term mental health and functioning [@landstedtHowWellParental2015; @adedejiPeerRelationshipsDepressive2022], and the salience of peer relationships increases in adolescence [@nelsonSocialReorientationBrain2016; @venticinqueExpandingUnderstandingAdolescent2024]. However, compared to higher SES youth, lower SES youth experience greater discrimination and stigma from others [@cozzarelliAttitudesPoorAttributions2001; @mouraStigmatizationPovertyBasis2019]; and this can lead to difficulty being trusting and intimate with others [@rokachChapter11Implications2023; @nesdalePeerRejectionChildhood2013]. As such, low SES adolescents may develop a bias to feedback from others [@simonsRelationalSchemasHostile2012; @simonsLearningBeBad2011], including anhedonic responses to positive feedback (i.e., acceptance). Over time, these biases can lead to social withdrawal and mental health problems [@ikeSocialWithdrawalInitially2020].
+Fulfilling peer relationships in adolescence are a robust predictor of long term mental health and functioning [@landstedtHowWellParental2015; @adedejiPeerRelationshipsDepressive2022]. However, compared to higher SES youth, lower SES youth experience greater discrimination and stigma from others [@cozzarelliAttitudesPoorAttributions2001; @mouraStigmatizationPovertyBasis2019], which can lead to difficulty being trusting and intimate with others [@rokachChapter11Implications2023; @nesdalePeerRejectionChildhood2013]. As such, low SES adolescents may develop a bias to feedback from others [@simonsRelationalSchemasHostile2012; @simonsLearningBeBad2011], including anhedonic responses to positive feedback (i.e., acceptance). Over time, these biases can lead to social withdrawal and mental health problems [@ikeSocialWithdrawalInitially2020].
 
-Indeed, brain studies find that heightened neural rejection sensitivity and blunted neural acceptance sensitivity are tied to internalizing disorders in youth, including depression [@eisenbergerFMRIStudyCytokineinduced2009; @groschwitzDifferentialNeuralProcessing2016; @jankowskiFeelingLeftOut2018; @kumarIncreasedNeuralResponse2017] and socially relevant anxiety [e.g., behavioral inhibition, social anxiety disorder, @beerAnxiouslyElaboratingSocial2016; @guyerLastingAssociationsEarlychildhood2014; @rappaportBrainResponsesSocial2020]. Neural sensitivity to acceptance and rejection can be measured in the lab using event-related potentials (ERPs)---fluctuations in electroencephalography (EEG) signals that are time-locked to accepting and rejecting feedback. Unlike other neural measures like fMRI, ERPs have high temporal resolution (on the order of milliseconds) making them ideal for detecting separate neuropsychological responses to peer feedback. For example, the reward positivity (RewP)---a positive inflection in EEG signal that occurs around 200ms post feedback [@proudfitRewardPositivityBasic2015]---likely reflects the rewarding aspects of acceptance in peer feedback [@funkhouserSocialFeedbackValence2020; @ethridgeNeuralResponsesSocial2017]. Additionally, the P3---a positive inflection occurring around 300ms post feedback---likely reflects the salient aspects of acceptance and rejection feedback [@funkhouserSocialFeedbackValence2020; @peggTimeCourseReactivity2022]. The RewP and P3 can therefore be used to index individual differences in brain responses to acceptance and rejection. This contrasts with other ERP components (e.g., N1) which, although elicited by peer feedback, seem to index non-emotional attentional processes [@babinskiSensitivityPeerFeedback2018; @peggTimeCourseReactivity2022]. The N100, then, can be used to test whether internalizing disorders are linked with broad individual differences in affective (RewP, P3) and non-affective processes (N100), or more specifically linked to differences in reward and salience processes.
+One way to objectively measure anhedonic responses to acceptance is with event-related potentials (ERPs)—fluctuations in electroencephalography (EEG) signals that are time-locked to the presentation of events such as accepting relative to rejecting feedback. Unlike other neural measures (e.g., fMRI), ERPs have high temporal resolution (on the order of milliseconds) making them ideal for disambiguating neuropsychological responses to peer feedback. For example, the reward positivity [RewP, @proudfitRewardPositivityBasic2015] is an ERP that occurs around 250ms post feedback and likely reflects neural activity to the rewarding aspects of accepting, relative to rejecting, feedback [@funkhouserSocialFeedbackValence2020; @ethridgeNeuralResponsesSocial2017]. A second ERP is the P300, which occurs slightly later (around 300-400ms post feedback) and indexes the salience of acceptance feedback [i.e., the degree to which participants find peer acceptance salient or important, @funkhouserSocialFeedbackValence2020; @peggTimeCourseReactivity2022]. The RewP and P300 can therefore be used to index individual differences in separate brain responses to social feedback [@brownNovelRewardsOcclude2020].
 
-## Current Study
-
-Despite prior studies showing links between SES and psychopathology, and brain responses to peer feedback and psychopathology, only one study found a link between SES and brain responses to peer feedback [@rappaportBehavioralPsychiatricCorrelates2024a]. This finding was, however, unexpected; SES was included as a covariate and happened to be significantly related to blunted brain responses to peer acceptance. Furthermore, it used a simpler measure of SES that only considers income relative to family size. The current study aims to fill this gap by using an objective, comprehensive measure of SES [area deprivation index [ADI], @kindMakingNeighborhooddisadvantageMetrics2018; @kindNeighborhoodSocioeconomicDisadvantage2014; @knightonIntroductionAreaDeprivation2016] derived from census data.
-
-The first aim of the study tests whether low SES relates to aberrant brain responses to different kinds of peer feedback -- specifically an, a) more blunted sensitivity to acceptance in the RewP or P3, and/or b) heightened salience of rejection in the P3.
-
-The second aim of the study tests whether SES moderates the relationship between brain responses to peer feedback and negative affect assessed via ecological momentary assessment (EMA). Unlike traditional self-report assessments, EMA provides ecologically valid indicators of affect outside of the lab, as youth go about their daily lives. Furthermore, as EMA collects multiple samples of affect per participant, it yields more accurate measures of trait-like affect than single snapshot assessments and is less susceptible to biases associated with retrospective recall [@moskowitzEcologicalMomentaryAssessment2006; @solhanClinicalAssessmentAffective2009]. Critically, showing that SES moderates the relationship between brain responses to peer feedback and negative affect would support heightened neural rejection sensitivity and/or blunted acceptance sensitivity as potential clinical targets for prevention/intervention. For example, targeted interventions aimed at reducing rejection sensitivity could reduce low SES youths' risk for later life psychopathology.
+Prior studies have established relationships between SES and psychopathology as well as brain responses to peer feedback and psychopathology in adolescents [@mclaughlinSocioeconomicStatusAdolescent2012; @peverillSocioeconomicStatusChild2021; @ferraroChildhoodDisadvantageHealth2016; @santiagoSocioeconomicStatusNeighborhood2011]. However, only one study tested whether SES was related to brain responses to peer feedback, with findings showing that lower SES (i.e., income relative to family size) was related to blunted brain responses to peer acceptance in late adolescents/young adults [17—18-year-olds, @rappaportBehavioralPsychiatricCorrelates2024a]. The current study expands upon this one study two ways. First, we use an objective, comprehensive measure of SES [area deprivation index [ADI], @kindMakingNeighborhooddisadvantageMetrics2018; @kindNeighborhoodSocioeconomicDisadvantage2014; @knightonIntroductionAreaDeprivation2016] derived from census data, and focus more centrally on adolescents (age 13—18) to further test whether adolescents with low SES exhibit more blunted brain responses (i.e., RewP and P300) to peer acceptance than high SES adolescents. Second, we examined whether low SES interacts with neural biases to peer feedback at predicting elevated negative affect outside of the lab, to test the hypotheses that those with both low SES and blunted neural response to acceptance would be particularly likely to report elevated negative affect measured outside of the lab.
 
 # Methods and Materials
 
 ## Participants
 
-Participant data (N=172) was acquired from a larger, ongoing project examining social processing deficits in adolescent depression. Adolescents, ages 13-18-years-old, were recruited from the community (via ads on public transportation, Facebook, and craigslist) and mental health clinics in New York, NY and Chicago, IL. All study procedures were carried out in accordance with the Declaration of Helsinki and approved by the New York State Psychiatric (NYSPI, primary) Institutional Review Board (IRB) and the Northwestern University IRB. See supplement for further information regarding participants, including inclusion and exclusion criteria. Table 1 summarizes the participant demographic and clinical characteristics.
+Participants (N=172) were from a larger, ongoing project examining social processing deficits in adolescent depression. Adolescents, ages 13-18-years-old, were recruited from the community and mental health clinics in New York, NY and Chicago, IL. All study procedures were conducted in accordance with the Declaration of Helsinki and approved by the New York State Psychiatric Institute and Northwestern University Institutional Review Boards. Table 1 summarizes the participant demographic and clinical characteristics. Informed assent and consent were obtained from the adolescent and parent, respectively, and adolescents 18 years-old provided consent. General inclusion criteria included: (a) Tanner Pubertal Stage ≥ 3 (1), (b) parental and child fluency in English, (c) Wechsler Abbreviated Scale of Intelligence-II (WASI-II) \> 85 (2), (d) ownership of a personal smartphone (android or iOS), and (e) right-handedness. General exclusion criteria included: (a) history of head injury or neurological disorders, (b) current moderate or severe substance use disorder, and (c) lifetime history of bipolar or psychotic disorders, oppositional defiant disorder, conduct disorder, organic mental disorder, or developmental disorder.
 
 ## Procedure
 
-**Social feedback EEG task**
+### Brain response to acceptance: Social feedback EEG task
 
-Brain responses to social feedback were measured using the Chatroom Task [@guyerAmygdalaVentrolateralPrefrontal2008; @guyerProbingNeuralCorrelates2009] which was completed over two visits. On the first visit, participants were told that they were participating in a multi-site study on adolescent interactions online. Participants created profiles including their likes/dislikes and were told that other participants would review their profile and indicate interest (acceptance) or not (rejection) in chatting with them. Next, participants viewed photographs of 100 same-sex peers and selected 50 that they were 'interested' (high value) and 50 that they were 'not interested' (low value) in chatting with online following the second visit. On the second visit (\~1 week later), participants were presented with the "results" showing whether each of the 100 peers were interested in chatting with them or not, while EEG data was recorded. Each of the 100 trials consisted of a (a) photograph of the peer and a reminder of participants' prior choice (i.e., 'You were [not] interested'), (b) fixation cross for a jittered inter-stimulus interval, and (c) green check or red 'X', indicating whether the peer was 'Interested' or 'Not Interested,' respectively, (i.e., accepting and rejecting feedback; Figure 1A). After each trial, participants rated their emotional response on a sliding scale from 0-100 from 'very bad' to 'very good.' Participants received 50 acceptance and 50 rejection trials --- split by participant interest in the peer (e.g., 25 trials when participants were interested and accepted). Trials were pseudo-randomized with no more than three sequential acceptances/rejections. After completing the task, participants' belief in the task was assessed. Finally, participants were debriefed on the deception.
+Brain activity to social feedback was measured using the Chatroom Task [@guyerAmygdalaVentrolateralPrefrontal2008; @guyerProbingNeuralCorrelates2009] which was completed over two visits. On the first visit, participants were told that they were participating in a multi-site study on adolescent interactions online. Participants created profiles including their hobbies and things about them (e.g., favorite food) and were told that other participants would review their profile and indicate interest (acceptance) or not (rejection) in chatting with them. Next, participants viewed photographs of 50 male and 50 female peers and selected 50 that they were ‘interested’ (high value) and 50 that they were ‘not interested’ (low value) in chatting with online following the second visit. On the second visit (\~1 week later), participants were presented with the “results” showing whether each of the 100 peers were interested in chatting with them or not while EEG data were recorded. Each of the 100 trials included: (a) photograph of the peer and a reminder of participants’ prior choice (2000ms, i.e., ‘You were [not] interested’), (b) fixation cross for a jittered inter-stimulus interval (1000ms), and (c) green check or red ‘X’, indicating whether the peer was ‘Interested’ or ‘Not Interested,’ respectively, (i.e., accepting and rejecting feedback, 2000ms, Figure 1A). After each trial, participants rated their emotional response on a sliding scale from 0-100 from ‘very bad’ to ‘very good.’ Trials were pseudo-randomized with no more than two sequential acceptances/rejections. Participants received 50 acceptance and 50 rejection trials — split by participant interest in the peer (e.g., 25 peers that participants were interested in, and accepted by). After completing the task, participants’ belief in the task was assessed, and then, participants were debriefed. The task therefore has four within-subject conditions: 1) acceptance from high-value peers (i.e., peers that participants were interested in talking to), 2) rejection from high-value peers, 3) acceptance from low-value peers (i.e., peers that participants were not interested in talking to), and 4) rejection from low-value peers.
 
-Importantly, the structure of the task results in four within-subject conditions: 1) acceptance from high-value peers (i.e., peers that participants were interested in talking to), 2) rejection from high-value peers, 3) acceptance from low-value peers (i.e., peers that participants were not interested in talking to), and 4) rejection from low-value peers.
+### EEG recording and processing
 
-**EEG recording and processing**
+Continuous EEG data were recorded during the Chatroom task using the 32-channel ActiCHamp from Brain Products (Brain Products, Munich, Germany), digitized at a 500 Hz sampling rate, and referenced online to FCz. Vertical and horizontal EOG data were recorded, and electrode impedances were maintained below 20 K$\Omega$. EEG data were processed offline using EEGLAB version 2022.1 [@delormeEEGLABOpenSource2004] and ERPLAB version 9.00 [@lopez-calderonERPLABOpensourceToolbox2014] toolboxes in MATLAB version r2022b. Independent component analysis (ICA) and automated identification (ICLabel version 1.4) was used to identify and correct for ocular artifacts prior to artifact rejection. Data were re-referenced offline using an average mastoid reference. A 60Hz notch filter and a second-order digital Butterworth filter with a bandpass from 0.1–30Hz were applied. Trials were epoched from -200–2000ms from the feedback and baseline-adjusted by subtracting the average amplitude for 200ms prior to the feedback onset (-200–0ms).
 
-Continuous EEG data were recorded during the Chatroom task using the 32-channel ActiCHamp from Brain Products (Brain Products, Munich, Germany), digitized at a 500 Hz sampling rate, and referenced online to FCz. Vertical and horizontal EOG data were recorded, and electrode impedances were maintained below 20 K$\Omega$. EEG data were processed offline using EEGLAB version 2022.1 [@delormeEEGLABOpenSource2004] and ERPLAB version 9.00 [@lopez-calderonERPLABOpensourceToolbox2014] toolboxes in MATLAB version r2022b. Independent component analysis (ICA) and automated identification (ICLabel version 1.4) was used to identify and correct for ocular artifacts prior to artifact rejection. Data were re-referenced offline using an average mastoid reference. A 60Hz notch filter and a second-order digital Butterworth filter with a bandpass from 0.1--30Hz were applied. Trials were epoched from -200--2000ms and baseline-adjusted by subtracting the average amplitude for 200ms prior to the stimulus onset (-200--0ms).
-
-Stimulus-locked ERPs were averaged separately for each combination of peer value (high, low) and feedback type (acceptance, rejection). Grand averages were inspected to determine time windows to be extracted (see Figure 1B). Time windows were chosen based on those windows which showed substantial difference between condition, and/or were consistent with prior literature [@donaldsonTemporalDynamicsReversal2016; @funkhouserSocialFeedbackValence2020; @peggTimeCourseReactivity2022]. For the N100, RewP, and P3, time windows of 50-150ms, 150-275ms, and 275-425ms were used, respectively. We also examined effects for the N100 (50-150ms) to test for specific effects outside of the main ERPs of interest (RewP and P3). For the RewP, mean amplitude of the difference between acceptance and rejection was maximal at Cz. Topographic maps of the difference between conditions did not show a clear maximal electrode in the time windows capturing the N100 and P3 (see Supplement). Therefore, maximal electrodes for those two components were based on prior literature, Fz and Pz, respectively.
+Feedback-locked ERPs were averaged separately for each combination of peer value (high, low) and feedback type (acceptance, rejection). Grand averages were inspected to determine time windows to be extracted (Figure 1B). Time windows were chosen based on those windows which showed substantial difference between conditions, and/or were consistent with prior literature [@donaldsonTemporalDynamicsReversal2016; @funkhouserSocialFeedbackValence2020; @peggTimeCourseReactivity2022]. For the RewP and P300, time windows of 150—275ms and 275—425ms were used, respectively. For the RewP, mean amplitude of the difference between acceptance and rejection was maximal at Cz. For the P300, topographic maps of the difference between conditions did not show a clear maximal electrode in the time window. Therefore, the maximal electrode for the P300 (Pz) was based on prior literature [@funkhouserSocialFeedbackValence2020].
 
 ```{r}
 segments_df <- read.csv(here::here("../data/eeg_processing/SegmentCount/summary_erp_bin_RewP.csv")) %>%
@@ -345,126 +345,76 @@ too_few_trials <- function(data, acceptance_trials, rejection_trials) {
 # too_few_trials(df_275425_pz, 15, 13)
 ```
 
-One hundred seventy-two participants completed the task. Dependability analyses were used to determine the minimum number of clean trials needed to achieve at least 0.70 dependability for the RewP and P3 (the N100 did not achieve 0.70 at any number of trials, see Dependability in Results below). `r n2w(length(dplyr::filter(segments_df, Acc_Acc_seg < 13 | Acc_Rej_seg < 11)$ID),cap=TRUE)` subjects were excluded for having too few clean trials for the RewP and `r length(dplyr::filter(segments_df, Acc_Acc_seg < 15 | Acc_Rej_seg < 13)$ID)` for the P3 following artifact rejection (at least 13 high-value acceptance and 11 high-value rejection trials were needed to dependably measure the RewP, and at least 15 high-value acceptance and 13 high-value rejection trials for the P3). This resulted in a sample of N=`r sum(complete.cases(df_50150_fz$Acc_All),na.rm=T)` with usable N100 data, N=`r sum(complete.cases(df_150275_cz$Acc_All),na.rm=T)` with usable RewP data, and N= `r sum(complete.cases(df_275425_pz$Acc_All),na.rm=T)` with usable P3 data.
-
-**Ecological momentary assessment (EMA)**
+#### Reliability of ERPs
 
 ```{r}
-subjects_with_less_than_3_responses <- read.csv(file=here::here("../data/number_with_less_than_3_EMA_responses.csv"))
+spearman_brown <-spearman_brown %>%
+  dplyr::select(-X) %>%
+  filter(!Time_windows=="Fz 50-150ms")
 ```
 
-Ecological momentary assessment data was collected using the Effortless Assessment of Risk States (EARS) app [@lindEffortlessAssessmentRisk2018; @lindReintroducingEffortlessAssessment2023] for seven days after consenting into the study. Participants received three notifications each day (between 6:30am-8:30am, 3:00pm-5:00pm, and 7:00-10:00pm) to rate their current mood. They rated how happy, excited, supported, angry, anxious, sad, and rejected they felt, on scales from 0 (*not at all*)-100 (*extremely*). The first three were averaged into a positive affect composite, and the latter four in a negative affect composite, and list-wise deletion was used (e.g., if "sad" was skipped, their negative affect composite score was missing for that time point). Participants were compensated \$1 for every completed set of questions for a maximum of \$3 per day and \$21 total. `r n2w(length(subjects_with_less_than_3_responses$subject_id), cap=TRUE)` participants were excluded for having made too few EMA responses (\<3).
+The RewP and P300 demonstrated acceptable levels of internal consistency across peer-value (high, low) and feedback conditions (acceptance, rejection), with split-half reliability (*r*) \> `r min(select(spearman_brown, c("Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej")))`, with particularly high reliability for the high-value peers conditions (acceptance *r* = `r select(spearman_brown, c("Acc_Acc"))[1,]` and `r select(spearman_brown, c("Acc_Acc"))[2,]`, and rejection *r* = `r select(spearman_brown, c("Acc_Rej"))[1,]` and `r select(spearman_brown, c("Acc_Rej"))[2,]`, for RewP and P300, respectively). Split-half reliability was considerably lower for the residualized scores, but remained comparable to other studies (RewP~resid~ *r*\>`r select(spearman_brown, "AA_AR")[1,]`, P3~resid~ *r*\>`r select(spearman_brown, "AA_AR")[2,]`) [@rappaportBehavioralPsychiatricCorrelates2024a; @ethridgePsychometricPropertiesNeural2018; @levinsonReliabilityElectrocorticalResponse2017]. See Supplement for full results.
+
+In dependability analyses (another form of reliability), the RewP and P300 achieved acceptable dependability ($\ge$ 0.70) with as few as 12—13 and 13—15 trials, respectively, depending on the peer-value and feedback condition. When using all available trials, up to 25 trials per condition, RewP and P300 achieved good dependability ($\ge$ 0.80; see Supplement). Based on these dependability analyses `r length(dplyr::filter(segments_df, Acc_Acc_seg < 13 | Acc_Rej_seg < 11)$ID)` subjects were excluded for having too few clean trials for the RewP and `r length(dplyr::filter(segments_df, Acc_Acc_seg < 15 | Acc_Rej_seg < 13)$ID)` for the P300 following artifact rejection. This resulted in different samples sizes per component: RewP (n=`r sum(complete.cases(df_150275_cz$Acc_All),na.rm=T)`) and P300 (n=`r sum(complete.cases(df_275425_pz$Acc_All),na.rm=T)`).
+
+### Ecological momentary assessment (EMA)
+
+```{r}
+subjects_with_less_than_4_responses <- read.csv(file=here::here("../data/number_with_less_than_4_EMA_responses.csv"))
+```
+
+Ecological momentary assessment data were collected using the Effortless Assessment of Risk States (EARS) app [@lindEffortlessAssessmentRisk2018; @lindReintroducingEffortlessAssessment2023] for 7 days after consenting into the study. Participants received three notifications each day (between 6:30am-8:30am, 3:00pm-5:00pm, and 7:00-10:00pm) to rate their current mood; specifically rating positive and negative affect items on a scale from 0 (*not at all*) to 100 (*extremely*). Positive affect reflected the sum of “happy,” “excited,” and “supported” items, whereas negative affect reflected the sum of “angry,” “anxious,” “sad,” and “rejected” items. List-wise deletion was used such that if, for example, “sad” was skipped, the negative affect composite score was missing for that participant at that time point; however, multilevel models, such as those used in these analyses, accommodate missing data in the dependent variable [@wuAnticipatoryConsummatoryPleasure2017]. Participants were compensated \$1 for every completed set of questions for a maximum of \$3 per day and \$21 total over the course of a week. `r n2w(length(subjects_with_less_than_4_responses$subject_id), cap=TRUE)` participants were excluded for having made too few EMA responses [\<4, @thompsonEverydayEmotionalExperiences2021].
 
 ## Measures
 
-**SES: Area Deprivation Index (ADI)**
+### SES: Area Deprivation Index (ADI)
 
-The area deprivation index [2021 version 4.0.1, @kindMakingNeighborhooddisadvantageMetrics2018; @universityofwisconsinschoolofmedicineandpublichealthAreaDeprivationIndex2023] is a composite measure based on 17 dimensions of socioeconomic disadvantage of an individual's neighborhood including education, employment, housing quality, and poverty-related factors, all measured via the American Community Survey. Neighborhoods are determined based on block groups and are assigned a percentile from 1 to 100, where a higher percentile indicates greater levels of neighborhood disadvantage. In cases when ADI values were missing for subjects (e.g., suppression due to a high group quarter population), it was estimated using the ADI of the nearest block group with available data (often \<1 mile from the original address). In cases when youth were living on college campuses, they provided their most recent non-college address; however, for four participants these addresses were outside of the USA or could not be obtained, and thus their college address was used. Of note, ADI percentile was reverse scored so that higher scores represented greater SES).
+The area deprivation index [2021 version 4.0.1, @kindMakingNeighborhooddisadvantageMetrics2018; @universityofwisconsinschoolofmedicineandpublichealthAreaDeprivationIndex2023] is a composite measure based on 17 dimensions of socioeconomic disadvantage for an individual’s neighborhood including education, employment, housing quality, and poverty-related factors, all measured via the American Community Survey. Neighborhoods are determined based on block groups and are assigned a percentile from 1 to 100, where a higher percentile indicates greater levels of neighborhood disadvantage. In cases when ADI values were missing (e.g., inability to accurately estimate ADI in block groups where an unusually large number of people lived), it was estimated using the ADI of the nearest block group with available data (often \<1 mile from the original address). Adolescents living on college campuses provided their most recent non-college address; however, for four participants these addresses were outside of the USA or could not be obtained, and thus their college address was used. ADI percentile was reverse scored so that higher scores represented greater SES.
 
-**Covariates**
+### Covariates
 
-***Depression and anxiety symptoms: Inventory of depression and anxiety symptoms (IDAS-II)***
+#### Depression and anxiety symptoms
 
 ```{r}
 idas_dep <- formatC(psych::alpha(df_275425_pz[,c("idas_1_i","idas_2_i","idas_5_i","idas_6_i","idas_8_i","idas_9_i","idas_11_i","idas_13_i","idas_21_i","idas_26_i","idas_30_i","idas_31_i","idas_40_i","idas_48_i","idas_51_i","idas_52_i","idas_57_i","idas_61_i")])$total$std.alpha,format="f",2)
 idas_anx <- formatC(psych::alpha(df_275425_pz[,c("idas_7_i","idas_16_i","idas_32_i","idas_39_i","idas_45_i","idas_49_i","idas_56_i","idas_58_i","idas_15_i","idas_18_i","idas_20_i","idas_41_i","idas_47_i","idas_99_i")])$total$std.alpha,format="f",2)
 ```
 
-The expanded Inventory of Depression and Anxiety Symptoms [IDAS-II, @watsonDevelopmentValidationNew2012] is a 99-item, self-report instrument that measures the severity of depression, anxiety, and bipolar disorder symptoms over the past two weeks. Items are scored on a 5-point scale (1=not at all; 5=extremely). For the present study, 52-items were selected to assess current depression and anxiety symptoms. The depression and anxiety (a combination of the panic and social anxiety subscales) both demonstrated excellent internal consistency (Cronbach's $\alpha$ = `r idas_dep`, `r idas_anx`, respectively).
+The expanded Inventory of Depression and Anxiety Symptoms [IDAS-II, @watsonDevelopmentValidationNew2012] is a 99-item, self-report instrument that measures the severity of depression, anxiety, and bipolar disorder symptoms over the past two weeks. Items are scored on a 5-point scale (1=not at all; 5=extremely). For the present study, 52-items were selected to assess current depression and anxiety symptoms. The depression (Cronbach's $\alpha$ = `r idas_dep`) and anxiety (a combination of the panic and social anxiety subscales; Cronbach's $\alpha$ = `r idas_anx`) demonstrated excellent internal consistency.
 
-***Stressful life events and severity of stressful life events: Stress and adversity inventory (STRAIN)***
+#### Stressful life events
 
-The Stress and Adversity Inventory for Adolescents [STRAIN, @slavichStressAdversityInventory2019] was administered to measure participants' exposure to acute and lifetime stressors. This interview assesses exposures to 75 different stressors across 12 primary life domains (i.e. Housing, Education, Work, Treatment/Health, Marital/Partner, Reproduction, Financial, Legal/Crime, Other Relationships, Parent/Guardian, Death, Life-Threatening Situations) and five social-psychological characteristics (i.e. Interpersonal Loss, Physical Danger, Humiliation, Entrapment, Role Change/Disruption). If a participant endorsed a stressor, they then rated its severity, frequency, timing, and duration. Based on these answers, the STRAIN produces two summary scores reflecting participants' 1) total lifetime stressor count and 2) severity for all the acute life events and chronic difficulties experienced, with higher scores indicating more frequent stress exposure and greater severity. Prior studies support the psychometric properties of the STRAIN, including excellent test-retest reliability [*r* = 0.90-0.95, @cazassaStressAdversityInventory2020; @slavichAssessingLifetimeStress2018]. Given the format of the STRAIN, which requires participants to endorse whether a stressor occurred in order to report its severity, Cronbach's alpha could not be measured.
+The Stress and Adversity Inventory for Adolescents [STRAIN, @slavichStressAdversityInventory2019] was administered to measure participants’ exposure to stressors over their lifetime. This interview assesses exposures to 75 different stressors across 12 primary life domains (e.g., education, parent/guardian, death, life-threatening situations) and five social-psychological characteristics (e.g., interpersonal loss, physical danger, humiliation). If a participant endorsed a stressor, they rated its severity, frequency, timing, and duration. We used two summary scores: 1) total lifetime stressor count and 2) severity for all acute life events and chronic difficulties, with higher scores indicating more frequent stress exposure and greater severity. Prior studies support the psychometric properties of the STRAIN, including excellent test-retest reliability [*r* = 0.90-0.95, @cazassaStressAdversityInventory2020; @slavichAssessingLifetimeStress2018]. Given the format of the STRAIN, which requires participants to endorse whether a stressor occurred to report its severity, Cronbach’s $\alpha$ could not be measured.
 
 ## Data analysis
 
-**Behavioral ratings**
+### In-task emotional response ratings
 
-Omnibus ANOVAs tested whether in-task behavioral ratings varied as a function of Peer value (high, low) and Feedback type (acceptance and rejection). Post-hoc paired samples t-tests compared levels of Peer value and Feedback type. Multiple regression models (covarying for site, age, and sex-assigned-at-birth) tested whether behavioral ratings were associated with SES.
+Omnibus ANOVAs tested whether in-task emotion ratings varied as a function of Peer value (high, low) and Feedback type (acceptance, rejection); there was too little between-subject variance to use MLMs to model random intercept. Post-hoc paired samples t-tests compared levels of Peer value and Feedback type. Multiple regression models tested whether behavioral ratings were associated with SES.
 
-**ERP task**
+### ERP task effects
 
-Omnibus MLMs tested whether mean ERP amplitude varied as a function of Peer value (high, low) and Feedback type (acceptance and rejection).
+Omnibus MLMs included random intercept effects of participants and tested whether mean ERP amplitude varied as a function of Peer value (high, low) and Feedback type (acceptance and rejection). See Supplement for these results.
 
-**Multilevel multiple regression models**
+### Multilevel multiple regression models (MLMs)
 
-***SES related to ERP residualized scores***
+#### SES related to ERP residualized scores
 
-For aim 1, we tested whether SES was associated with residualized scores to acceptance and rejection for each component (N1~resid~, RewP~resid~, P3~resid~).
+To compute residualized scores to acceptance, we calculated the unstandardized residuals of brain activity to acceptance, accounting for brain activity to rejection. For aim 1, MLMs tested whether SES was associated with residualized scores to acceptance for each component (RewP~resid~, P300~resid~).
 
-***SES moderating association between ERP and EMA measures of affect***
+#### SES moderating association between ERP and EMA measures of affect
 
-For aim 2, multilevel multiple regression models tested whether SES moderated associations between ERP amplitudes and EMA ratings of negative/positive affect. These models included random intercept effects of subject and study site. In some models, the random effect of site accounted for so little variance, that the model was singular (i.e., variance of the random effect was essentially zero, likely because there were only two sites); in these cases, site was instead included as a fixed effect (i.e., covariate). Given a positive skew and large number of zeros in the measure of negative affect, negative affect was cube-root transformed and zero-inflated Gaussian multilevel models were used. All predictors were included in both the conditional and zero-inflation portions of the model. Similar models were used to assess whether SES moderated associations between in-task behavioral ratings and negative affect.
-
-Visual diagnostic checks for model assumptions were conducted to assure that models were accurately specified (e.g., posterior predictive checks, homogeneity of variance, normality of residuals, collinearity, and normality of random effects).
-
-We used an identical approach to test whether SES moderated associations between mean in-task emotional response rating and negative affect.
+For aim 2, multilevel multiple regression models tested whether SES moderated associations between ERP amplitudes and EMA ratings of negative/positive affect. These models included random intercept effects of subject and fixed effect of study site. Given a positive skew and large number of zeros in the measure of negative affect, negative affect was cube-root transformed and zero-inflated Gaussian multilevel models were used. All predictors were included in both the conditional and zero-inflation portions of the model. Similar models were used to assess whether SES moderated associations between in-task emotional response ratings and EMA-rated negative affect. All models covaried for site and demographic factors (e.g., age, sex-assigned-at-birth). To test for specificity of effects for SES, analyses also covaried for lifetime stressors (number of stressful life events, severity of stressful life events) and symptoms of depression and anxiety where noted.
 
 # Results
 
-## Behavioral ratings to peer feedback
+```{r functions including set-model-predictors}
+ses_lm <- function(data, y) {
+  y <- enquo(y)
 
-**In-task emotional response ratings**
-
-```{r}
-df_BUDS_rating_it_pt <- df_BUDS_rating_it_pt %>%
-mutate(site = case_when(ID < 9000 ~ "NYC",
-                          ID > 8999 ~ "Chicago"))
-
-df_BUDS_rating_it_pt2 <- df_BUDS_rating_it_pt %>%
-    dplyr::group_by(ID, Condition) %>%
-    dplyr::summarise(rating=mean(rating)) %>%
-    dplyr::ungroup() %>%
-    pivot_wider(names_from = Condition, values_from = rating, id_cols = ID) %>%
-  filter(complete.cases(Acc_Acc)) %>%
-  mutate(beh_AA_AR_z = scale(stdres(lm(Acc_Acc ~ Acc_Rej, .)), center=T, scale=T),
-         beh_AR_AA_z = scale(stdres(lm(Acc_Rej ~ Acc_Acc, .)), center=T, scale=T),
-         beh_RA_RR_z = scale(stdres(lm(Rej_Acc ~ Rej_Rej, .)), center=T, scale=T),
-         beh_AA_RA_z = scale(stdres(lm(Acc_Acc ~ Rej_Acc, .)), center=T, scale=T)) %>%
-  select(ID, starts_with("beh_"))
-
-df_BUDS_rating_it_pt_demo <- df_BUDS_rating_it_pt2 %>%
-  left_join(df_50150_fz, by="ID")
-
-df_BUDS_rating_it_pt_ema <- df_BUDS_rating_it_pt2 %>%
-    full_join(df_50150_fz_ema, by="ID") %>%
-    mutate(na_cubert = na^(1/3))
-
-ratings_model <- lm(aov(rating ~ site + Feedback*Voting + Error(ID/(Feedback*Voting)), df_BUDS_rating_it_pt)) # wrapping with lm() to make it work with apa_print
-
-ratings_ses_model_AA_AR <- lm(beh_AA_AR_z ~ ADI_NATRANK_z + site + Age_c + demo_child_sex, df_BUDS_rating_it_pt_demo)
-ratings_ses_model_AR_AA <- lm(beh_AR_AA_z ~ ADI_NATRANK_z + site + Age_c + demo_child_sex, df_BUDS_rating_it_pt_demo)
-
-model_behavioral_rating_ses_ema_na_ar <- glmmTMB(na_cubert ~ ADI_NATRANK_z*beh_AA_AR_z + Age_c + demo_child_sex + site + (1 | ID),
-                zi = ~ .,
-  data = df_BUDS_rating_it_pt_ema,
-  family=gaussian, REML=TRUE)
-model_behavioral_rating_ses_ema_na_ar_p <- tidy(model_behavioral_rating_ses_ema_na_ar) %>% filter(effect=="fixed",component=="cond",term=="ADI_NATRANK_z:beh_AA_AR_z") %>% select(p.value)
-
-model_behavioral_rating_ses_ema_na_ra <- glmmTMB(na_cubert ~ ADI_NATRANK_z*beh_AR_AA_z + Age_c + demo_child_sex + site + (1 | ID),
-                zi = ~ .,
-  data = df_BUDS_rating_it_pt_ema,
-  family=gaussian, REML=TRUE)
-model_behavioral_rating_ses_ema_na_ra_p <- tidy(model_behavioral_rating_ses_ema_na_ra) %>% filter(effect=="fixed",component=="cond",term=="ADI_NATRANK_z:beh_AR_AA_z") %>% select(p.value)
-
-model_behavioral_rating_ses_ema_pa_ar <- glmmTMB(pa ~ ADI_NATRANK_z*beh_AA_AR_z + Age_c + demo_child_sex + site + (1 | ID),
-  data = df_BUDS_rating_it_pt_ema,
-  family=gaussian, REML=TRUE)
-model_behavioral_rating_ses_ema_pa_ar_p <- tidy(model_behavioral_rating_ses_ema_pa_ar) %>% filter(effect=="fixed",component=="cond",term=="ADI_NATRANK_z:beh_AA_AR_z") %>% select(p.value)
-
-# model_behavioral_rating_ses_ema_pa_ra <- glmmTMB(pa ~ ADI_NATRANK_z*beh_AR_AA_z + Age_c + demo_child_sex + site + (1 | ID),
-#   data = df_BUDS_rating_it_pt_ema,
-#   family=gaussian, REML=TRUE)
-# model_behavioral_rating_ses_ema_pa_ra_p <- tidy(model_behavioral_rating_ses_ema_pa_ra) %>% filter(effect=="fixed",component=="cond",term=="ADI_NATRANK_z:beh_AR_AA_z") %>% select(p.value)
-
-df_BUDS_rating_it_pt_wide <- df_BUDS_rating_it_pt %>%
-  pivot_wider(id_cols=ID, names_from = c(Feedback, Voting), values_from = rating, values_fn = mean)
-
-ttest_like <- t.test(df_BUDS_rating_it_pt_wide$Accept_Like, df_BUDS_rating_it_pt_wide$Reject_Like, paired=TRUE)
-ttest_dislike <- t.test(df_BUDS_rating_it_pt_wide$Accept_Dislike, df_BUDS_rating_it_pt_wide$Reject_Dislike, paired=TRUE)
-
-d_like <- paste0("Cohen's D=",round(cohensD(df_BUDS_rating_it_pt_wide$Accept_Like, df_BUDS_rating_it_pt_wide$Reject_Like, method="paired"),2))
-d_dislike <- paste0("Cohen's D=",round(cohensD(df_BUDS_rating_it_pt_wide$Accept_Dislike, df_BUDS_rating_it_pt_wide$Reject_Dislike, method="paired"),2))
+  model_formula <- formula(paste0(quo_name(y), "~ ADI_NATRANK_z + site + Age_c + demo_child_sex + StressCT_z + StressTH_z + IDAS_depression_z + IDAS_anxiety_z"))
+  lm(model_formula, data = data)
+}
 
 apa_printt <- function(model) {
   glue_apa_results(broom::tidy(model, conf.int = TRUE)
@@ -475,162 +425,73 @@ apa_printt <- function(model) {
 }
 ```
 
-Omnibus MLMs showed a significant Peer value x Feedback type interaction (`r apa_print(ratings_model, est_name="\\beta")$full_result$FeedbackReject_VotingLike`, see Figure 1C), such that participants rated acceptance from high-value peers (i.e., peers that they were interested in) as feeling significantly better than rejection from high-value peers (`r paste0(d_like, ", ", apa_printt(ttest_like)$full_result)`). However, participants rated feeling worse in response to acceptance than rejection from low-value peers (`r paste0(d_dislike, ", ", apa_printt(ttest_dislike)$full_result)`).[^1]
-
-[^1]: This somewhat surprising/counter intuitive finding is discussed further in the Supplement.
-
-Residualized scores assessing ratings to acceptance relative to ratings to rejection were not significantly associated with SES (`r apa_printlm(ratings_ses_model_AA_AR)$full_result$ADI_NATRANK_z`), nor were ratings to rejection relative to ratings to acceptance (`r apa_printlm(ratings_ses_model_AR_AA)$full_result$ADI_NATRANK_z`). SES also did not moderate the association between emotional ratings to feedback and EMA negative affect (Rating to acceptance~resid~: *p*=`r round(model_behavioral_rating_ses_ema_na_ar_p$p.value,2)`, Rating to rejection~resid~: *p*=`r round(model_behavioral_rating_ses_ema_na_ra_p$p.value,2)`)).
-
-**Belief in deception**
+## In-task emotional response ratings
 
 ```{r}
-df_BUDS_rating_deception <- df_150275_cz %>%
-  select(ID,Acc_All,Acc_Acc,Acc_Rej) %>%
-  full_join(df_BUDS_rating_it_pt, by="ID") %>%
-  filter(complete.cases(Acc_All)) %>%
-  group_by(ID) %>%
-  filter(row_number() == 1)
+df_BUDS_rating_it_pt <- df_BUDS_rating_it_pt %>%
+mutate(site = case_when(ID < 9000 ~ "NYC",
+                          ID > 8999 ~ "Chicago"))
 
-post_task_table <- st(dplyr::select(df_BUDS_rating_it_pt, SP_debriefing_interested:SP_debriefing_nervous,SP_debriefing_socialmediause),
-        out="return")[,-c(5:8)] %>%
-  mutate(Measure=c("Interested","Happy","Upset","Angry","Nervous","Social Media Use")) %>%
-  dplyr::select(-Variable, -N) %>%
-  dplyr::select(Measure, everything())
+ratings_model <- lm(aov(rating ~ site + Feedback*Voting + Error(ID/(Feedback*Voting)), df_BUDS_rating_it_pt)) # wrapping with lm() to make it work with apa_print
+
+df_BUDS_rating_it_pt_wide <- df_BUDS_rating_it_pt %>%
+  pivot_wider(id_cols=ID, names_from = c(Feedback, Voting), values_from = rating, values_fn = mean)
+
+ttest_like <- t.test(df_BUDS_rating_it_pt_wide$Accept_Like, df_BUDS_rating_it_pt_wide$Reject_Like, paired=TRUE)
+ttest_dislike <- t.test(df_BUDS_rating_it_pt_wide$Accept_Dislike, df_BUDS_rating_it_pt_wide$Reject_Dislike, paired=TRUE)
+
+d_like <- paste0("Cohen's D=",round(cohensD(df_BUDS_rating_it_pt_wide$Accept_Like, df_BUDS_rating_it_pt_wide$Reject_Like, method="paired"),2))
+d_dislike <- paste0("Cohen's D=",round(cohensD(df_BUDS_rating_it_pt_wide$Accept_Dislike, df_BUDS_rating_it_pt_wide$Reject_Dislike, method="paired"),2))
 ```
 
-Only `r round(table(df_BUDS_rating_deception$SP_debriefing_deceived)[2]/sum(table(df_BUDS_rating_deception$SP_debriefing_deceived))*100,2)`% stated that they did not believe that they would be chatting with one of the peers from the task (N= `r sum(is.na(df_BUDS_rating_deception$SP_debriefing_deceived))` missing debriefing data). Given the potential for deception to affect results, we present additional analyses covarying for this in the Supplement.
+Omnibus MLMs showed a significant Peer value x Feedback type interaction (`r paste0(substr(apa_printlm(ratings_model)$full_result$FeedbackReject_VotingLike, 0, 40), "*p*< 0.001")`) as participants rated acceptance from high-value peers (i.e., peers that they were interested in) as feeling significantly better than rejection from high-value peers (`r paste0(d_like, ", ", apa_printt(ttest_like)$full_result)`), and participants rated feeling worse in response to acceptance than rejection from low-value peers (`r paste0(d_dislike, ", ", apa_printt(ttest_dislike)$full_result)`). This counter-intuitive behavioral finding calls into question how participants perceived low-value acceptance and rejection. Given these findings and because peer value interacted with feedback for the RewP and P300, further analyses were conducted only for feedback from high-value peers (see Supplement for results and discussion of this counter-intuitive finding for low-value peers).
 
-## Brain responses to peer feedback
+## Brain responses to peer feedback and socioeconomic status (SES)
 
-**Task effects: Feedback x Value interaction**
-
-```{r}
-erp_to_long <- function(data) {
-  data %>%
-  pivot_longer(cols=c("Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej"), names_sep = "_", names_to = c("Voting","Feedback"), values_to = "ERP")
-}
-df_150275_cz_long <- erp_to_long(df_150275_cz)
-df_275425_pz_long <- erp_to_long(df_275425_pz)
-
-rewp_fv_mlm <- lmer(formula = ERP ~ Feedback*Voting + site + (1 | ID), REML=TRUE, data = df_150275_cz_long)
-p300_fv_mlm <- lmer(formula = ERP ~ Feedback*Voting + site + (1 | ID), REML=TRUE, data = df_275425_pz_long)
-
-ttest_rewp_hv <- t.test(df_150275_cz$Acc_Acc, df_150275_cz$Acc_Rej, paired=TRUE)
-ttest_rewp_lv <- t.test(df_150275_cz$Rej_Acc, df_150275_cz$Rej_Rej, paired=TRUE)
-ttest_p3_hv <- t.test(df_275425_pz$Acc_Acc, df_275425_pz$Acc_Rej, paired=TRUE)
-ttest_p3_lv <- t.test(df_275425_pz$Rej_Acc, df_275425_pz$Rej_Rej, paired=TRUE)
-
-d_rewp_hv <- paste0("Cohen's D=",round(cohensD(df_150275_cz$Acc_Acc, df_150275_cz$Acc_Rej, method="paired"),2))
-d_rewp_lv <- paste0("Cohen's D=",round(cohensD(df_150275_cz$Rej_Acc, df_150275_cz$Rej_Rej, method="paired"),2))
-d_p3_hv <- paste0("Cohen's D=",round(cohensD(df_275425_pz$Acc_Acc, df_275425_pz$Acc_Rej, method="paired"),2))
-d_p3_lv <- paste0("Cohen's D=",round(cohensD(df_275425_pz$Rej_Acc, df_275425_pz$Rej_Rej, method="paired"),2))
-```
-
-Omnibus MLMs showed that Peer value interacted with Feedback type to predict ERP mean amplitude for the RewP (`r apa_print(rewp_fv_mlm, est_name="\\beta")$full_result$FeedbackRej_VotingRej`) and P300 (`r apa_print(p300_fv_mlm, est_name="\\beta")$full_result$FeedbackRej_VotingRej`). Follow-up analyses showed that the RewP (`r paste0(d_rewp_lv, ", ", apa_printt(ttest_rewp_lv)$full_result)`) and P300 (`r paste0(d_p3_lv, ", ", apa_printt(ttest_p3_lv)$full_result)`) differentiated between acceptance and rejection for low-value peers. Only the RewP differentiated between acceptance and rejection for high-value peers (`r paste0(d_rewp_hv, ", ", apa_printt(ttest_rewp_hv)$full_result)`), but not the P300 (`r paste0(d_p3_lv, ", ", apa_printt(ttest_p3_lv)$full_result)`).
-
-**Internal consistency**
-
-The RewP and P3 demonstrated acceptable levels of internal consistency across peer-value (high, low) and feedback conditions (acceptance, rejection), with split-half reliability (*r*) \> `r min(spearman_brown[2:3,3:6])`, with particularly high reliability for the high-value peers conditions (acceptance *r* = `r spearman_brown[2:3,3]` and rejection *r* = `r spearman_brown[2:3,4]` for RewP and P3, respectively). The N100 did not achieve acceptable internal consistency (*r*=`r min(spearman_brown[1,3:6])`-`r max(spearman_brown[1,3:6])`). Split-half reliability was considerably lower for the residualized scores, but remained comparable to other studies (RewP~resid~ *r*\>`r min(spearman_brown[2,7])`, P3~resid~ *r*\>`r min(spearman_brown[3,7])`) [@rappaportBehavioralPsychiatricCorrelates2024a; @ethridgePsychometricPropertiesNeural2018; @levinsonReliabilityElectrocorticalResponse2017]. See Supplement for full results.
-
-**Dependability**
-
-In dependability analyses, the RewP and P3 achieved acceptable dependability ($\ge$ 0.70) with as few as 12-13 and 13-15 trials, respectively, depending on the peer-value and feedback condition. When using all available trials, up to 25 trials per condition, RewP and P3 achieved good dependability ($\ge$ 0.80; see Supplement). The N100 did not achieve acceptable dependability with any number of trials.
-
-**SES**
-
-***SES associations with N1~resid~, RewP~resid~, and P3~resid~***
-
-```{r set-model-predictors}
-ses_lm <- function(data, y) {
-  y <- enquo(y)
-
-  model_formula <- formula(paste0(quo_name(y), "~ ADI_NATRANK_z + site + Age_c + demo_child_sex + StressCT + StressTH + IDAS_depression_z + IDAS_anxiety"))
-  lm(model_formula, data = data)
-}
-```
-
-```{r}
-n1_aaar_model <- ses_lm(df_50150_fz,AA_AR_z)
-n1_araa_model <- ses_lm(df_50150_fz,AR_AA_z)
-n1_rarr_model <- ses_lm(df_50150_fz,RA_RR_z)
-n1_rrra_model <- ses_lm(df_50150_fz,RR_RA_z)
-
-n1_low_value_ses_pvalues <- c(as.numeric(apa_print(n1_rarr_model)$table$p.value[2]),as.numeric(apa_print(n1_rrra_model)$table$p.value[2]),
-  as.numeric(apa_print(n1_rarr_model)$table$p.value[2]),as.numeric(apa_print(n1_rrra_model)$table$p.value[2]))
-```
+### SES associations with RewP~resid~ and P300~resid~
 
 ```{r}
 rewp_aaar_model <- ses_lm(df_150275_cz,AA_AR_z)
-rewp_araa_model <- ses_lm(df_150275_cz,AR_AA_z)
-rewp_rarr_model <- ses_lm(df_150275_cz,RA_RR_z)
-rewp_rrra_model <- ses_lm(df_150275_cz,RR_RA_z)
-
-rewp_low_value_ses_pvalues <- c(as.numeric(apa_print(rewp_rarr_model)$table$p.value[2]),as.numeric(apa_print(rewp_rrra_model)$table$p.value[2]),
-  as.numeric(apa_print(rewp_rarr_model)$table$p.value[2]),as.numeric(apa_print(rewp_rrra_model)$table$p.value[2]))
-```
-
-```{r}
 p300_aaar_model <- ses_lm(df_275425_pz,AA_AR_z)
-p300_araa_model <- ses_lm(df_275425_pz,AR_AA_z)
-p300_rarr_model <- ses_lm(df_275425_pz,RA_RR_z)
-p300_rrra_model <- ses_lm(df_275425_pz,RR_RA_z)
-
-p300_low_value_ses_pvalues <- c(as.numeric(apa_print(p300_rarr_model)$table$p.value[2]),as.numeric(apa_print(p300_rrra_model)$table$p.value[2]),
-  as.numeric(apa_print(p300_rarr_model)$table$p.value[2]),as.numeric(apa_print(p300_rrra_model)$table$p.value[2]))
 ```
 
-We found support for aim 1: SES was significantly related to brain responses to different kinds of peer feedback (see Figure 2). Specifically, lower SES was significantly related to a more blunted RewP~resid~ and P3~resid~ to acceptance from high-value peers (i.e., peers the participant was interested in). These findings remained significant over-and-above site, demographic factors (e.g., age, sex assigned at birth), lifetime stressors (total stressful life events, severity of stressful life events), and self-reported psychopathology (self-reported depression, self-reported anxiety). SES was not related to RewP~resid~ nor P300~resid~ to rejection (`r apa_printlm(rewp_araa_model)$full_result$ADI_NATRANK_z`; `r apa_printlm(p300_araa_model)$full_result$ADI_NATRANK_z`, respectively). Additionally, SES was not related to RewP~resid~ or P3~resid~ to acceptance or rejection from *low-value* peers (i.e., peers the participant was not interested in, $p \ge$ `r round(min(rewp_low_value_ses_pvalues,p300_low_value_ses_pvalues),2)`). Results are consistent when also covarying for self-reported deception (see Supplement).
-
-***SES does not moderate association between RewP~resid~/P3~resid~ and depression or anxiety symptoms***
+Lower SES was significantly related to a more blunted RewP~resid~ and P300~resid~ to acceptance relative to rejection (see Figure 2) over-and-above site, demographic factors (e.g., age, sex-assigned-at-birth), lifetime stressors (number of stressful life events, severity of stressful life events), and symptoms of depression and anxiety. Results are consistent when excluding those who reported that they were not deceived[^1] (see Supplement).
 
 ```{r}
-model_150275_dep <- lm(IDAS_depression_z ~ AA_AR_z + Age_z + demo_child_sex + StressCT_z + StressTH_z + site, data = df_150275_cz)
+load(file=here("../data/BUDS_behavior.RData"))
 
-model_275425_dep <- lm(IDAS_depression_z ~ AA_AR_z + Age_z + demo_child_sex + StressCT_z + StressTH_z + site, data = df_275425_pz)
+df_150275_cz_dec <- df_150275_cz_rating %>%
+  select(ID, SP_debriefing_deceived_f) %>%
+  right_join(df_150275_cz, by="ID")
 
-model_150275_anx <- lm(IDAS_anxiety_z ~ AA_AR_z + Age_z + demo_child_sex + StressCT_z + StressTH_z + site, data = df_150275_cz)
-
-model_275425_anx <- lm(IDAS_anxiety_z ~ AA_AR_z + Age_z + demo_child_sex + StressCT_z + StressTH_z + site, data = df_275425_pz)
-
-model_150275_dep_ses <- lm(IDAS_depression_z ~ ADI_NATRANK_z*AA_AR_z + Age_z + demo_child_sex + StressCT_z + StressTH_z + site, data = df_150275_cz)
-
-model_275425_dep_ses <- lm(IDAS_depression_z ~ ADI_NATRANK_z*AA_AR_z + Age_z + demo_child_sex + StressCT_z + StressTH_z + site, data = df_275425_pz)
-
-model_150275_anx_ses <- lm(IDAS_anxiety_z ~ ADI_NATRANK_z*AA_AR_z + Age_z + demo_child_sex + StressCT_z + StressTH_z + site, data = df_150275_cz)
-
-model_275425_anx_ses <- lm(IDAS_anxiety_z ~ ADI_NATRANK_z*AA_AR_z + Age_z + demo_child_sex + StressCT_z + StressTH_z + site, data = df_275425_pz)
+df_275425_pz_dec <- df_275425_pz_rating %>%
+  select(ID, SP_debriefing_deceived_f) %>%
+  right_join(df_275425_pz, by="ID")
 ```
 
-***SES moderates association between RewP~resid~/P3~resid~ and affect***
+[^1]: Only `r round(sum(df_150275_cz_dec$SP_debriefing_deceived_f==2, na.rm=TRUE)/sum(table(df_150275_cz_dec$SP_debriefing_deceived_f))*100,2)`% of participants with RewP~resid~ data and `r round(sum(df_275425_pz_dec$SP_debriefing_deceived_f==2, na.rm=TRUE)/sum(table(df_275425_pz_dec$SP_debriefing_deceived_f))*100,2)`% of participants with P300~resid~ data stated that they did not believe that they would be chatting with one of the peers from the task (n= `r sum(is.na(df_150275_cz_dec$SP_debriefing_deceived_f))` and `r sum(is.na(df_275425_pz_dec$SP_debriefing_deceived_f))` missing this data, respectively). Given the potential for deception to affect results, we present additional analyses excluding those who did not endorse deception in the Supplement.
+
+### SES moderation of association between RewP~resid~/P300~resid~ and affect
+
+#### Negative Affect
 
 ```{r}
-model_150275_ema_na <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_z + demo_child_sex + IDAS_depression_z + IDAS_anxiety_z + StressCT_z + StressTH_z + site + (1 | ID),
+model_150275_ema_na <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_z + demo_child_sex + site + (1 | ID),
                 zi = ~ .,
   data = df_150275_cz_ema,
   family=gaussian, REML=TRUE)
 
-model_275425_ema_na <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + IDAS_depression_z + IDAS_anxiety_z + StressCT_z + StressTH_z + site + (1 | ID),
+model_275425_ema_na <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_z + demo_child_sex + site + (1 | ID),
                                    zi = ~ .,
   data = df_275425_pz_ema,
   family=gaussian, REML=TRUE)
 
-# Positive affect
-model_150275_ema_pa <- glmmTMB(pa ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + site + (1 | ID),
-  data = df_150275_cz_ema,
-  family=gaussian, REML=TRUE)
-
-model_275425_ema_pa <- glmmTMB(pa ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + site + (1 | ID),
-  data = df_275425_pz_ema,
-  family=gaussian, REML=TRUE)
-```
-
-```{r}
 rewp_na_stat <- c(tidy(model_150275_ema_na) %>% 
                     filter(effect == "fixed", component == "cond", term == "ADI_NATRANK_z:AA_AR_z"),
                   as.data.frame(confint(model_150275_ema_na)) %>% 
                     rownames_to_column("row_name") %>% 
                     filter(row_name == "cond.ADI_NATRANK_z:AA_AR_z") %>% 
-                       mutate(lower = round(`2.5 %`,2), upper=round(`97.5 %`,2)) %>% 
+                       mutate(lower = round3(`2.5 %`), upper=round3(`97.5 %`)) %>% 
                        select(lower,upper))
 
 p300_na_stat <- c(tidy(model_275425_ema_na) %>%
@@ -638,8 +499,48 @@ p300_na_stat <- c(tidy(model_275425_ema_na) %>%
                   as.data.frame(confint(model_275425_ema_na)) %>%
                     rownames_to_column("row_name") %>%
                     filter(row_name == "cond.ADI_NATRANK_z:AA_AR_z") %>%
-                       mutate(lower = round(`2.5 %`,2), upper=round(`97.5 %`,2)) %>%
+                       mutate(lower = round3(`2.5 %`), upper=round3(`97.5 %`)) %>%
                        select(lower,upper))
+```
+
+```{r}
+## REWP
+mean_ses <- mean(df_150275_cz$ADI_NATRANK_z, na.rm=TRUE)
+sd_ses <- sd(df_150275_cz$ADI_NATRANK_z, na.rm=TRUE)
+SES_list <- list(ADI_NATRANK_z=round(c(mean_ses + sd_ses,mean_ses - sd_ses),2)) 
+
+m_rewp_acc <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_z + demo_child_sex + site + (1 | ID),
+        zi = ~ .,
+  data = df_150275_cz_ema,
+  family=gaussian, REML=TRUE)
+
+m_rewp_acc_ss <- emtrends(m_rewp_acc, pairwise ~ADI_NATRANK_z, var="AA_AR_z",at=SES_list, adjust="none")|> test()
+
+## P300
+mean_ses <- mean(df_275425_pz$ADI_NATRANK_z, na.rm=TRUE)
+sd_ses <- sd(df_275425_pz$ADI_NATRANK_z, na.rm=TRUE)
+SES_list <- list(ADI_NATRANK_z=round(c(mean_ses + sd_ses,mean_ses - sd_ses),2)) 
+
+m_p300_acc <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + site + (1 | ID),
+        zi = ~ .,
+  data = df_275425_pz_ema,
+  family=gaussian, REML=TRUE)
+
+m_p300_acc_ss <- emtrends(m_p300_acc, pairwise ~ADI_NATRANK_z, var="AA_AR_z",at=SES_list, adjust="none")|> test()
+```
+
+SES significantly moderated the relationship between EMA-assessed negative affect and RewP~resid~ and P300~resid~ to acceptance relative to rejection (Table 2, Figure 3), over-and-above site and demographic factors. Follow-up simple slope analyses showed that no simple slopes were significant for the SES x RewP~resid~ interaction. By contrast, there were significant simple slopes for the SES x P300~resid~, as lower SES was associated with a more negative relationship between P300~resid~ to acceptance relative to rejection and subsequent negative affect. That is, individuals with lower SES who had blunted sensitivity to acceptance exhibited greater negative affect. Results are consistent when excluding those who reported not being deceived (see Supplement). As a test of specificity, we added lifetime stressors and symptoms of depression and anxiety as covariates; the moderation was still significant when these variables were included (see Supplement).
+
+#### Positive Affect
+```{r}
+# Positive affect
+model_150275_ema_pa <- glmmTMB(pa ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + StressCT_z + StressTH_z + site + (1 | ID),
+  data = df_150275_cz_ema,
+  family=gaussian, REML=TRUE)
+
+model_275425_ema_pa <- glmmTMB(pa ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + StressCT_z + StressTH_z + site + (1 | ID),
+  data = df_275425_pz_ema,
+  family=gaussian, REML=TRUE)
 
 rewp_pa_stat <- c(tidy(model_150275_ema_pa) %>% 
                     filter(effect == "fixed", component == "cond", term == "ADI_NATRANK_z:AA_AR_z"),
@@ -658,202 +559,40 @@ p300_pa_stat <- c(tidy(model_275425_ema_pa) %>%
                        select(lower,upper))
 ```
 
-We also found support for aim 2: SES significantly moderated the relationship between EMA-assessed negative affect and RewP~resid~ to acceptance ($\beta$=`r rewp_na_stat$estimate`, 95% CI=[`r paste0(rewp_na_stat$lower,", ", rewp_na_stat$upper)`], *p*=`r rewp_na_stat$p.value`), but not RewP~resid~ to rejection ($\beta$=`r rewp_na_ar_stat$estimate`, *p*=`r rewp_na_ar_stat$p.value`). SES also moderated the relationship between negative affect and the P3~resid~ to acceptance ($\beta$=`r p300_na_stat$estimate`, 95% CI=[`r paste0(p300_na_stat$lower,", ",p300_na_stat$upper)`], *p*=`r p300_na_stat$p.value`) and the P3~resid~ to rejection ($\beta$=`r p300_na_ar_stat$estimate`, 95% CI=[`r paste0(p300_na_ar_stat$lower,", ",p300_na_ar_stat$upper)`], *p*=`r p300_na_ar_stat$p.value`); see Figure 3). SES continued to moderate the relationship between negative affect and the P3~resid~ to rejection even when covarying for EMA-assessed positive affect as a fixed effect covariate[^2], as well as when covarying for deception (see Supplement).
-
-[^2]: Models covarying for EMA reported positive affect did not converge for models testing SES moderating relationship between negative affect and RewP~resid~ or P3~resid~ to acceptance
-
-```{r}
-## REWP
-mean_ses <- mean(df_150275_cz_ema$ADI_NATRANK_z, na.rm=TRUE)
-sd_ses <- sd(df_150275_cz_ema$ADI_NATRANK_z, na.rm=TRUE)
-SES_list <- list(ADI_NATRANK_z=round(c(mean_ses + sd_ses,mean_ses - sd_ses),2)) 
-
-m_rewp_acc <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_z + demo_child_sex + site + (1 | ID),
-        zi = ~ .,
-  data = df_150275_cz_ema,
-  family=gaussian, REML=TRUE)
-
-m_rewp_acc_ss <- emtrends(m_rewp_acc, pairwise ~ADI_NATRANK_z, var="AA_AR_z",at=SES_list, adjust="none")|> test()
-
-## P300
-mean_ses <- mean(df_275425_pz_ema$ADI_NATRANK_z, na.rm=TRUE)
-sd_ses <- sd(df_275425_pz_ema$ADI_NATRANK_z, na.rm=TRUE)
-SES_list <- list(ADI_NATRANK_z=round(c(mean_ses + sd_ses,mean_ses - sd_ses),2)) 
-
-m_p300_acc <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + site + (1 | ID),
-        zi = ~ .,
-  data = df_275425_pz_ema,
-  family=gaussian, REML=TRUE)
-#IDAS_depression_z + IDAS_anxiety_z + StressCT_z + StressTH_z + 
-
-m_p300_acc_ss <- emtrends(m_p300_acc, pairwise ~ADI_NATRANK_z, var="AA_AR_z",at=SES_list, adjust="none")|> test()
-```
-
-Follow-up simple slope analyses showed that while no simple slopes were significant for the SES x RewP~resid~ interaction (*p* = `r round(min(m_rewp_acc_ss$emtrends[,6]),2)`), there were significant simple slopes for the SES x P3~resid~ such that lower SES was associated with a more negative relationship between P3~resid~ to *acceptance* and subsequent negative affect (slope = `r round(m_p300_acc_ss$emtrends[2,2],2)`, *p*=`r format.pval(m_p300_acc_ss$emtrends[2,6],eps=0.001)`), and positive relationship between P3~resid~ to *rejection* and subsequent negative affect (slope = `r m_p300_rej_ss$emtrends[2,2]`, *p*=`r format.pval(m_p300_rej_ss$emtrends[2,6],eps=0.001)`). That is, individuals with lower SES who had blunted acceptance sensitivity or heightened rejection sensitivity exhibited greater negative affect outside of the lab.
-
-SES did not moderate the relationship between positive affect and RewP~resid~ to acceptance ($\beta$=`r rewp_pa_stat$estimate`, 95% CI=[`r paste0(rewp_pa_stat$lower,", ", rewp_pa_stat$upper)`], *p*=`r rewp_pa_stat$p.value`) or rejection ($\beta$=`r rewp_pa_ar_stat$estimate`, 95% CI=[`r paste0(rewp_pa_ar_stat$lower,", ", rewp_pa_ar_stat$upper)`], *p*=`r rewp_pa_ar_stat$p.value`), nor between positive affect and P3~resid~ to rejection ($\beta$=`r p300_pa_ar_stat$estimate`, 95% CI=[`r paste0(p300_pa_ar_stat$lower,", ", p300_pa_ar_stat$upper)`], *p*=`r p300_pa_ar_stat$p.value`). This moderation was trending for P3~resid~ to acceptance ($\beta$=`r p300_pa_stat$estimate`, 95% CI=[`r paste0(p300_pa_stat$lower,", ", p300_pa_stat$upper)`], *p*=`r p300_pa_stat$p.value`).
-
-```{r, eval=FALSE}
-performance::check_model(model_275425_ema_na_ar, data=df_275425_pz_ema, plot = TRUE)
-```
+SES did not moderate the relationship between positive affect and RewP~resid~ to acceptance ($\beta$=`r rewp_pa_stat$estimate`, 95% CI=[`r paste0(rewp_pa_stat$lower,", ", rewp_pa_stat$upper)`], *p*=`r rewp_pa_stat$p.value`), nor between positive affect and P300~resid~ to acceptance ($\beta$=`r p300_pa_stat$estimate`, 95% CI=[`r paste0(p300_pa_stat$lower,", ", p300_pa_stat$upper)`], *p*=`r p300_pa_stat$p.value`).
 
 # Discussion
 
-The current study found important links between SES and neural response to social feedback---SES was (a) related to aberrant responses to peer acceptance and rejection, and (b) moderated the association between neural response to feedback and negative affect assessed outside of the lab. Follow-up analyses indicated that lower SES adolescents who had a more blunted neural response to acceptance (as indicated by a smaller P3~resid~) and greater neural response to rejection (as indicated by a larger P3~resid~) reported greater daily experiences of negative affect.
+The current study found important links between SES and neural response to social feedback—SES was (a) related to aberrant responses to peer acceptance, and (b) moderated the association between neural response to feedback and negative affect assessed outside of the lab. Follow-up analyses indicated that lower SES adolescents who had a more blunted neural response to acceptance (as indicated by a smaller P300~resid~) reported greater daily experiences of negative affect. Importantly, analyses were not due to lifetime stressful life events nor symptoms of depression, highlighting the particular importance of SES. 
 
-## Linking SES to psychopathology
+## Linking SES to negative affect
 
-The present study provides novel evidence of one potential mechanism through which youth SES may lead to heightened risk for internalizing disorders in adolescence. Because this data cannot determine the causal direction between SES, brain responses to peer feedback, and daily negative affect, we do not know whether changes in brain responsivity lead to daily negative affect or vice versa. One possibility is that low SES environments lead to greater negative affect [@galloUnderstandingAssociationSocioeconomic2003], which in turn leads to blunted sensitivity to acceptance and heightened sensitivity to rejection. Another possibility is that growing up in a low SES environment may make youth less sensitive to positive social feedback and more sensitive to negative social feedback, relative to their higher SES peers. Such interpersonal sensitivities may then lead to greater daily negative affect, and chronic experiences of negative affect may in turn lead to depression. Prior data most support this pathway. Numerous studies [@eisenbergerFMRIStudyCytokineinduced2009; @groschwitzDifferentialNeuralProcessing2016; @jankowskiFeelingLeftOut2018; @kumarIncreasedNeuralResponse2017; @beerAnxiouslyElaboratingSocial2016; @guyerLastingAssociationsEarlychildhood2014; @rappaportBrainResponsesSocial2020] have shown that depressed youth exhibit a blunted response to social acceptance, and anxious youth a heightened response to social rejection (though see @guNeuralCorrelatesNegative2020 and @harrewijnBehavioralEEGResponses2018 for examples of social anxiety being related to *enhanced* response to social acceptance too). Longitudinal studies have also shown that low SES prospectively predicts changes in the way youth report on their relationships [@simonsRelationalSchemasHostile2012; @simonsLearningBeBad2011], and that clinical levels of social anhedonia and rejection sensitivity cross-sectionally and prospectively predict greater depression [@llerenaSocialAnhedoniaAffiliation2012; @aydukRejectionSensitivityDepressive2001; @gaoAssociationsRejectionSensitivity2017]. Thus, these findings together with prior research suggest one intriguing explanation for how youth SES may lead to adolescent depression.
+The present study provides novel evidence of one potential mechanism for why adolescents with low SES may be at heightened risk for internalizing psychopathology--through a blunted response to positive feedback. There are several potential pathways for this mechanism. One possibility is that low SES environments lead to greater negative affect  [@galloUnderstandingAssociationSocioeconomic2003], which in turn leads to blunted sensitivity to acceptance. A second possibility is that growing up in a low SES environment may make youth less sensitive to positive social feedback, relative to their higher SES peers. This interpersonal sensitivity may then lead to greater daily negative affect, and chronic experiences of negative affect is a robust risk factor for internalizing psychopathology [@minekaComorbidityAnxietyUnipolar1998]. Longitudinal studies have consistently shown that low SES prospectively predicts changes in the way youth report on their relationships [@simonsRelationalSchemasHostile2012; @simonsLearningBeBad2011], and that blunted sensitivity to acceptance is related to depression [@eisenbergerFMRIStudyCytokineinduced2009; @groschwitzDifferentialNeuralProcessing2016; @jankowskiFeelingLeftOut2018; @kumarIncreasedNeuralResponse2017; @beerAnxiouslyElaboratingSocial2016; @guyerLastingAssociationsEarlychildhood2014; @rappaportBrainResponsesSocial2020; @kujawaSocialProcessingEarly2017; @zhangDullSocialAcceptance2017, though see @peggBluntedSocialReward2019 and @rappaportBehavioralPsychiatricCorrelates2024a] and more generally negative affect [@tanAssociationsMaternalNegative2014]. However, as the present study cannot determine the causal direction between SES, brain activity to peer feedback, and daily negative affect, future longitudinal studies are needed to test this and alternative pathways from SES to psychopathology. 
 
-To our knowledge, only one other study examined the association between SES and neural sensitivity to feedback; the present study replicates and builds on this [@rappaportBehavioralPsychiatricCorrelates2024a]. While both studies were comparable sample sizes, age ranges, and oversampled individuals with depression, the prior study used a 1) different social feedback task than the current study and 2) different measure of SES (income-to-needs). ADI is a more reliable and objective measure of SES than income-to-needs as it is composite measure rather than a single measure and is derived from the American Community Survey rather than self-report. Finally, the present study collected a large, clinically-enriched sample from two different, diverse metro areas, and measured experience with negative affect via daily ecological momentary assessments over a week as opposed to self-report at a single timepoint.
+To our knowledge, only one other study examined the association between SES and neural sensitivity to feedback; the present study replicates and expands on this work [@rappaportBehavioralPsychiatricCorrelates2024a]. While both studies were comparable in sample sizes and oversampled individuals with depression, the present study: 1) included a different social feedback task, 2) included a different measure of SES (ADI vs. income-to-needs), 3) had a younger sample (13—18-year-olds), (4) used data from two different, diverse metro areas and, 5) additionally tested whether SES acts in combination with neurobiological patterns to predict behavior outside of the lab. The use of ADI is a particularly notable advance as it may be a more reliable and objective measure of SES than income-to-needs as it (a) is a composite measure that accounts for many aspects of SES rather than a single measure (e.g., education, income) and (b) is derived from census data rather than self-report.
 
-Clinically, these findings suggest that prevention and intervention focused on increasing hedonic responses to acceptance and reducing rejection sensitivity in safe, non-threatening situations may alleviate psychopathology. For example, short-term solutions may include helping youth heal from racial trauma [e.g., @metzgerHealingInterpersonalRacial2021], or interventions aimed at cultivating positive peer interactions [@pollakSystematicReviewIntervention2023]. Longer-term solutions may involve systemic interventions focused on reducing instances of discrimination against lower SES youth [@bartlettGettingRootProblem2022].
+## Limitations
 
-## Strengths and Limitations
+The results of the current study must also be considered in light of several limitations. First, although the area deprivation index provides a rich measure of the neighborhood in which youth are currently living, it does not capture other aspects of adolescents’ environment such as where they spend significant time (e.g., school, after-school activities). Second, we did not assess how long youth had been living at this address; it is possible that some youth had recently moved to their address (although due to low upward mobility in the USA [@chettyEconomicMobility2018] it is unlikely SES dramatically changed). Third, we did not examine how the perceived race or ethnicity of the peer giving feedback impacts brain responses. Half of the feedback came from White peers, while the other half came from peers perceived to be non-White. Thus, we were under-powered to test whether peer perceived race or ethnicity interacted with neural response to feedback. Fourth, one could question the validity of labeling the ERP components we identified as a RewP and P300. These components have, however, been identified in many other studies of social feedback within similar time windows and scalp topographies [@weinbergNeuralResponsesSocial2021; @kujawaSocialProcessingEarly2017; @rappaportBehavioralPsychiatricCorrelates2024a; @distefanoComparisonElectrocorticalResponse2018], and like other studies, we found that ERPs to acceptance were significantly greater than to rejection in the RewP time window but did not differ within the P300 time window [See Supplement, @rappaportBehavioralPsychiatricCorrelates2024a; @peggTimeCourseReactivity2022]. Fifth, we focused on brain response to acceptance residualized for rejection, rather than rejection residualized for acceptance. We did this for two reasons: 1) the RewP is considered to be sensitive to gains rather than losses [@proudfitRewardPositivityBasic2015], and 2) we were concerned that this would unnecessarily increase the number of statistical tests and not provide meaningful additional information. Nonetheless, when we examined responses to rejection residualized for acceptance, we found a similar pattern of results. Future studies could consider including a neutral condition [@peggTimeCourseReactivity2022], however it remains an empirical question what constitutes “neutral” social feedback [@funkhouserSocialFeedbackValence2020].
 
-The current study has additional, noteworthy strengths. First, these findings extend previous research detailing how the brain responds to social feedback. At a group level, we show that an fMRI task of neural responses to social feedback---the Chatroom task [@pagliaccioNeuralSensitivityPeer2022; @guyerAmygdalaVentrolateralPrefrontal2008]---yields the expected ERP components: RewP and P3. We also show these components have acceptable psychometrics (split-half reliability/internal consistency and dependability). Finding that the RewP and P3 occur across this and other social feedback tasks [@weinbergNeuralResponsesSocial2021; @kujawaSocialProcessingEarly2017; @rappaportBehavioralPsychiatricCorrelates2024a; @distefanoComparisonElectrocorticalResponse2018] speaks to the generalizable role of these components in responding to rewarding and salient feedback, respectively. Additionally, we demonstrate functional specificity: that the task elicits specific processes and not brain-wide differences---ERPs to acceptance and rejection within the N100 time window did not significantly differ from each other and exhibited low internal consistency and dependability. Second, the emotional ratings assessed during the social feedback task verified that participants felt 'better' when accepted and 'worse' when rejected by peers that they were interested in chatting with (i.e., high-value peers).
-
-The current study must also be considered in light of its limitations. First, although the area deprivation index provides a rich measure of the neighborhood youth are currently living, it does not capture other aspects of adolescents' environment such as where they spend significant time (e.g., school, after school activities). Second, we did not assess how long youth had been living at this address; it is possible that some youth had recently moved to their address (although due to low upward mobility in the USA [@chettyEconomicMobility2018] it is unlikely SES dramatically changed). Third, we did not examine how the perceived race or ethnicity of the peer giving feedback impact brain responses. Half of the feedback came from white peers, while the other half came from peers perceived to be non-white. Thus, we were unfortunately under-powered to test whether peer perceived race or ethnicity interacted with neural response to feedback. Future versions of this and other social feedback tasks with more trials from peers of different racial and ethnic backgrounds will be key to more rigorously testing for racial or ethnic group differences. Fourth, one could question the validity of labeling the ERP components we identified as a RewP and P3. These components have, however, been identified in many other studies of social feedback within similar time windows and scalp topographies [@weinbergNeuralResponsesSocial2021; @kujawaSocialProcessingEarly2017; @rappaportBehavioralPsychiatricCorrelates2024a; @distefanoComparisonElectrocorticalResponse2018], and like other studies, we found that ERPs to acceptance were significantly greater than to rejection in the RewP time window, but did not differ within the P3 time window [@rappaportBehavioralPsychiatricCorrelates2024a; @peggTimeCourseReactivity2022].
-
-In conclusion, this study has clear implications for basic and clinical research on the role of SES in psychopathology. Recent studies are beginning to elucidate the role and consequences of SES [@correaEthnicDifferencesBehavioral2022] on not only symptoms of psychopathology, but their underlying neurobiological mechanisms as well [e.g., @sheridanChapter13Neurodevelopmental2020; @palacios-barriosPovertySelfregulationConnecting2019; @barchEarlyChildhoodSocioeconomic2022]. At the very least, accounting for SES in analyses will help assure that findings examining neural mechanisms of psychopathology are not influenced by a large potential third-variable. More broadly, studying consequences of SES can potentially influence public policies aimed at lifting at-risk children out of poverty.
+In conclusion, this study has implications for clinical research on the role of SES in mental health. Recent studies are beginning to elucidate the role and consequences of demographic factors [@correaEthnicDifferencesBehavioral2022] on  mental health symptoms as well as the underlying neurobiological mechanisms [@sheridanChapter13Neurodevelopmental2020; @palacios-barriosPovertySelfregulationConnecting2019; @barchEarlyChildhoodSocioeconomic2022]. Here, we have shown that SES is related to certain neurobiological patterns and that SES in combination with neurobiological patterns can explain some variance in risk to adolescents’ mental health. Clinically, such findings may lead to a better understanding of who is at greatest risk, and more targeted interventions and prevention efforts. For example, prevention and intervention focused on increasing hedonic responses to acceptance in safe, supportive environments may alleviate experiences of negative affect and improve positive affect [@dellacquaLinkingSocialReward2024; @pollakSystematicReviewIntervention2023]. In the absence of societal changes that lift youth out of poverty, understanding how SES interacts with individual vulnerabilities will be integral to addressing the growing youth mental health crisis.
 
 \newpage
 
-# Figures
+# Acknowledgments
+The authors would like to thank all participants.
 
-Figure 1. A) Example of trial from chatroom task. B) Grand average ERP for acceptance and rejection feedback from high-value peers. Colored sections of the graph represent time windows where ERP components were extracted at Cz electrode: N100 = purple, RewP = orange, P3 = blue. C) Mean in-task, post-feedback emotional ratings across all trials and participants by Feedback (acceptance, rejection) and Value (high, low).
-
-Figure 2. Relationship between SES and brain responses to acceptance (relative to rejection) for RewP~resid~ and P3~resid~ ERP components.
-
-Figure 3. Interactions for which SES significantly moderated association between brain responses to acceptance or rejection and negative affect. Orange lines = -1 standard deviation below the mean SES; Blue lines = +1 standard deviation above the mean. RewP to acceptance: b= `r round(rewp_na_stat$estimate,3)`, p= `r round(rewp_na_stat$p.value,3)`; No simple slopes significant. P3 to acceptance: b= `r round(p300_na_stat$estimate,3)`, p= `r round(p300_na_stat$p.value,3)`; Simple slope significant for SES -1 SD. P3 to rejection: b= `r round(p300_na_ar_stat$estimate,3)`, p= `r round(p300_na_ar_stat$p.value,3)`; Simple slope significant for SES -1 SD. Note: All plots use residualized scores, such that 'Acceptance RewP' indicates responses to acceptance residualized for rejection, and vice versa.
-
-```{r, eval=FALSE}
-library(readxl)
-cdrs <- readRDS(here("../data/demographics_questionnaire_5.14.24.RDS"))  %>%
-  mutate(ID = as.integer(subjectID)) %>%
-  select(ID, starts_with("cdrs_"))
-
-cu_diagnostic_groups <- read_excel("/projects/p31735/BUDS/eeg_processing/ParticipantInfo/CU_Participant_Assessment_Dates.xlsx")[-1,] %>%
-  mutate(ID = as.integer(src_subject_id)) %>%
-  select(ID, group)
-
-nw_diagnostic_groups <- read_excel("/projects/p31735/BUDS/eeg_processing/ParticipantInfo/NU_PREDICT_Participant_Info.xlsx")[-1,] %>%
-  mutate(ID = as.integer(src_subject_id)) %>%
-  select(ID, group)
-
-diagnostic_groups <-  rbind(cu_diagnostic_groups, nw_diagnostic_groups) %>%
-  left_join(cdrs, by="ID")
-
-df_150275_cz_groups <- df_150275_cz %>%
-  left_join(diagnostic_groups, by="ID") %>%
-  mutate(lifetime_mdd = case_match(group, "MDD" ~ "yes",
-                                          "remMDD" ~ "yes",
-                                          "HC" ~ "no"))
-
-df_275425_pz_groups <- df_275425_pz %>%
-  left_join(diagnostic_groups, by="ID") %>%
-  mutate(lifetime_mdd = case_match(group, "MDD" ~ "yes",
-                                          "remMDD" ~ "yes",
-                                          "HC" ~ "no"))
-
-
-summary(lm(AA_AR_z ~ group, df_150275_cz_groups))
-summary(lm(AR_AA_z ~ group, df_150275_cz_groups))
-summary(lm(AA_AR_z ~ lifetime_mdd, df_150275_cz_groups))
-summary(lm(AR_AA_z ~ lifetime_mdd, df_150275_cz_groups))
-
-summary(lm(AA_AR_z ~ IDAS_depression_z, df_150275_cz_groups))
-summary(lm(AR_AA_z ~ IDAS_depression_z, df_150275_cz_groups))
-summary(lm(AA_AR_z ~ IDAS_anxiety, df_150275_cz_groups))
-summary(lm(AR_AA_z ~ IDAS_anxiety, df_150275_cz_groups))
-summary(lm(AA_AR_z ~ IDAS_wellbeing, df_150275_cz_groups))
-summary(lm(AR_AA_z ~ IDAS_wellbeing, df_150275_cz_groups))
-
-summary(lm(AA_AR_z ~ group, df_275425_pz_groups))
-summary(lm(AR_AA_z ~ group, df_275425_pz_groups))
-summary(lm(AA_AR_z ~ lifetime_mdd, df_275425_pz_groups))
-summary(lm(AR_AA_z ~ lifetime_mdd, df_275425_pz_groups))
-
-summary(lm(AA_AR_z ~ IDAS_depression_z, filter(df_150275_cz_groups, group!="HC")))
-summary(lm(AR_AA_z ~ IDAS_depression_z, filter(df_150275_cz_groups, group!="HC")))
-
-summary(lm(AA_AR_z ~ IDAS_depression_z, filter(df_275425_pz_groups, group!="HC")))
-summary(lm(AR_AA_z ~ IDAS_depression_z, filter(df_275425_pz_groups, group!="HC")))
-
-summary(lm(AA_AR_z ~ IDAS_wellbeing, df_275425_pz_groups))
-summary(lm(AR_AA_z ~ IDAS_wellbeing, df_275425_pz_groups))
-summary(lm(AA_AR_z ~ IDAS_wellbeing, filter(df_275425_pz_groups, group!="HC")))
-summary(lm(AR_AA_z ~ IDAS_wellbeing, filter(df_275425_pz_groups, group!="HC")))
-
-anova(lm(AR_AA_z ~ group, df_275425_pz_groups))
-anova(lm(AR_AA_z ~ lifetime_mdd, df_275425_pz_groups))
-summary(lm(AR_AA_z ~ scale(IDAS_depression_z, center=TRUE, scale=TRUE), df_275425_pz_groups))
-summary(lm(AR_AA_z ~ scale(IDAS_depression_z, center=TRUE, scale=TRUE), filter(df_275425_pz_groups, group=="remMDD")))
-summary(lm(AR_AA_z ~ scale(IDAS_depression_z, center=TRUE, scale=TRUE) + Age + demo_child_sex, filter(df_275425_pz_groups, group!="HC")))
-summary(lm(AR_AA_z ~ scale(IDAS_depression_z, center=TRUE, scale=TRUE) + Age + demo_child_sex, filter(df_275425_pz_groups, group=="remMDD")))
-
-summary(lm(AA_AR_z ~ group + scale(IDAS_depression_z, center=TRUE, scale=TRUE) + Age + demo_child_sex, filter(df_150275_cz_groups, group!="MDD")))
-summary(lm(AR_AA_z ~ group + scale(IDAS_depression_z, center=TRUE, scale=TRUE) + Age + demo_child_sex, filter(df_150275_cz_groups, group!="MDD")))
-summary(lm(AA_AR_z ~ group + scale(IDAS_depression_z, center=TRUE, scale=TRUE) + Age + demo_child_sex, filter(df_275425_pz_groups, group!="MDD")))
-summary(lm(AR_AA_z ~ group + scale(IDAS_depression_z, center=TRUE, scale=TRUE) + Age + demo_child_sex, filter(df_275425_pz_groups, group!="MDD")))
-
-#CDRS
-summary(lm(AA_AR_z ~ cdrs_raw_i, df_150275_cz_groups))
-summary(lm(AR_AA_z ~ cdrs_raw_i, df_150275_cz_groups))
-summary(lm(AA_AR_z ~ cdrs_t_score_i_corrected, df_150275_cz_groups))
-summary(lm(AR_AA_z ~ cdrs_t_score_i_corrected, df_150275_cz_groups))
-summary(lm(AA_AR_z ~ cdrs_raw_6, df_150275_cz_groups))
-summary(lm(AR_AA_z ~ cdrs_raw_6, df_150275_cz_groups))
-summary(lm(AA_AR_z ~ cdrs_t_score_6_corrected, df_150275_cz_groups))
-summary(lm(AR_AA_z ~ cdrs_t_score_6_corrected, df_150275_cz_groups))
-summary(lm(AA_AR_z ~ cdrs_raw_12, df_150275_cz_groups))
-summary(lm(AR_AA_z ~ cdrs_raw_12, df_150275_cz_groups))
-summary(lm(AA_AR_z ~ cdrs_t_score_12_corrected, df_150275_cz_groups))
-summary(lm(AR_AA_z ~ cdrs_t_score_12_corrected, df_150275_cz_groups))
-
-summary(lm(AA_AR_z ~ cdrs_raw_i, df_275425_pz_groups))
-summary(lm(AR_AA_z ~ cdrs_raw_i, df_275425_pz_groups))
-summary(lm(AA_AR_z ~ cdrs_t_score_i_corrected, df_275425_pz_groups))
-summary(lm(AR_AA_z ~ cdrs_t_score_i_corrected, df_275425_pz_groups))
-summary(lm(AA_AR_z ~ cdrs_raw_6, df_275425_pz_groups))
-summary(lm(AR_AA_z ~ cdrs_raw_6, df_275425_pz_groups))
-summary(lm(AA_AR_z ~ cdrs_t_score_6_corrected, df_275425_pz_groups))
-summary(lm(AR_AA_z ~ cdrs_t_score_6_corrected, df_275425_pz_groups))
-summary(lm(AA_AR_z ~ cdrs_raw_12, df_275425_pz_groups))
-summary(lm(AR_AA_z ~ cdrs_raw_12, df_275425_pz_groups))
-summary(lm(AA_AR_z ~ cdrs_t_score_12_corrected, df_275425_pz_groups))
-summary(lm(AR_AA_z ~ cdrs_t_score_12_corrected, df_275425_pz_groups))
-
-
-sum(complete.cases(filter(df_275425_pz_groups, group=="remMDD")$IDAS_depression_z))
-
-summary(lm(AR_AA_z ~ scale(IDAS_depression_z, center=TRUE, scale=TRUE) + Age + demo_child_sex, filter(df_275425_pz_groups, group!="HC")))
-df_p3_no_hc <- filter(df_275425_pz_groups, group!="HC")
-df_rewp_no_hc <- filter(df_150275_cz_groups, group!="HC")
-
-# Task effects
-t.test(df_p3_no_hc$Acc_Acc, df_p3_no_hc$Acc_Rej, paired=TRUE)
-t.test(df_rewp_no_hc$Acc_Acc, df_rewp_no_hc$Acc_Rej, paired=TRUE)
-t.test(df_150275_cz_groups$Acc_Acc, df_150275_cz_groups$Acc_Rej, paired=TRUE)
-
-model1 <- lm(AR_AA_z ~ scale(IDAS_depression_z, center=TRUE, scale=TRUE) + Age + demo_child_sex, df_no_hc)
-df_p3_no_hc$fitted <- fitted(model1)
-# Load ggplot2
-library(ggplot2)
-
-# Assuming you have a data frame called 'df' with columns 'IDAS_depression_z' and 'AR_AA_z'
-plot1 <- ggplot(df_p3_no_hc, aes(x = AR_AA_z, y = fitted)) +
-  geom_point(color = "black", alpha = 0.6) +  # Scatter plot points
-  geom_smooth(method = "lm", se = TRUE, color = "blue") +  # Add linear regression line with confidence interval
-  labs(
-    x = "P300 to rejection \n(residualized for acceptance)\n covarying for age and sex",
-    y = "IDAS Depression"
-  ) +
-  theme_apa()  # Use a minimal theme
-
-```
+# Disclosures
+This work was supported by the National Institute of Mental Health, including R01 MH119771, T32 MH126368, K23 MH129607, and K99 MH133991. The content is solely the responsibility of the authors and does not necessarily represent the official views of the National Institutes of Health. RPA is an unpaid scientific advisor for Ksana Health and is a paid scientific advisor for Get Sonar, Inc. No other authors have conflicts of interest to disclose.
 
 # References
 
 ::: {#refs custom-style="Bibliography"}
 :::
+
+# Figure Legends
+Figure 1. A) Example of trial from chatroom task. B) Grand average ERP for acceptance and rejection feedback from high-value peers and topographic maps. Gray sections of the graph represent time windows where ERP components were extracted at Cz electrode for the RewP (top) and Pz electrode for the P300 (bottom).
+
+Figure 2. Relationship between SES and brain responses to acceptance (relative to rejection) for RewP~resid~ and P300~resid~ ERP components.
+
+Figure 3. Interactions for which SES significantly moderated association between brain responses to acceptance and negative affect. Orange lines = -1 standard deviation below the mean SES; Blue lines = +1 standard deviation above the mean. SES x RewP~resid~ interaction: $\beta$= `r round3(rewp_na_stat$estimate)`, 95% CI = [`r (rewp_na_stat$lower)`,`r (rewp_na_stat$upper)`], p= `r round3(rewp_na_stat$p.value)`; no simple slopes significant. SES x P300~resid~ to acceptance: $\beta$= `r round3(p300_na_stat$estimate)`, 95% CI = [`r (p300_na_stat$lower)`, `r (p300_na_stat$upper)`], p= `r round3(p300_na_stat$p.value)`; Simple slope significant for SES -1 SD.

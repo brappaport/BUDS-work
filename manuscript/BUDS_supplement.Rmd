@@ -1,5 +1,5 @@
 ---
-title             : "Supplemental for Socioeconomic status and adolescent brain responses to peer feedback: Testing the impact on negative affect"
+title     : "Socioeconomic status and adolescent brain responses to peer feedback: Testing impact on negative affect assessed outside of the lab"
 shorttitle    : "SES & brain responses to peer feedback"
 
 bibliography      : "BUDS.bib"
@@ -57,6 +57,7 @@ cat("\014")       #Clear Console
 # Models
   library(lmerTest)
   library(glmmTMB)
+  library(lsr)        #cohensD
 # Plotting
   library(ggplot2)    #creates plots
   library(ggpubr)
@@ -183,17 +184,50 @@ plot_stats <- function(model, var) {
     round3(.)
   paste0("b = ", temp_stats[1], ", p = ", temp_stats[2])
 }
+
+ses_lm <- function(data, y) {
+  y <- enquo(y)
+
+  model_formula <- formula(paste0(quo_name(y), "~ ADI_NATRANK_z + site + Age_c + demo_child_sex + StressCT_z + StressTH_z + IDAS_depression_z + IDAS_anxiety_z"))
+  lm(model_formula, data = data)
+}
+
+apa_printlm <- function(model) {
+  glue_apa_results(broom::tidy(model, conf.int = TRUE)
+    , est_glue = "$\\beta=<<estimate>>$, 95% CI [<<conf.low>>,<<conf.high>>]"
+    , stat_glue = "*p*<<add_equals2(p.value)>>"
+    , term_names = sanitize_terms(make.names(names(coef(model))))
+)
+}
+
+# Make my own apa_printlm function that does not include t stats
+add_equals2 <- function(p_value) {
+  for (p in p_value) {
+    if (p < 0.001) {
+      return("< 0.001")
+    } else {
+      return(paste0("=", format(p_value, digits = 2, nsmall =2)))
+    }
+  }
+}
+
+lm_results <- function(model, var) {
+  tidy(model, conf.int=TRUE) %>%
+    filter(term==var) %>%
+    mutate(stat = paste0("$\\beta$=",round3(estimate), ", 95% CI= [",round3(conf.low), ", ", round3(conf.high),"], *p*=",round3(p.value))) %>%
+    select(stat)
+}
+
+apa_printt <- function(model) {
+  glue_apa_results(broom::tidy(model, conf.int = TRUE)
+    , est_glue = "*t*(<<parameter>>)=<<statistic>>, 95% CI [<<conf.low>>,<<conf.high>>]"
+    , stat_glue = "*p*<<add_equals2(p.value)>>"
+    , term_names = sanitize_terms(make.names(names(coef(model))))
+)
+}
 ```
 
-# Supplemental for *Socioeconomic status and adolescent brain responses to peer feedback: Testing the impact on negative affect*
-
-# Methods and Materials
-
-## Participants
-
-Informed assent and consent were obtained from the adolescent and parent, respectively, and adolescents 18 years or older provided consent.
-General inclusion criteria included: (a) Tanner Stage $\ge$ 3 [@tannerClinicalLongitudinalStandards1985], (b) parental and child fluency in English, (c) Wechsler Abbreviated Scale of Intelligence-II (WASI-II) \> 85 [@wechslerWechslerAbbreviatedScale2018], (d) ownership of a personal smartphone (android or iOS), and (e) right-handedness.
-General exclusion criteria included: (a) history of head injury or neurological disorders, (b) current moderate or severe substance use disorder, and (c) lifetime history of bipolar or psychotic disorders, oppositional defiant disorder, conduct disorder, organic mental disorder, or developmental disorder.
+# Supplement for *Socioeconomic status and adolescent brain responses to peer feedback: Testing the impact on negative affect assessed outside of the lab*
 
 ```{r, include=TRUE, dpi=400, fig.cap="Topographic maps of RewP and P300 to high-value peer acceptance, high-value peer rejection, high-value peer acceptance relative to high-value peer rejection."}
 
@@ -265,21 +299,6 @@ grid.arrange(textGrob(""), title_rewp, title_p300,
 )
 ```
 
-# Results
-
-## Behavioral ratings
-
-```{r, eval=FALSE}
-post_task_table <- st(dplyr::select(df_BUDS_rating_it_pt, SP_debriefing_interested:SP_debriefing_nervous,SP_debriefing_socialmediause),
-                      out="return")[,-c(5:8)] %>%
-  mutate(Measure=c("Interested","Happy","Upset","Angry","Nervous","Social Media Use")) %>%
-  dplyr::select(-Variable, -N) %>%
-  dplyr::select(Measure, everything())
-```
-
-Of note, for low-value peers, participants rated being rejected as feeling *better* than being accepted.
-Although seemingly counter-intuitive, previous work suggests that this is likely reflects participants feeling good that they were "right"---that they rejected the person who rejected them---and feeling guilty when they were "wrong"---rejected someone who accepted them [@distefanoComparisonElectrocorticalResponse2018; @quarmleyKnewYouWerent2019].
-
 ```{r, results='asis', include=TRUE}
 spearman_brown <- spearman_brown_raw %>%
   select(-X,-AR_AA) %>%
@@ -313,9 +332,137 @@ apa_table(dependability,
 )
 ```
 
-## Including only those that reported belief in deception
+## In-task emotional response ratings
 
-### SES associations with RewP~resid~ and P300~resid~
+For low-value peers, participants rated being rejected as feeling better than being accepted.
+Although seemingly counter-intuitive, previous work suggests that this likely reflects participants feeling good that they were “right”--i.e., that they rejected the person who rejected them—and feeling guilty when they were “wrong”—-i.e., rejected someone who accepted them [@distefanoComparisonElectrocorticalResponse2018; @quarmleyKnewYouWerent2019].
+
+```{r}
+df_BUDS_rating_it_pt2 <- df_BUDS_rating_it_pt %>%
+    dplyr::group_by(ID, Condition) %>%
+    dplyr::summarise(rating=mean(rating)) %>%
+    dplyr::ungroup() %>%
+    pivot_wider(names_from = Condition, values_from = rating, id_cols = ID) %>%
+  filter(complete.cases(Acc_Acc)) %>%
+  mutate(beh_AA_AR_z = scale(residuals(lm(Acc_Acc ~ Acc_Rej, .)), center=T, scale=T),
+         beh_AR_AA_z = scale(residuals(lm(Acc_Rej ~ Acc_Acc, .)), center=T, scale=T),
+         beh_RA_RR_z = scale(residuals(lm(Rej_Acc ~ Rej_Rej, .)), center=T, scale=T),
+         beh_AA_RA_z = scale(residuals(lm(Acc_Acc ~ Rej_Acc, .)), center=T, scale=T)) %>%
+  select(ID, starts_with("beh_"))
+
+df_BUDS_rating_it_pt_demo <- df_BUDS_rating_it_pt2 %>%
+  left_join(df_50150_fz, by="ID")
+
+df_BUDS_rating_it_pt_ema <- df_BUDS_rating_it_pt2 %>%
+    full_join(df_50150_fz_ema, by="ID") %>%
+    mutate(na_cubert = na^(1/3))
+
+ratings_ses_model_AA_AR <- ses_lm(df_BUDS_rating_it_pt_demo, beh_AA_AR_z)
+ratings_ses_model_AR_AA <- ses_lm(df_BUDS_rating_it_pt_demo, beh_AR_AA_z)
+
+model_behavioral_rating_ses_ema_na <- glmmTMB(na_cubert ~ ADI_NATRANK_z*beh_AA_AR_z + Age_c + demo_child_sex  + StressCT_z + StressTH_z + IDAS_depression_z + IDAS_anxiety_z + site + (1 | ID),
+                zi = ~ .,
+  data = df_BUDS_rating_it_pt_ema,
+  family=gaussian, REML=TRUE)
+model_behavioral_rating_ses_ema_na_p <- tidy(model_behavioral_rating_ses_ema_na) %>% filter(effect=="fixed",component=="cond",term=="ADI_NATRANK_z:beh_AA_AR_z") %>% select(p.value)
+
+model_behavioral_rating_ses_ema_pa <- glmmTMB(pa ~ ADI_NATRANK_z*beh_AA_AR_z + Age_c + demo_child_sex + site + (1 | ID),
+  data = df_BUDS_rating_it_pt_ema,
+  family=gaussian, REML=TRUE)
+model_behavioral_rating_ses_ema_pa_p <- tidy(model_behavioral_rating_ses_ema_pa) %>% filter(effect=="fixed",component=="cond",term=="ADI_NATRANK_z:beh_AA_AR_z") %>% select(p.value)
+```
+
+### SES associations with in-task emotional response ratings
+
+Residualized scores assessing ratings to acceptance relative to ratings to rejection were not significantly associated with SES (`r apa_printlm(ratings_ses_model_AA_AR)$full_result$ADI_NATRANK_z`. SES also did not moderate the association between emotional ratings to feedback and EMA negative affect (Rating to acceptance~resid~: p=`r round(model_behavioral_rating_ses_ema_na_p$p.value,2)`).
+
+## Brain responses to peer feedback
+
+### Task effects: Feedback x Value interaction
+
+```{r}
+erp_to_long <- function(data) {
+  data %>%
+  pivot_longer(cols=c("Acc_Acc","Acc_Rej","Rej_Acc","Rej_Rej"), names_sep = "_", names_to = c("Voting","Feedback"), values_to = "ERP")
+}
+df_150275_cz_long <- erp_to_long(df_150275_cz)
+df_275425_pz_long <- erp_to_long(df_275425_pz)
+
+rewp_fv_mlm <- lmer(formula = ERP ~ Feedback*Voting + site + (1 | ID), REML=TRUE, data = df_150275_cz_long)
+p300_fv_mlm <- lmer(formula = ERP ~ Feedback*Voting + site + (1 | ID), REML=TRUE, data = df_275425_pz_long)
+
+ttest_rewp_hv <- t.test(df_150275_cz$Acc_Acc, df_150275_cz$Acc_Rej, paired=TRUE)
+ttest_rewp_lv <- t.test(df_150275_cz$Rej_Acc, df_150275_cz$Rej_Rej, paired=TRUE)
+ttest_p3_hv <- t.test(df_275425_pz$Acc_Acc, df_275425_pz$Acc_Rej, paired=TRUE)
+ttest_p3_lv <- t.test(df_275425_pz$Rej_Acc, df_275425_pz$Rej_Rej, paired=TRUE)
+
+d_rewp_hv <- paste0("Cohen's D=",round(cohensD(df_150275_cz$Acc_Acc, df_150275_cz$Acc_Rej, method="paired"),2))
+d_rewp_lv <- paste0("Cohen's D=",round(cohensD(df_150275_cz$Rej_Acc, df_150275_cz$Rej_Rej, method="paired"),2))
+d_p3_hv <- paste0("Cohen's D=",round(cohensD(df_275425_pz$Acc_Acc, df_275425_pz$Acc_Rej, method="paired"),2))
+d_p3_lv <- paste0("Cohen's D=",round(cohensD(df_275425_pz$Rej_Acc, df_275425_pz$Rej_Rej, method="paired"),2))
+```
+
+Omnibus MLMs showed that Peer value interacted with Feedback type to predict ERP mean amplitude for the RewP (`r apa_print(rewp_fv_mlm, est_name="\\beta")$full_result$FeedbackRej_VotingRej`) and P300 (`r apa_print(p300_fv_mlm, est_name="\\beta")$full_result$FeedbackRej_VotingRej`).
+Follow-up analyses showed that the RewP (`r paste0(d_rewp_lv, ", ", apa_printt(ttest_rewp_lv)$full_result)`) and P300 (`r paste0(d_p3_lv, ", ", apa_printt(ttest_p3_lv)$full_result)`) were larger to acceptance than rejection for low-value peers.
+Only the RewP was larger to acceptance than rejection for high-value peers (`r paste0(d_rewp_hv, ", ", apa_printt(ttest_rewp_hv)$full_result)`), but not the P300 (`r paste0(d_p3_hv, ", ", apa_printt(ttest_p3_hv)$full_r)`).
+
+```{r}
+## REWP
+mean_ses <- mean(df_150275_cz$ADI_NATRANK_z, na.rm=TRUE)
+sd_ses <- sd(df_150275_cz$ADI_NATRANK_z, na.rm=TRUE)
+SES_list <- list(ADI_NATRANK_z=round(c(mean_ses + sd_ses,mean_ses - sd_ses),2)) 
+
+m_rewp_idas_acc <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_z + demo_child_sex + StressCT_z + StressTH_z + IDAS_depression + IDAS_anxiety + site + (1 | ID),
+        zi = ~ .,
+  data = df_150275_cz_ema,
+  family=gaussian, REML=TRUE)
+
+m_rewp_acc_idas_ss <- emtrends(m_rewp_idas_acc, pairwise ~ADI_NATRANK_z, var="AA_AR_z",at=SES_list, adjust="none")|> test()
+
+## P300
+mean_ses <- mean(df_275425_pz$ADI_NATRANK_z, na.rm=TRUE)
+sd_ses <- sd(df_275425_pz$ADI_NATRANK_z, na.rm=TRUE)
+SES_list <- list(ADI_NATRANK_z=round(c(mean_ses + sd_ses,mean_ses - sd_ses),2)) 
+
+m_p300_idas_acc <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + StressCT_z + StressTH_z + IDAS_depression + IDAS_anxiety + site + (1 | ID),
+        zi = ~ .,
+  data = df_275425_pz_ema,
+  family=gaussian, REML=TRUE)
+
+m_p300_acc_idas_ss <- emtrends(m_p300_idas_acc, pairwise ~ADI_NATRANK_z, var="AA_AR_z",at=SES_list, adjust="none")|> test()
+```
+
+```{r include=TRUE, results='asis'}
+model_150275_ema_na_table <- tidy(m_rewp_idas_acc,component="cond", conf.int=TRUE) %>%
+  mutate(ci = paste0("[",sprintf("%.3f",conf.low),", ",sprintf("%.3f",conf.high),"]")) %>% # make 95% CI variable
+  select(term,estimate,ci,p.value) %>%
+  filter(row_number() <= n()-2) %>% # remove random effects
+  mutate(term=c("Intercept","SES","RewP\\textsubscript{resid}",
+                "Age","Sex",
+                "Stressor count","Stressor severity",
+                "Depression symptoms","Anxiety symptoms","Site","SES x RewP\\textsubscript{resid}"),
+         p.value = ifelse(p.value < 0.001, "<0.001", as.character(sprintf("%.3f",p.value))))
+
+model_275425_ema_na_table <- tidy(m_p300_idas_acc,component="cond", conf.int=TRUE) %>%
+  mutate(ci = paste0("[",sprintf("%.3f",conf.low),", ",sprintf("%.3f",conf.high),"]")) %>% # make 95% CI variable
+  select(term,estimate,ci,p.value) %>%
+  filter(row_number() <= n()-2) %>% # remove random effects
+  mutate(term=c("Intercept","SES","P300\\textsubscript{resid}",
+                                "Age","Sex",
+                "Stressor count","Stressor severity",
+                "Depression symptoms","Anxiety symptoms","Site","SES x P300\\textsubscript{resid}"),
+         p.value = ifelse(p.value < 0.001, "<0.001", as.character(sprintf("%.3f",p.value))))
+
+apa_table(list(`RewP\\textsubscript{resid}`=model_150275_ema_na_table,
+               `P300\\textsubscript{resid}`=model_275425_ema_na_table),
+          col.names=c("Predictor", "$\\beta$","95\\% CI","\\textit{p} value"),
+          digits=3, escape=FALSE,
+          caption="Fixed effects from MLM models predicting EMA reported negative affect, including stressful life events and depression and anxiety symptoms as covariates.")
+```
+
+### Including only those that reported belief in deception
+
+#### SES associations with RewP~resid~ and P300~resid~
 
 ```{r, eval=TRUE}
 load(file=here("../data/BUDS_behavior.RData"))
@@ -339,16 +486,9 @@ ses_lm_dec <- function(data, y) {
 
 rewp_aaar_model <- ses_lm_dec(df_150275_cz_dec, AA_AR_z)
 p3_aaar_model <- ses_lm_dec(df_275425_pz_dec, AA_AR_z)
-
-lm_results <- function(model, var) {
-  tidy(model, conf.int=TRUE) %>%
-    filter(term==var) %>%
-    mutate(stat = paste0("$\\beta$=",round3(estimate), ", 95% CI= [",round3(conf.low), ", ", round3(conf.high),"], *p*=",round3(p.value))) %>%
-    select(stat)
-}
 ```
 
-When excluding those who did not endorse deception, SES was still significantly, positively related to RewP~resid~ and P300~resid~ to acceptance (`r lm_results(rewp_aaar_model, "ADI_NATRANK_z")`, `r lm_results(p3_aaar_model, "ADI_NATRANK_z")`, respectively).
+When excluding those who did not endorse being deceived, SES was still significantly, positively related to RewP~resid~ and P300~resid~ to acceptance (`r lm_results(rewp_aaar_model, "ADI_NATRANK_z")`; `r lm_results(p3_aaar_model, "ADI_NATRANK_z")`, respectively).
 
 ```{r}
 df_150275_cz_ema_dec <- df_150275_cz_ema %>%
@@ -366,7 +506,7 @@ df_275425_pz_ema_dec <- df_275425_pz_ema %>%
   full_join(df_275425_pz_rating, by="ID")
 ```
 
-### SES moderates association between RewP~resid~/P300~resid~ and negative affect
+#### SES moderation of associations between RewP~resid~/P300~resid~ and negative affect
 
 ```{r}
 model_150275_ema_na_dec <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_z + demo_child_sex + site + (1 | ID),
@@ -426,35 +566,10 @@ m_p300_acc_dec <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_z + demo_child
 
 m_p300_acc_dec_ss <- emtrends(m_p300_acc_dec, pairwise ~ADI_NATRANK_z, var="AA_AR_z",at=SES_list, adjust="none")|> test()
 ```
-Follow-up simple slope analyses excluding those who did not endorse deception were consistent with results: no simple slopes were significant for the SES x RewP~resid~ interaction (*p*$\ge$ `r round3(min(m_rewp_acc_dec_ss$emtrends[,6]))`), but were significant for the SES x P300~resid~ such that lower SES was associated with a more negative relationship between P300~resid~ to acceptance and subsequent negative affect (slope=`r round3(m_p300_acc_dec_ss$emtrends[2,2])`, *p*=`r round3(m_p300_acc_dec_ss$emtrends[2,6])`).
 
-## Covarying for positive affect
-
-### SES moderates association between RewP~resid~/P300~resid~ and negative affect
-
-```{r}
-# DOESN'T CONVERGE
-# model_150275_ema_na_pa <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_z + demo_child_sex + pa + site + (1 | ID),
-#                 zi = ~ .,
-#   data = df_150275_cz_ema,
-#   family=gaussian, REML=TRUE)
-
-model_275425_ema_na_pa <- glmmTMB(na_cubert ~ ADI_NATRANK_z*AA_AR_z + Age_c + demo_child_sex + pa + site + (1 | ID),
-                                   zi = ~ .,
-  data = df_275425_pz_ema,
-  family=gaussian, REML=TRUE)
-
-p300_na_pa_stat <- c(broom.mixed::tidy(model_275425_ema_na_pa) %>% 
-                       filter(effect == "fixed", component == "cond", term == "ADI_NATRANK_z:AA_AR_z"),
-                     as.data.frame(confint(model_275425_ema_na_pa)) %>% 
-                       rownames_to_column("row_name") %>% 
-                       filter(row_name == "cond.ADI_NATRANK_z:AA_AR_z") %>% 
-                       mutate(lower = round3(`2.5 %`), upper=round3(`97.5 %`)) %>% 
-                       select(lower,upper))
-```
-
-Models covarying for EMA reported positive affect did not converge for models testing SES moderating relationship between negative affect and RewP~resid~. However, SES continued to moderate the relationship between negative affect and P300~resid~ to acceptance ($\beta$=`r round3(p300_na_pa_stat$estimate)`, 95% CI=[`r paste0(p300_na_pa_stat$lower,", ",p300_na_pa_stat$upper)`], *p*=`r round3(p300_na_pa_stat$p.value)`).
-
+Follow-up simple slope analyses excluding those who did not endorse deception were consistent with results: no simple slopes were significant for the SES x RewP~resid~ interaction (*p*$\ge$ `r round3(min(m_rewp_acc_dec_ss$emtrends[,6]))`), but were significant for the SES x P300~resid~ such that lower SES was associated with a more negative relationship between P300~resid~ to acceptance and subsequent negative affect (*b*=`r round3(m_p300_acc_dec_ss$emtrends[2,2])`, *p*=`r round3(m_p300_acc_dec_ss$emtrends[2,6])`).
+<p>&nbsp;</p>
+<p>&nbsp;</p>
 # References
 
 ::: {#refs custom-style="Bibliography"}
